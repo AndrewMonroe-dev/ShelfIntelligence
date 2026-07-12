@@ -163,6 +163,43 @@ stays in the regular Moscato section even if it's actually a frizzante-style d'A
 Would need re-parsing the original SKU Ranking product text with new keyword detection
 to close this gap.
 
+## Package type, small formats, and fill-to-width (2026-07-12)
+
+- **Package type (3L/4L/5L)**: real national data confirms 3L Box, 3L Bottle, 4L Bottle,
+  5L Box, and 5L Bottle are genuinely distinct categories with real volume, but
+  `data/skus.json` has no per-SKU package-type field (checked: raw product text doesn't
+  state it separately from brand names like "Bota Box"). Applied a **disclosed
+  assumption** rather than a real per-SKU split: 3L and 5L assumed Box, 4L assumed
+  Bottle -- section labels show "(assumed)" so this is visible, not silent. A true split
+  would need the original raw product text re-parsed with package-type keyword detection.
+- **Small-format extended shelving**: sections for 0.5L, 0.375L, 0.25L, and 0.187L get an
+  extended shelf-count range (4-8, vs. the standard 4-5) in the Optimization Engine, since
+  physically shorter bottles allow more shelves in the same vertical space.
+- **Fill-to-width facings**: `optimize/facings.js` now guarantees a row's full allocated
+  width gets consumed (floor of 1 facing per SKU, then repeatedly awards the next facing
+  to whichever SKU is furthest below its fair score-proportional share, until nothing
+  left fits) -- "no set should have empty space." Facings are computed **per shelf row**,
+  not once for the whole section, because the section's width repeats at every shelf
+  level rather than being divided among rows.
+- **Overflow resolution**: when a section has more SKUs than fit at 1 facing each within
+  its allocated width, the section is allowed to grow beyond its nominal score-proportional
+  share (not drop SKUs) -- the Planogram Viewer computes block count from actual real
+  content width, not the stale nominal figure, so this never crams/crops.
+- **Bug fixed**: `computeFacingsWithBotaFloor` was capping an all-Bota row at 50%+1 of
+  its budget even when there were no non-Bota SKUs to reserve the other ~49% for,
+  wasting nearly half the row's real space. Now gives the full row budget to whichever
+  group (Bota or other) actually exists when the other is empty.
+
+## Planogram Viewer: 4-foot block rendering (2026-07-12)
+
+Each section renders in fixed 4-foot visual blocks (partial final block shows its real
+remaining width). Blocks stay **within one section only** -- they don't span across
+section boundaries, since adjacent sections can have different shelf counts and their
+rows wouldn't align vertically. Box width uses a fixed pixel-per-inch scale (no
+proportionality-distorting minimum width) so box size is always a true reflection of
+real allocated linear space, comparable across the whole viewer, not just within one
+section.
+
 ## Data sources on file (real market data, not fixtures)
 
 Provided 2026-07-12 as Excel exports from `C:\Users\The Monroes\OneDrive\Desktop\DATA FOR INTELLIGENCE\`:

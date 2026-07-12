@@ -25,27 +25,53 @@ export function bottleWidthInches(sku, bottleDimensions) {
   return dim ? dim.widthIn : FALLBACK_WIDTH_IN;
 }
 
+// Guarantees a section's full allocated width is always consumed -- "no set
+// should have empty space." Gives every SKU a floor of 1 facing, then
+// repeatedly awards the NEXT facing to whichever SKU is furthest below its
+// fair score-proportional share (a standard largest-remainder apportionment
+// approach), until no remaining SKU's bottle width fits in the leftover
+// space. As sets get larger relative to SKU count, facings scale up to fill
+// the space rather than leaving it empty.
 export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions) {
   if (!sectionSkus.length) return [];
   const sectionInches = sectionLinearFeet * 12;
   const widths = sectionSkus.map((sku) => bottleWidthInches(sku, bottleDimensions));
+  const scores = sectionSkus.map((sku) => scoreMap.get(sku.skuId)?.score ?? 0);
+  const totalScore = scores.reduce((a, b) => a + b, 0) || 1;
 
-  const floorWidthTotal = widths.reduce((a, b) => a + b, 0);
-  const remainingInches = Math.max(0, sectionInches - floorWidthTotal);
+  const facingCounts = new Array(sectionSkus.length).fill(1);
+  let usedInches = widths.reduce((a, b) => a + b, 0);
 
-  const totalScore = sectionSkus.reduce((sum, sku) => sum + (scoreMap.get(sku.skuId)?.score ?? 0), 0) || 1;
+  const minWidth = Math.min(...widths);
+  let guard = 0;
+  while (sectionInches - usedInches >= minWidth && guard < 100000) {
+    guard++;
+    const remaining = sectionInches - usedInches;
+    const totalFacingsSoFar = facingCounts.reduce((a, b) => a + b, 0);
 
-  return sectionSkus.map((sku, i) => {
-    const share = (scoreMap.get(sku.skuId)?.score ?? 0) / totalScore;
-    const extraInches = remainingInches * share;
-    const extraFacings = Math.floor(extraInches / widths[i]);
-    return {
-      skuId: sku.skuId,
-      facings: 1 + extraFacings,
-      widthInches: widths[i],
-      allocatedInches: widths[i] * (1 + extraFacings),
-    };
-  });
+    let bestIdx = -1;
+    let bestDeficit = -Infinity;
+    for (let i = 0; i < sectionSkus.length; i++) {
+      if (widths[i] > remaining) continue;
+      const targetShare = scores[i] / totalScore;
+      const currentShare = facingCounts[i] / totalFacingsSoFar;
+      const deficit = targetShare - currentShare;
+      if (deficit > bestDeficit) {
+        bestDeficit = deficit;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) break; // nothing left fits
+    facingCounts[bestIdx]++;
+    usedInches += widths[bestIdx];
+  }
+
+  return sectionSkus.map((sku, i) => ({
+    skuId: sku.skuId,
+    facings: facingCounts[i],
+    widthInches: widths[i],
+    allocatedInches: widths[i] * facingCounts[i],
+  }));
 }
 
 // Bota 3L hard rule: within the 3L section, Bota Box/Mini SKUs collectively
@@ -54,7 +80,13 @@ export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleD
 export function computeFacingsWithBotaFloor(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, isBotaFn) {
   const botaSkus = sectionSkus.filter(isBotaFn);
   const otherSkus = sectionSkus.filter((s) => !isBotaFn(s));
-  if (!botaSkus.length) return computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions);
+  // Nothing to split the width against -- give the full row budget to
+  // whichever group actually exists (e.g. a row that landed all-Bota with no
+  // other brands) instead of artificially half-capping it at 50%+1 and
+  // wasting the rest of the row's real space.
+  if (!botaSkus.length || !otherSkus.length) {
+    return computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions);
+  }
 
   const sectionInches = sectionLinearFeet * 12;
   const botaInches = sectionInches * 0.5 + 0.0001; // bare majority, "50% + 1"

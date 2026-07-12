@@ -77,14 +77,21 @@ export function generatePlan(store, allSkus, metricsConfig, targetSkuCount, bott
     const shelfDefs = buildSectionShelves(store.shelfLayout.shelves, shelfCount);
     const groups = partitionIntoShelves(ranked, shelfCount);
 
-    const facingsResult = isBota3LSection(section)
-      ? computeFacingsWithBotaFloor(ranked, scoreMap, linearFeet, bottleDimensions, isBotaBrand)
-      : computeFacings(ranked, scoreMap, linearFeet, bottleDimensions);
-    const facingsBySkuId = new Map(facingsResult.map((f) => [f.skuId, f]));
+    // Facings are computed PER ROW, not once for the whole section's SKU
+    // list -- the section's width repeats at every shelf level (confirmed:
+    // "that same 9-foot width repeats at every shelf level in the section"),
+    // it isn't divided among the rows. Each row independently fills the same
+    // `linearFeet` budget with its own subset of SKUs.
+    const shelves = shelfDefs.map((shelfDef, i) => {
+      const rowSkus = groups[i] || [];
+      const facingsResult = isBota3LSection(section)
+        ? computeFacingsWithBotaFloor(rowSkus, scoreMap, linearFeet, bottleDimensions, isBotaBrand)
+        : computeFacings(rowSkus, scoreMap, linearFeet, bottleDimensions);
+      const facingsBySkuId = new Map(facingsResult.map((f) => [f.skuId, f]));
 
-    const shelves = shelfDefs.map((shelfDef, i) => ({
+      return {
       ...shelfDef,
-      skus: (groups[i] || []).map((sku) => {
+      skus: rowSkus.map((sku) => {
         const scoreEntry = scoreMap.get(sku.skuId);
         const facing = facingsBySkuId.get(sku.skuId);
         const tradeUpNote = tradeUpPartnerNote(sku, selected);
@@ -113,7 +120,8 @@ export function generatePlan(store, allSkus, metricsConfig, targetSkuCount, bott
           reasons,
         };
       }),
-    }));
+      };
+    });
 
     sections.push({
       key,

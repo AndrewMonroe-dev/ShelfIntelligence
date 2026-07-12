@@ -1,5 +1,9 @@
 import { store } from '../core/store.js';
 import { generatePlan } from '../optimize/placementSolver.js';
+import { isSmallFormatSection } from '../optimize/blocking.js';
+
+const STANDARD_SHELF_OPTIONS = [4, 5];
+const SMALL_FORMAT_SHELF_OPTIONS = [4, 5, 6, 7, 8];
 
 export function mount(el) {
   let selectedStoreId = null;
@@ -43,10 +47,11 @@ export function mount(el) {
           <span class="section-mult-value" style="font-family:var(--font-mono);font-size:12px;width:34px;">${section.multiplier.toFixed(1)}x</span>
         </div>
         <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
-          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Shelves per block</span>
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Shelves per block${isSmallFormatSection(section) ? ' (small format, extended range)' : ''}</span>
           <div class="tabs shelf-count-tabs">
-            <div class="tab shelf-count-tab ${section.shelfCount === 4 ? 'active' : ''}" data-shelf-count="4">4</div>
-            <div class="tab shelf-count-tab ${section.shelfCount === 5 ? 'active' : ''}" data-shelf-count="5">5</div>
+            ${(isSmallFormatSection(section) ? SMALL_FORMAT_SHELF_OPTIONS : STANDARD_SHELF_OPTIONS)
+              .map((n) => `<div class="tab shelf-count-tab ${section.shelfCount === n ? 'active' : ''}" data-shelf-count="${n}">${n}</div>`)
+              .join('')}
           </div>
         </div>
         <div style="margin-top:12px;">${shelvesHtml}</div>
@@ -54,11 +59,29 @@ export function mount(el) {
     `;
   }
 
+  function actualSectionFeet(section) {
+    const maxRowInches = Math.max(
+      ...section.shelves.map((sh) => sh.skus.reduce((sum, s) => sum + (s.allocatedInches ?? s.facings * (s.widthInches ?? 3)), 0)),
+      0
+    );
+    return Math.max(section.linearFeet, maxRowInches / 12);
+  }
+
   function renderPlan(plan) {
+    const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     return `
       <div class="page-header" style="margin-top:20px;">
         <h1 style="font-size:16px;">Plan: ${plan.skuCount} SKUs across ${plan.sections.length} sections</h1>
         <p>Generated ${new Date(plan.generatedAt).toLocaleString()}. Drag a section's size slider to expand or contract it -- other sections shrink or grow proportionally to keep the store's total space fixed, then release to recompute.</p>
+      </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span class="card-label">Total Horizontal Set Width</span>
+          <span class="kpi-value" style="font-size:22px;margin-top:0;">${totalWidth.toFixed(1)} ft</span>
+        </div>
+        <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
+          ${plan.sections.map((s) => `<span class="badge" style="font-family:var(--font-mono);">${s.label}: ${actualSectionFeet(s).toFixed(1)}ft</span>`).join('')}
+        </div>
       </div>
       ${plan.sections.map(renderSectionCard).join('')}
     `;

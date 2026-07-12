@@ -17,6 +17,35 @@ export function isSparklingVarietal(varietal) {
   return typeof varietal === 'string' && varietal.startsWith('SPARKLING');
 }
 
+// Real national data (data/market/size_package.json) confirms 3L Box, 3L
+// Bottle, 4L Bottle, 5L Box, and 5L Bottle are genuinely distinct categories
+// with real volume. But data/skus.json has no per-SKU package-type field --
+// the raw product text doesn't state it separately from brand names like
+// "Bota Box" (checked directly: every 3L sample pulled was "BOTA BOX ..." or
+// "BLACK BOX WINES ...", where "BOX" is part of the brand, not an
+// independent descriptor). Splitting into real per-SKU Box vs Bottle
+// sections isn't possible without that data. This applies a disclosed,
+// documented ASSUMPTION instead of a real split: 3L/5L assumed box (box is
+// the overwhelmingly dominant real-world format at these sizes), 4L assumed
+// bottle. The label says "(assumed)" so this is visible, not silent.
+const PACKAGE_TYPE_ASSUMPTIONS = {
+  '3LT': 'Box',
+  '5LT': 'Box',
+  '4LT': 'Bottle',
+};
+
+// Small-format sizes where bottles are physically shorter, so more shelves
+// realistically fit in the same vertical fixture space -- these sections get
+// an extended shelf-count range (see optimizationEngine.js) instead of the
+// standard 4-5 max.
+export const SMALL_FORMAT_SIZES = new Set(['0.5LT', '0.375LT', '0.25LT', '0.187LT']);
+
+export function isSmallFormatSection(section) {
+  if (section.type !== 'size') return false;
+  const size = section.key.replace('size:', '');
+  return SMALL_FORMAT_SIZES.has(size);
+}
+
 export function sectionForSku(sku) {
   if (sku.bottleSizeRaw === SEVEN_FIFTY_ML) {
     if (isSparklingVarietal(sku.varietal)) {
@@ -26,7 +55,9 @@ export function sectionForSku(sku) {
     return { key: `varietal:${varietal}`, type: 'varietal', label: varietal };
   }
   const size = sku.bottleSizeRaw || 'UNSPECIFIED SIZE';
-  return { key: `size:${size}`, type: 'size', label: size };
+  const assumedPackage = PACKAGE_TYPE_ASSUMPTIONS[size];
+  const label = assumedPackage ? `${size} ${assumedPackage} (assumed)` : size;
+  return { key: `size:${size}`, type: 'size', label };
 }
 
 export function groupBySection(skus) {
