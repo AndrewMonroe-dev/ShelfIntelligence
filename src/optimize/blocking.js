@@ -3,8 +3,25 @@
 
 const SEVEN_FIFTY_ML = '0.75LT';
 
+// Sparkling wine (Brut, Prosecco, Rose, Spumante, All Other -- the 5 real
+// national-data sparkling varietal categories) gets its own dedicated section
+// for 750ml SKUs, instead of scattering across 5 separate varietal sections.
+// Sub-blocked internally by its original specific varietal (see
+// groupBySection / placementSolver). This only catches SKUs whose varietal
+// field was already classified as one of the "SPARKLING ___" national
+// categories -- it can't distinguish e.g. "Moscato d'Asti" from a plain still
+// Moscato, since the raw product text needed for that wasn't retained when
+// skus.json was built. A SKU merely labeled "MOSCATO" stays in the regular
+// Moscato section.
+export function isSparklingVarietal(varietal) {
+  return typeof varietal === 'string' && varietal.startsWith('SPARKLING');
+}
+
 export function sectionForSku(sku) {
   if (sku.bottleSizeRaw === SEVEN_FIFTY_ML) {
+    if (isSparklingVarietal(sku.varietal)) {
+      return { key: 'varietal:SPARKLING WINE', type: 'varietal', label: 'Sparkling Wine' };
+    }
     const varietal = sku.varietal || 'UNSPECIFIED VARIETAL';
     return { key: `varietal:${varietal}`, type: 'varietal', label: varietal };
   }
@@ -49,6 +66,33 @@ export function applyBlackBoxTiebreak(rankedSkus, scoreMap) {
     }
   }
   return result;
+}
+
+export function isSparklingSection(section) {
+  return section.key === 'varietal:SPARKLING WINE';
+}
+
+// Sub-blocks the Sparkling Wine section by original specific varietal
+// (Prosecco together, Brut together, etc.) -- subtype groups ordered by
+// their combined score, SKUs within each subtype ordered by their own score.
+export function subBlockBySubtype(skus, scoreMap) {
+  const groups = new Map();
+  skus.forEach((sku) => {
+    const subtype = sku.varietal || 'UNSPECIFIED';
+    if (!groups.has(subtype)) groups.set(subtype, []);
+    groups.get(subtype).push(sku);
+  });
+
+  const orderedGroups = [...groups.entries()].map(([subtype, groupSkus]) => {
+    const sorted = [...groupSkus].sort(
+      (a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0)
+    );
+    const totalScore = sorted.reduce((sum, s) => sum + (scoreMap.get(s.skuId)?.score ?? 0), 0);
+    return { subtype, sorted, totalScore };
+  });
+
+  orderedGroups.sort((a, b) => b.totalScore - a.totalScore);
+  return orderedGroups.flatMap((g) => g.sorted);
 }
 
 // "Bota 3L" hard rule: Bota Box SKUs in the 3L size section get 50%+1 (bare

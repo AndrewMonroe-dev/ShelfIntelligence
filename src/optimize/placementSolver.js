@@ -1,8 +1,14 @@
 import { computeScoreMap } from '../calc/scoreEngine.js';
 import { selectAssortment } from './assortment.js';
-import { groupBySection, applyBlackBoxTiebreak, isBota3LSection, isBotaBrand, tradeUpPartnerNote } from './blocking.js';
+import {
+  groupBySection, applyBlackBoxTiebreak, isBota3LSection, isBotaBrand, tradeUpPartnerNote,
+  isSparklingSection, subBlockBySubtype,
+} from './blocking.js';
 import { buildSectionShelves } from './shelfPosition.js';
 import { computeFacings, computeFacingsWithBotaFloor } from './facings.js';
+
+const MIN_SECTION_LINEAR_FEET = 4;
+const DEFAULT_SECTION_SHELF_COUNT = 5;
 
 // Splits a score-sorted SKU list into `shelfCount` contiguous groups, largest
 // groups first, so the top-scored cluster lands on the best shelf position.
@@ -21,7 +27,7 @@ function partitionIntoShelves(sortedSkus, shelfCount) {
   return groups;
 }
 
-export function generatePlan(store, allSkus, metricsConfig, targetSkuCount, bottleDimensions, sectionMultipliers = {}) {
+export function generatePlan(store, allSkus, metricsConfig, targetSkuCount, bottleDimensions, sectionMultipliers = {}, sectionShelfCounts = {}) {
   const scoreMap = computeScoreMap(allSkus, metricsConfig);
   const { selected } = selectAssortment(allSkus, targetSkuCount, metricsConfig);
 
@@ -51,17 +57,21 @@ export function generatePlan(store, allSkus, metricsConfig, targetSkuCount, bott
   weightedTotal = weightedTotal || 1;
 
   const totalLinearFeet = store.shelfLayout.totalLinearFeet;
-  const totalShelfBudget = store.shelfLayout.shelves.length;
 
   const sections = [];
   sectionsMap.forEach((section, key) => {
     const scoreShare = (weightedShares.get(key) || 0) / weightedTotal;
-    const linearFeet = totalLinearFeet * scoreShare;
-    const shelfCount = Math.max(1, Math.round(totalShelfBudget * scoreShare));
+    // Sections are built in 4-foot blocks minimum -- the score-proportional
+    // width stays continuous (not rounded to a 4ft multiple), it just can't
+    // fall below one block's worth of space. Shelf count is a per-section
+    // setting (4 or 5), not derived from score -- this also means a section
+    // never rounds down to an unrealistic single eye-level-only shelf.
+    const linearFeet = Math.max(MIN_SECTION_LINEAR_FEET, totalLinearFeet * scoreShare);
+    const shelfCount = sectionShelfCounts[key] ?? DEFAULT_SECTION_SHELF_COUNT;
 
-    let ranked = [...section.skus].sort(
-      (a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0)
-    );
+    let ranked = isSparklingSection(section)
+      ? subBlockBySubtype(section.skus, scoreMap)
+      : [...section.skus].sort((a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0));
     ranked = applyBlackBoxTiebreak(ranked, scoreMap);
 
     const shelfDefs = buildSectionShelves(store.shelfLayout.shelves, shelfCount);

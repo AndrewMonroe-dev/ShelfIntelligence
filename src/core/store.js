@@ -16,10 +16,12 @@ const state = {
   ready: false,
   targetSkuCounts: {}, // storeId -> desired total SKU count for that store's set
   sectionMultipliers: {}, // storeId -> { sectionKey -> multiplier (default 1) }
+  sectionShelfCounts: {}, // storeId -> { sectionKey -> 4 | 5 (default 5) }
 };
 
 const DEFAULT_TARGET_SKU_COUNT = 150;
 const DEFAULT_SECTION_MULTIPLIER = 1;
+const DEFAULT_SECTION_SHELF_COUNT = 5;
 
 function persist() {
   savePersistedState(state);
@@ -41,6 +43,21 @@ export function setSectionMultiplier(storeId, sectionKey, multiplier) {
   if (!state.sectionMultipliers[storeId]) state.sectionMultipliers[storeId] = {};
   state.sectionMultipliers[storeId][sectionKey] = multiplier;
   bus.emit('section:changed', { storeId, sectionKey, multiplier });
+  persist();
+}
+
+export function getSectionShelfCount(storeId, sectionKey) {
+  return state.sectionShelfCounts[storeId]?.[sectionKey] ?? DEFAULT_SECTION_SHELF_COUNT;
+}
+
+export function getSectionShelfCounts(storeId) {
+  return state.sectionShelfCounts[storeId] || {};
+}
+
+export function setSectionShelfCount(storeId, sectionKey, shelfCount) {
+  if (!state.sectionShelfCounts[storeId]) state.sectionShelfCounts[storeId] = {};
+  state.sectionShelfCounts[storeId][sectionKey] = shelfCount;
+  bus.emit('section:changed', { storeId, sectionKey, shelfCount });
   persist();
 }
 
@@ -73,6 +90,7 @@ function applyPersistedOverrides() {
 
   if (persisted.targetSkuCounts) state.targetSkuCounts = persisted.targetSkuCounts;
   if (persisted.sectionMultipliers) state.sectionMultipliers = persisted.sectionMultipliers;
+  if (persisted.sectionShelfCounts) state.sectionShelfCounts = persisted.sectionShelfCounts;
   if (persisted.activeScenarioId) state.activeScenarioId = persisted.activeScenarioId;
 
   if (persisted.metricOverrides) {
@@ -142,5 +160,8 @@ export const store = {
   getSectionMultiplier,
   getSectionMultipliers,
   setSectionMultiplier,
+  getSectionShelfCount,
+  getSectionShelfCounts,
+  setSectionShelfCount,
   resetPersistedState,
 };

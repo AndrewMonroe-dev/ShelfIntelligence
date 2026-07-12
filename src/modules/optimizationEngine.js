@@ -9,7 +9,8 @@ export function mount(el) {
     const targetStore = stores.find((s) => s.storeId === selectedStoreId);
     const targetCount = store.getTargetSkuCount(selectedStoreId);
     const multipliers = store.getSectionMultipliers(selectedStoreId);
-    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, multipliers);
+    const shelfCounts = store.getSectionShelfCounts(selectedStoreId);
+    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, multipliers, shelfCounts);
     store.setPlan(plan);
     return plan;
   }
@@ -41,6 +42,13 @@ export function mount(el) {
           <input type="range" class="section-mult-slider" min="0.5" max="2" step="0.1" value="${section.multiplier}" style="flex:1;" />
           <span class="section-mult-value" style="font-family:var(--font-mono);font-size:12px;width:34px;">${section.multiplier.toFixed(1)}x</span>
         </div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Shelves per block</span>
+          <div class="tabs shelf-count-tabs">
+            <div class="tab shelf-count-tab ${section.shelfCount === 4 ? 'active' : ''}" data-shelf-count="4">4</div>
+            <div class="tab shelf-count-tab ${section.shelfCount === 5 ? 'active' : ''}" data-shelf-count="5">5</div>
+          </div>
+        </div>
         <div style="margin-top:12px;">${shelvesHtml}</div>
       </div>
     `;
@@ -65,6 +73,17 @@ export function mount(el) {
       slider.addEventListener('change', (e) => {
         const sectionKey = e.target.closest('[data-section-key]').dataset.sectionKey;
         store.setSectionMultiplier(selectedStoreId, sectionKey, parseFloat(e.target.value));
+        const plan = regenerateAndSetPlan();
+        output.innerHTML = renderPlan(plan);
+        bindPlanOutputListeners(output);
+      });
+    });
+
+    output.querySelectorAll('.shelf-count-tab').forEach((tab) => {
+      tab.addEventListener('click', (e) => {
+        const sectionKey = e.target.closest('[data-section-key]').dataset.sectionKey;
+        const shelfCount = parseInt(e.target.dataset.shelfCount, 10);
+        store.setSectionShelfCount(selectedStoreId, sectionKey, shelfCount);
         const plan = regenerateAndSetPlan();
         output.innerHTML = renderPlan(plan);
         bindPlanOutputListeners(output);

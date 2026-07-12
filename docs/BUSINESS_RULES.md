@@ -128,6 +128,41 @@ Full Phase 5 pipeline, gathered 2026-07-12, not yet implemented:
    not fully live like the Phase 4 score/weight sliders -- this computation is heavier
    and a plan is a deliberate, versionable decision, not a continuous live number.
 
+## Section model correction (2026-07-12)
+
+Supersedes the shelf-count/width formulas in "Section sizing, facings, and placement
+algorithm" above -- those produced sections that could round down to a single
+eye-level-only shelf, which isn't physically realistic. Corrected model:
+
+- **Shelf count is a per-section setting (4 or 5), not derived from score.** Configurable
+  independently per section in the Optimization Engine (defaults to 5). This guarantees
+  every section always gets a real above/eye/belowEye/bottom(+bottom) zone spread --
+  never rounds down to a single "everything is eye level" shelf.
+- **Section width stays continuous and score-proportional** (unchanged from before), with
+  a **4-foot floor** -- no rounding to exact 4-ft multiples, just a minimum so no section
+  is an unrealistic sliver. A section calculating out to 9 feet stays 9 feet.
+- **Vertical zones are one continuous row across the section's full width** -- eye level
+  on a 3-block-wide section is the same physical shelf running the whole width, not a
+  separate eye-level shelf per 4-ft block.
+
+## Sparkling Wine section (2026-07-12)
+
+All sparkling wine (Brut, Prosecco, Rose, Spumante, All Other -- the 5 real national-data
+sparkling varietal categories) merges into **one dedicated "Sparkling Wine" section**
+instead of scattering across 5 separate varietal sections, **sub-blocked internally by
+its original specific varietal** (Prosecco grouped together, Brut grouped together, etc.,
+subtype groups ordered by combined score, SKUs within each subtype ordered by their own
+score). Applies to **750ml only** -- non-750ml sparkling stays in its size section as
+normal.
+
+Known gap: this only catches SKUs whose varietal was already classified as one of the 5
+national "SPARKLING ___" categories. It cannot distinguish "Moscato d'Asti" or
+"Brachetto" from a plain still Moscato/Brachetto, since the raw product text needed for
+that distinction wasn't retained when skus.json was built. A SKU labeled plain "MOSCATO"
+stays in the regular Moscato section even if it's actually a frizzante-style d'Asti.
+Would need re-parsing the original SKU Ranking product text with new keyword detection
+to close this gap.
+
 ## Data sources on file (real market data, not fixtures)
 
 Provided 2026-07-12 as Excel exports from `C:\Users\The Monroes\OneDrive\Desktop\DATA FOR INTELLIGENCE\`:

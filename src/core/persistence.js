@@ -27,6 +27,7 @@ export function savePersistedState(state) {
   const payload = {
     targetSkuCounts: state.targetSkuCounts,
     sectionMultipliers: state.sectionMultipliers,
+    sectionShelfCounts: state.sectionShelfCounts,
     metricOverrides: state.metricsConfig.map((m) => ({ id: m.id, enabled: m.enabled, weight: m.weight })),
     activeScenarioId: state.activeScenarioId,
     importedSales: state.sales.filter((r) => !r.synthetic),
