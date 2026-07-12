@@ -142,9 +142,30 @@ export function generatePlan(
   // always sum to exactly the fixture's total bays, with every section
   // guaranteed at least 1 bay.
   const totalBays = Math.max(1, Math.floor(totalLinearFeet / MIN_SECTION_LINEAR_FEET));
+
+  // A fixture too small to give every section its guaranteed 1-bay floor
+  // can't fit the assortment as scored -- drop the lowest-opportunity
+  // sections entirely (their SKUs excluded from the plan) until what's left
+  // fits, rather than shrinking every section below a physically real bay.
+  // Reported back on the plan as `droppedSections` so the UI can surface it.
+  const droppedSections = [];
+  if (sectionsMap.size > totalBays) {
+    const numToDrop = sectionsMap.size - totalBays;
+    const dropKeys = [...sectionsMap.keys()]
+      .sort((a, b) => (weightedShares.get(a) || 0) - (weightedShares.get(b) || 0))
+      .slice(0, numToDrop);
+    dropKeys.forEach((key) => {
+      const section = sectionsMap.get(key);
+      droppedSections.push({ key, label: section.label, skuCount: section.skus.length });
+      sectionsMap.delete(key);
+    });
+  }
+  const survivingWeightedTotal = [...sectionsMap.keys()]
+    .reduce((sum, key) => sum + (weightedShares.get(key) || 0), 0) || 1;
+
   const sectionKeys = [...sectionsMap.keys()];
   const rawBays = sectionKeys.map((key) => {
-    const scoreShare = (weightedShares.get(key) || 0) / weightedTotal;
+    const scoreShare = (weightedShares.get(key) || 0) / survivingWeightedTotal;
     return scoreShare * totalBays;
   });
   const bayCounts = new Map();
@@ -167,7 +188,7 @@ export function generatePlan(
 
   const sections = [];
   sectionsMap.forEach((section, key) => {
-    const scoreShare = (weightedShares.get(key) || 0) / weightedTotal;
+    const scoreShare = (weightedShares.get(key) || 0) / survivingWeightedTotal;
     const linearFeet = bayCounts.get(key) * MIN_SECTION_LINEAR_FEET;
     const shelfCount = sectionShelfCounts[key] ?? DEFAULT_SECTION_SHELF_COUNT;
 
@@ -264,12 +285,15 @@ export function generatePlan(
 
   sections.sort((a, b) => b.totalScore - a.totalScore);
 
+  const droppedSkuCount = droppedSections.reduce((sum, d) => sum + d.skuCount, 0);
+
   return {
     storeId: store.storeId,
     generatedAt: new Date().toISOString(),
     targetSkuCount,
-    skuCount: selected.length,
+    skuCount: selected.length - droppedSkuCount,
     caseOnlyMode,
     sections,
+    droppedSections,
   };
 }

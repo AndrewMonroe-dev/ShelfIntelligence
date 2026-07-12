@@ -83,6 +83,7 @@ export function mount(el) {
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
           ${plan.sections.map((s) => `<span class="badge" style="font-family:var(--font-mono);">${s.label}: ${actualSectionFeet(s).toFixed(1)}ft</span>`).join('')}
         </div>
+        ${(plan.droppedSections || []).length ? `<div class="badge badge-warning" style="margin-top:10px;">Fixture too small for every category -- dropped ${plan.droppedSections.length} lowest-opportunity section${plan.droppedSections.length === 1 ? '' : 's'} (${plan.droppedSections.reduce((sum, d) => sum + d.skuCount, 0)} SKUs): ${plan.droppedSections.map((d) => d.label).join(', ')}</div>` : ''}
       </div>
       ${plan.sections.map(renderSectionCard).join('')}
     `;

@@ -29,6 +29,14 @@ function computePlanMetrics(plan, physicalWidth) {
   };
 }
 
+function dropWarningHtml(plan) {
+  const dropped = plan.droppedSections || [];
+  if (!dropped.length) return '';
+  const skuCount = dropped.reduce((sum, d) => sum + d.skuCount, 0);
+  const names = dropped.map((d) => d.label).join(', ');
+  return `<div class="badge badge-warning" style="margin-top:6px;">Fixture too small for every category -- dropped ${dropped.length} lowest-opportunity section${dropped.length === 1 ? '' : 's'} (${skuCount} SKUs): ${names}</div>`;
+}
+
 function qualityLabel(q) {
   if (q == null) return 'Neutral';
   if (q >= 0.6) return 'High-End';
@@ -120,6 +128,7 @@ export function mount(el) {
         <div class="extended-warning">${result.extendedCount > 0
           ? '<div class="badge badge-warning" style="margin-top:6px;">Drawing into extended pool (rank 501-1000)</div>'
           : ''}</div>
+        <div class="dropped-warning">${dropWarningHtml(plan)}</div>
       </div>
     `;
   }
@@ -146,6 +155,7 @@ export function mount(el) {
     card.querySelector('.extended-warning').innerHTML = result.extendedCount > 0
       ? '<div class="badge badge-warning" style="margin-top:6px;">Drawing into extended pool (rank 501-1000)</div>'
       : '';
+    card.querySelector('.dropped-warning').innerHTML = dropWarningHtml(plan);
   }
 
   function renderAddStoreCard() {
