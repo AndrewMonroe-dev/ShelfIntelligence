@@ -1,0 +1,53 @@
+[
+  {
+    "scenarioId": "scenario-a",
+    "label": "Current Shelf",
+    "description": "Baseline: reflects the store's existing assortment and placement as-is, no optimization applied.",
+    "metricsConfigOverride": null,
+    "optimizationConstraints": { "mode": "baseline" }
+  },
+  {
+    "scenarioId": "scenario-b",
+    "label": "Optimized Shelf",
+    "description": "Default balanced optimization using the current Metric Center weights.",
+    "metricsConfigOverride": null,
+    "optimizationConstraints": { "mode": "optimize", "objective": "balanced" }
+  },
+  {
+    "scenarioId": "scenario-c",
+    "label": "Premium Strategy",
+    "description": "Weights shifted toward margin, premium tier, and price point strength; favors elevated/premium SKUs for eye-level placement.",
+    "metricsConfigOverride": {
+      "marginDollars": { "enabled": true, "weight": 20 },
+      "marginPct": { "enabled": true, "weight": 15 },
+      "pricePointStrength": { "enabled": true, "weight": 15 },
+      "skuVolume": { "weight": 10 }
+    },
+    "optimizationConstraints": { "mode": "optimize", "objective": "margin_premium", "premiumEyeLevelBoost": true }
+  },
+  {
+    "scenarioId": "scenario-d",
+    "label": "Growth Strategy",
+    "description": "Weights shifted toward growth rate and trend metrics; favors SKUs with strong momentum even at lower current volume.",
+    "metricsConfigOverride": {
+      "growthRate": { "enabled": true, "weight": 30 },
+      "trend52wk": { "enabled": true, "weight": 15 },
+      "trend104wk": { "enabled": true, "weight": 10 },
+      "innovationPriority": { "enabled": true, "weight": 10 },
+      "skuVolume": { "weight": 10 }
+    },
+    "optimizationConstraints": { "mode": "optimize", "objective": "growth" }
+  },
+  {
+    "scenarioId": "scenario-e",
+    "label": "Margin Strategy",
+    "description": "Weights maximized toward margin dollars and margin percent, deprioritizing raw volume.",
+    "metricsConfigOverride": {
+      "marginDollars": { "enabled": true, "weight": 30 },
+      "marginPct": { "enabled": true, "weight": 25 },
+      "skuVolume": { "weight": 8 },
+      "velocity": { "weight": 5 }
+    },
+    "optimizationConstraints": { "mode": "optimize", "objective": "margin" }
+  }
+]

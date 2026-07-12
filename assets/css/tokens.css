@@ -1,0 +1,46 @@
+:root{
+  --bg:#0A0B0F;
+  --panel:#131722;
+  --panel2:#1A1F2D;
+  --border:rgba(255,255,255,.05);
+  --border-strong:rgba(255,255,255,.09);
+  --blue:#3B82F6;
+  --cyan:#06B6D4;
+  --success:#10B981;
+  --warning:#F59E0B;
+  --danger:#EF4444;
+  --text:#FFFFFF;
+  --text2:#94A3B8;
+  --text3:#5B6677;
+
+  /* Shelf Intelligence extensions */
+  --premium:#C9A227;
+  --heat-low:#1A1F2D;
+  --heat-high:#EF4444;
+
+  --font-sans:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --ease-standard:cubic-bezier(.22,.68,.31,1);
+}
+
+*{box-sizing:border-box;}
+
+html,body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-sans);
+  height:100%;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:4px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.15);}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;}
+}

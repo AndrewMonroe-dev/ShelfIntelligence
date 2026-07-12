@@ -1,0 +1,2306 @@
+[
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 21,
+    "revenueUsd": 314.79,
+    "marginUsd": 88.14
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 17,
+    "revenueUsd": 254.83,
+    "marginUsd": 71.35
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 19,
+    "revenueUsd": 284.81,
+    "marginUsd": 79.75
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 19,
+    "revenueUsd": 284.81,
+    "marginUsd": 79.75
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 23,
+    "revenueUsd": 344.77,
+    "marginUsd": 96.54
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 23,
+    "revenueUsd": 344.77,
+    "marginUsd": 96.54
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 25,
+    "revenueUsd": 374.75,
+    "marginUsd": 104.93
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 20,
+    "revenueUsd": 299.8,
+    "marginUsd": 83.94
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 23,
+    "revenueUsd": 344.77,
+    "marginUsd": 96.54
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 20,
+    "revenueUsd": 299.8,
+    "marginUsd": 83.94
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 22,
+    "revenueUsd": 329.78,
+    "marginUsd": 92.34
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 25,
+    "revenueUsd": 374.75,
+    "marginUsd": 104.93
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 23,
+    "revenueUsd": 321.77,
+    "marginUsd": 83.66
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 24,
+    "revenueUsd": 335.76,
+    "marginUsd": 87.3
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 28,
+    "revenueUsd": 391.72,
+    "marginUsd": 101.85
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 28,
+    "revenueUsd": 391.72,
+    "marginUsd": 101.85
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 25,
+    "revenueUsd": 349.75,
+    "marginUsd": 90.94
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 28,
+    "revenueUsd": 391.72,
+    "marginUsd": 101.85
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 24,
+    "revenueUsd": 335.76,
+    "marginUsd": 87.3
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 28,
+    "revenueUsd": 391.72,
+    "marginUsd": 101.85
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 26,
+    "revenueUsd": 363.74,
+    "marginUsd": 94.57
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 15,
+    "revenueUsd": 239.85,
+    "marginUsd": 74.35
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 13,
+    "revenueUsd": 207.87,
+    "marginUsd": 64.44
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 12,
+    "revenueUsd": 191.88,
+    "marginUsd": 59.48
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 13,
+    "revenueUsd": 207.87,
+    "marginUsd": 64.44
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 16,
+    "revenueUsd": 255.84,
+    "marginUsd": 79.31
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 16,
+    "revenueUsd": 255.84,
+    "marginUsd": 79.31
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 20,
+    "revenueUsd": 319.8,
+    "marginUsd": 99.14
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 19,
+    "revenueUsd": 303.81,
+    "marginUsd": 94.18
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 36,
+    "revenueUsd": 287.64,
+    "marginUsd": 63.28
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 34,
+    "revenueUsd": 271.66,
+    "marginUsd": 59.77
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 36,
+    "revenueUsd": 287.64,
+    "marginUsd": 63.28
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 33,
+    "revenueUsd": 263.67,
+    "marginUsd": 58.01
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 34,
+    "revenueUsd": 271.66,
+    "marginUsd": 59.77
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 28,
+    "revenueUsd": 223.72,
+    "marginUsd": 49.22
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 29,
+    "revenueUsd": 231.71,
+    "marginUsd": 50.98
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 30,
+    "revenueUsd": 239.7,
+    "marginUsd": 52.73
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 28,
+    "revenueUsd": 223.72,
+    "marginUsd": 49.22
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 29,
+    "revenueUsd": 231.71,
+    "marginUsd": 50.98
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 28,
+    "revenueUsd": 223.72,
+    "marginUsd": 49.22
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 29,
+    "revenueUsd": 231.71,
+    "marginUsd": 50.98
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 23,
+    "revenueUsd": 390.77,
+    "marginUsd": 74.25
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 21,
+    "revenueUsd": 356.79,
+    "marginUsd": 67.79
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 21,
+    "revenueUsd": 356.79,
+    "marginUsd": 67.79
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 19,
+    "revenueUsd": 322.81,
+    "marginUsd": 61.33
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 20,
+    "revenueUsd": 339.8,
+    "marginUsd": 64.56
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 24,
+    "revenueUsd": 407.76,
+    "marginUsd": 77.47
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 22,
+    "revenueUsd": 373.78,
+    "marginUsd": 71.02
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 21,
+    "revenueUsd": 356.79,
+    "marginUsd": 67.79
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 18,
+    "revenueUsd": 305.82,
+    "marginUsd": 58.11
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 21,
+    "revenueUsd": 356.79,
+    "marginUsd": 67.79
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 18,
+    "revenueUsd": 305.82,
+    "marginUsd": 58.11
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 19,
+    "revenueUsd": 322.81,
+    "marginUsd": 61.33
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 11,
+    "revenueUsd": 241.89,
+    "marginUsd": 79.82
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 11,
+    "revenueUsd": 241.89,
+    "marginUsd": 79.82
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 11,
+    "revenueUsd": 241.89,
+    "marginUsd": 79.82
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 11,
+    "revenueUsd": 241.89,
+    "marginUsd": 79.82
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 17,
+    "revenueUsd": 373.83,
+    "marginUsd": 123.36
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 20,
+    "revenueUsd": 359.8,
+    "marginUsd": 86.35
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 17,
+    "revenueUsd": 305.83,
+    "marginUsd": 73.4
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 18,
+    "revenueUsd": 323.82,
+    "marginUsd": 77.72
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 17,
+    "revenueUsd": 305.83,
+    "marginUsd": 73.4
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 20,
+    "revenueUsd": 359.8,
+    "marginUsd": 86.35
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 17,
+    "revenueUsd": 305.83,
+    "marginUsd": 73.4
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 16,
+    "revenueUsd": 287.84,
+    "marginUsd": 69.08
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 16,
+    "revenueUsd": 287.84,
+    "marginUsd": 69.08
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 18,
+    "revenueUsd": 323.82,
+    "marginUsd": 77.72
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 16,
+    "revenueUsd": 287.84,
+    "marginUsd": 69.08
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 18,
+    "revenueUsd": 323.82,
+    "marginUsd": 77.72
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 20,
+    "revenueUsd": 359.8,
+    "marginUsd": 86.35
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W15",
+    "unitsSold": 23,
+    "revenueUsd": 206.77,
+    "marginUsd": 47.56
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W16",
+    "unitsSold": 22,
+    "revenueUsd": 197.78,
+    "marginUsd": 45.49
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W17",
+    "unitsSold": 27,
+    "revenueUsd": 242.73,
+    "marginUsd": 55.83
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W18",
+    "unitsSold": 23,
+    "revenueUsd": 206.77,
+    "marginUsd": 47.56
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W19",
+    "unitsSold": 20,
+    "revenueUsd": 179.8,
+    "marginUsd": 41.35
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W20",
+    "unitsSold": 19,
+    "revenueUsd": 170.81,
+    "marginUsd": 39.29
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W21",
+    "unitsSold": 19,
+    "revenueUsd": 170.81,
+    "marginUsd": 39.29
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W22",
+    "unitsSold": 22,
+    "revenueUsd": 197.78,
+    "marginUsd": 45.49
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W23",
+    "unitsSold": 22,
+    "revenueUsd": 197.78,
+    "marginUsd": 45.49
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W24",
+    "unitsSold": 20,
+    "revenueUsd": 179.8,
+    "marginUsd": 41.35
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W25",
+    "unitsSold": 17,
+    "revenueUsd": 152.83,
+    "marginUsd": 35.15
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0091",
+    "period": "2026-W26",
+    "unitsSold": 19,
+    "revenueUsd": 170.81,
+    "marginUsd": 39.29
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 16,
+    "revenueUsd": 239.84,
+    "marginUsd": 67.16
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 14,
+    "revenueUsd": 209.86,
+    "marginUsd": 58.76
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 18,
+    "revenueUsd": 269.82,
+    "marginUsd": 75.55
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 17,
+    "revenueUsd": 254.83,
+    "marginUsd": 71.35
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 19,
+    "revenueUsd": 284.81,
+    "marginUsd": 79.75
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 16,
+    "revenueUsd": 239.84,
+    "marginUsd": 67.16
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 19,
+    "revenueUsd": 284.81,
+    "marginUsd": 79.75
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 20,
+    "revenueUsd": 279.8,
+    "marginUsd": 72.75
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 23,
+    "revenueUsd": 321.77,
+    "marginUsd": 83.66
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 23,
+    "revenueUsd": 321.77,
+    "marginUsd": 83.66
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 20,
+    "revenueUsd": 279.8,
+    "marginUsd": 72.75
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 21,
+    "revenueUsd": 293.79,
+    "marginUsd": 76.39
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 19,
+    "revenueUsd": 265.81,
+    "marginUsd": 69.11
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 24,
+    "revenueUsd": 335.76,
+    "marginUsd": 87.3
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 24,
+    "revenueUsd": 335.76,
+    "marginUsd": 87.3
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 21,
+    "revenueUsd": 293.79,
+    "marginUsd": 76.39
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 23,
+    "revenueUsd": 321.77,
+    "marginUsd": 83.66
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 23,
+    "revenueUsd": 321.77,
+    "marginUsd": 83.66
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 20,
+    "revenueUsd": 279.8,
+    "marginUsd": 72.75
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 11,
+    "revenueUsd": 175.89,
+    "marginUsd": 54.53
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 11,
+    "revenueUsd": 175.89,
+    "marginUsd": 54.53
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 12,
+    "revenueUsd": 191.88,
+    "marginUsd": 59.48
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 11,
+    "revenueUsd": 175.89,
+    "marginUsd": 54.53
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 10,
+    "revenueUsd": 159.9,
+    "marginUsd": 49.57
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 11,
+    "revenueUsd": 175.89,
+    "marginUsd": 54.53
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 10,
+    "revenueUsd": 159.9,
+    "marginUsd": 49.57
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 14,
+    "revenueUsd": 223.86,
+    "marginUsd": 69.4
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 14,
+    "revenueUsd": 223.86,
+    "marginUsd": 69.4
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 15,
+    "revenueUsd": 239.85,
+    "marginUsd": 74.35
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 13,
+    "revenueUsd": 207.87,
+    "marginUsd": 64.44
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 12,
+    "revenueUsd": 191.88,
+    "marginUsd": 59.48
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 28,
+    "revenueUsd": 223.72,
+    "marginUsd": 49.22
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 29,
+    "revenueUsd": 231.71,
+    "marginUsd": 50.98
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 22,
+    "revenueUsd": 175.78,
+    "marginUsd": 38.67
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 25,
+    "revenueUsd": 199.75,
+    "marginUsd": 43.95
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 22,
+    "revenueUsd": 175.78,
+    "marginUsd": 38.67
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 27,
+    "revenueUsd": 215.73,
+    "marginUsd": 47.46
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 27,
+    "revenueUsd": 215.73,
+    "marginUsd": 47.46
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 22,
+    "revenueUsd": 175.78,
+    "marginUsd": 38.67
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 24,
+    "revenueUsd": 191.76,
+    "marginUsd": 42.19
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 25,
+    "revenueUsd": 199.75,
+    "marginUsd": 43.95
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 23,
+    "revenueUsd": 183.77,
+    "marginUsd": 40.43
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 27,
+    "revenueUsd": 215.73,
+    "marginUsd": 47.46
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 17,
+    "revenueUsd": 288.83,
+    "marginUsd": 54.88
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 15,
+    "revenueUsd": 254.85,
+    "marginUsd": 48.42
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 17,
+    "revenueUsd": 288.83,
+    "marginUsd": 54.88
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 18,
+    "revenueUsd": 305.82,
+    "marginUsd": 58.11
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 15,
+    "revenueUsd": 254.85,
+    "marginUsd": 48.42
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 15,
+    "revenueUsd": 254.85,
+    "marginUsd": 48.42
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 18,
+    "revenueUsd": 305.82,
+    "marginUsd": 58.11
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 17,
+    "revenueUsd": 288.83,
+    "marginUsd": 54.88
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 15,
+    "revenueUsd": 254.85,
+    "marginUsd": 48.42
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 16,
+    "revenueUsd": 271.84,
+    "marginUsd": 51.65
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 14,
+    "revenueUsd": 237.86,
+    "marginUsd": 45.19
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 14,
+    "revenueUsd": 237.86,
+    "marginUsd": 45.19
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 7,
+    "revenueUsd": 153.93,
+    "marginUsd": 50.8
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 8,
+    "revenueUsd": 175.92,
+    "marginUsd": 58.05
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 8,
+    "revenueUsd": 175.92,
+    "marginUsd": 58.05
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 8,
+    "revenueUsd": 175.92,
+    "marginUsd": 58.05
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 8,
+    "revenueUsd": 175.92,
+    "marginUsd": 58.05
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 10,
+    "revenueUsd": 219.9,
+    "marginUsd": 72.57
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 9,
+    "revenueUsd": 197.91,
+    "marginUsd": 65.31
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 11,
+    "revenueUsd": 241.89,
+    "marginUsd": 79.82
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 9,
+    "revenueUsd": 197.91,
+    "marginUsd": 65.31
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 10,
+    "revenueUsd": 219.9,
+    "marginUsd": 72.57
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 12,
+    "revenueUsd": 215.88,
+    "marginUsd": 51.81
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 12,
+    "revenueUsd": 215.88,
+    "marginUsd": 51.81
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 15,
+    "revenueUsd": 269.85,
+    "marginUsd": 64.76
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 14,
+    "revenueUsd": 251.86,
+    "marginUsd": 60.45
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 13,
+    "revenueUsd": 233.87,
+    "marginUsd": 56.13
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 15,
+    "revenueUsd": 269.85,
+    "marginUsd": 64.76
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 15,
+    "revenueUsd": 269.85,
+    "marginUsd": 64.76
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 12,
+    "revenueUsd": 215.88,
+    "marginUsd": 51.81
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 12,
+    "revenueUsd": 215.88,
+    "marginUsd": 51.81
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 13,
+    "revenueUsd": 233.87,
+    "marginUsd": 56.13
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 13,
+    "revenueUsd": 233.87,
+    "marginUsd": 56.13
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 13,
+    "revenueUsd": 233.87,
+    "marginUsd": 56.13
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W15",
+    "unitsSold": 20,
+    "revenueUsd": 179.8,
+    "marginUsd": 41.35
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W16",
+    "unitsSold": 19,
+    "revenueUsd": 170.81,
+    "marginUsd": 39.29
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W17",
+    "unitsSold": 21,
+    "revenueUsd": 188.79,
+    "marginUsd": 43.42
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W18",
+    "unitsSold": 15,
+    "revenueUsd": 134.85,
+    "marginUsd": 31.02
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W19",
+    "unitsSold": 17,
+    "revenueUsd": 152.83,
+    "marginUsd": 35.15
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W20",
+    "unitsSold": 16,
+    "revenueUsd": 143.84,
+    "marginUsd": 33.08
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W21",
+    "unitsSold": 18,
+    "revenueUsd": 161.82,
+    "marginUsd": 37.22
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W22",
+    "unitsSold": 15,
+    "revenueUsd": 134.85,
+    "marginUsd": 31.02
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W23",
+    "unitsSold": 14,
+    "revenueUsd": 125.86,
+    "marginUsd": 28.95
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W24",
+    "unitsSold": 15,
+    "revenueUsd": 134.85,
+    "marginUsd": 31.02
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W25",
+    "unitsSold": 15,
+    "revenueUsd": 134.85,
+    "marginUsd": 31.02
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0142",
+    "period": "2026-W26",
+    "unitsSold": 14,
+    "revenueUsd": 125.86,
+    "marginUsd": 28.95
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 22,
+    "revenueUsd": 329.78,
+    "marginUsd": 92.34
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 27,
+    "revenueUsd": 404.73,
+    "marginUsd": 113.32
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 24,
+    "revenueUsd": 359.76,
+    "marginUsd": 100.73
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 28,
+    "revenueUsd": 419.72,
+    "marginUsd": 117.52
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 26,
+    "revenueUsd": 389.74,
+    "marginUsd": 109.13
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 22,
+    "revenueUsd": 329.78,
+    "marginUsd": 92.34
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 30,
+    "revenueUsd": 449.7,
+    "marginUsd": 125.92
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 30,
+    "revenueUsd": 449.7,
+    "marginUsd": 125.92
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 31,
+    "revenueUsd": 464.69,
+    "marginUsd": 130.11
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 32,
+    "revenueUsd": 479.68,
+    "marginUsd": 134.31
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 32,
+    "revenueUsd": 479.68,
+    "marginUsd": 134.31
+  },
+  {
+    "skuId": "000481",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 26,
+    "revenueUsd": 389.74,
+    "marginUsd": 109.13
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 29,
+    "revenueUsd": 405.71,
+    "marginUsd": 105.48
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 28,
+    "revenueUsd": 391.72,
+    "marginUsd": 101.85
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 38,
+    "revenueUsd": 531.62,
+    "marginUsd": 138.22
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 31,
+    "revenueUsd": 433.69,
+    "marginUsd": 112.76
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 36,
+    "revenueUsd": 503.64,
+    "marginUsd": 130.95
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 33,
+    "revenueUsd": 461.67,
+    "marginUsd": 120.03
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 33,
+    "revenueUsd": 461.67,
+    "marginUsd": 120.03
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 39,
+    "revenueUsd": 545.61,
+    "marginUsd": 141.86
+  },
+  {
+    "skuId": "000482",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 40,
+    "revenueUsd": 559.6,
+    "marginUsd": 145.5
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 16,
+    "revenueUsd": 255.84,
+    "marginUsd": 79.31
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 15,
+    "revenueUsd": 239.85,
+    "marginUsd": 74.35
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 16,
+    "revenueUsd": 255.84,
+    "marginUsd": 79.31
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 20,
+    "revenueUsd": 319.8,
+    "marginUsd": 99.14
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 19,
+    "revenueUsd": 303.81,
+    "marginUsd": 94.18
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 19,
+    "revenueUsd": 303.81,
+    "marginUsd": 94.18
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 21,
+    "revenueUsd": 335.79,
+    "marginUsd": 104.09
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 17,
+    "revenueUsd": 271.83,
+    "marginUsd": 84.27
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 21,
+    "revenueUsd": 335.79,
+    "marginUsd": 104.09
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 21,
+    "revenueUsd": 335.79,
+    "marginUsd": 104.09
+  },
+  {
+    "skuId": "000483",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 24,
+    "revenueUsd": 383.76,
+    "marginUsd": 118.97
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 35,
+    "revenueUsd": 279.65,
+    "marginUsd": 61.52
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 44,
+    "revenueUsd": 351.56,
+    "marginUsd": 77.34
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 34,
+    "revenueUsd": 271.66,
+    "marginUsd": 59.77
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 35,
+    "revenueUsd": 279.65,
+    "marginUsd": 61.52
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 39,
+    "revenueUsd": 311.61,
+    "marginUsd": 68.55
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 40,
+    "revenueUsd": 319.6,
+    "marginUsd": 70.31
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 35,
+    "revenueUsd": 279.65,
+    "marginUsd": 61.52
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 33,
+    "revenueUsd": 263.67,
+    "marginUsd": 58.01
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 42,
+    "revenueUsd": 335.58,
+    "marginUsd": 73.83
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 34,
+    "revenueUsd": 271.66,
+    "marginUsd": 59.77
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 38,
+    "revenueUsd": 303.62,
+    "marginUsd": 66.8
+  },
+  {
+    "skuId": "000484",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 38,
+    "revenueUsd": 303.62,
+    "marginUsd": 66.8
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 25,
+    "revenueUsd": 424.75,
+    "marginUsd": 80.7
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 26,
+    "revenueUsd": 441.74,
+    "marginUsd": 83.93
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 26,
+    "revenueUsd": 441.74,
+    "marginUsd": 83.93
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 29,
+    "revenueUsd": 492.71,
+    "marginUsd": 93.61
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 23,
+    "revenueUsd": 390.77,
+    "marginUsd": 74.25
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 26,
+    "revenueUsd": 441.74,
+    "marginUsd": 83.93
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 23,
+    "revenueUsd": 390.77,
+    "marginUsd": 74.25
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 23,
+    "revenueUsd": 390.77,
+    "marginUsd": 74.25
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 25,
+    "revenueUsd": 424.75,
+    "marginUsd": 80.7
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 22,
+    "revenueUsd": 373.78,
+    "marginUsd": 71.02
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 22,
+    "revenueUsd": 373.78,
+    "marginUsd": 71.02
+  },
+  {
+    "skuId": "000485",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 25,
+    "revenueUsd": 424.75,
+    "marginUsd": 80.7
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 10,
+    "revenueUsd": 219.9,
+    "marginUsd": 72.57
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 15,
+    "revenueUsd": 329.85,
+    "marginUsd": 108.85
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 15,
+    "revenueUsd": 329.85,
+    "marginUsd": 108.85
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 12,
+    "revenueUsd": 263.88,
+    "marginUsd": 87.08
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 13,
+    "revenueUsd": 285.87,
+    "marginUsd": 94.34
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 14,
+    "revenueUsd": 307.86,
+    "marginUsd": 101.59
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 17,
+    "revenueUsd": 373.83,
+    "marginUsd": 123.36
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 18,
+    "revenueUsd": 395.82,
+    "marginUsd": 130.62
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 19,
+    "revenueUsd": 417.81,
+    "marginUsd": 137.88
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 17,
+    "revenueUsd": 373.83,
+    "marginUsd": 123.36
+  },
+  {
+    "skuId": "000486",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 16,
+    "revenueUsd": 351.84,
+    "marginUsd": 116.11
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 23,
+    "revenueUsd": 413.77,
+    "marginUsd": 99.3
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 22,
+    "revenueUsd": 395.78,
+    "marginUsd": 94.99
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 21,
+    "revenueUsd": 377.79,
+    "marginUsd": 90.67
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 24,
+    "revenueUsd": 431.76,
+    "marginUsd": 103.62
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 22,
+    "revenueUsd": 395.78,
+    "marginUsd": 94.99
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 18,
+    "revenueUsd": 323.82,
+    "marginUsd": 77.72
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 23,
+    "revenueUsd": 413.77,
+    "marginUsd": 99.3
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 20,
+    "revenueUsd": 359.8,
+    "marginUsd": 86.35
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 22,
+    "revenueUsd": 395.78,
+    "marginUsd": 94.99
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 24,
+    "revenueUsd": 431.76,
+    "marginUsd": 103.62
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 19,
+    "revenueUsd": 341.81,
+    "marginUsd": 82.03
+  },
+  {
+    "skuId": "000487",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 18,
+    "revenueUsd": 323.82,
+    "marginUsd": 77.72
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W15",
+    "unitsSold": 25,
+    "revenueUsd": 224.75,
+    "marginUsd": 51.69
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W16",
+    "unitsSold": 28,
+    "revenueUsd": 251.72,
+    "marginUsd": 57.9
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W17",
+    "unitsSold": 26,
+    "revenueUsd": 233.74,
+    "marginUsd": 53.76
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W18",
+    "unitsSold": 28,
+    "revenueUsd": 251.72,
+    "marginUsd": 57.9
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W19",
+    "unitsSold": 28,
+    "revenueUsd": 251.72,
+    "marginUsd": 57.9
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W20",
+    "unitsSold": 24,
+    "revenueUsd": 215.76,
+    "marginUsd": 49.62
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W21",
+    "unitsSold": 26,
+    "revenueUsd": 233.74,
+    "marginUsd": 53.76
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W22",
+    "unitsSold": 23,
+    "revenueUsd": 206.77,
+    "marginUsd": 47.56
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W23",
+    "unitsSold": 24,
+    "revenueUsd": 215.76,
+    "marginUsd": 49.62
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W24",
+    "unitsSold": 27,
+    "revenueUsd": 242.73,
+    "marginUsd": 55.83
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W25",
+    "unitsSold": 26,
+    "revenueUsd": 233.74,
+    "marginUsd": 53.76
+  },
+  {
+    "skuId": "000488",
+    "storeId": "STORE-0206",
+    "period": "2026-W26",
+    "unitsSold": 20,
+    "revenueUsd": 179.8,
+    "marginUsd": 41.35
+  }
+]

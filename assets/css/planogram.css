@@ -1,0 +1,51 @@
+.shelf-unit{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:10px;
+}
+.shelf-unit-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+  font-size:12.5px;
+  color:var(--text2);
+}
+.shelf-slots{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  min-height:120px;
+  align-items:flex-end;
+}
+.bottle-slot{
+  width:60px;
+  min-width:60px;
+  height:110px;
+  border-radius:6px;
+  background:var(--panel2);
+  border:1px dashed var(--border-strong);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text3);
+  font-size:10px;
+  text-align:center;
+}
+.bottle-slot img{max-width:100%;max-height:100%;object-fit:contain;}
+
+.heat-legend{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:11px;
+  color:var(--text2);
+}
+.heat-gradient{
+  width:120px;
+  height:8px;
+  border-radius:4px;
+  background:linear-gradient(90deg,var(--heat-low),var(--heat-high));
+}

@@ -1,0 +1,53 @@
+[
+  {
+    "storeId": "STORE-0091",
+    "name": "Retailer X - Location 12",
+    "storeType": "Grocery - Upscale",
+    "region": "Pacific Northwest",
+    "demographics": { "medianIncome": 82000, "ageBand": "35-54" },
+    "shelfLayout": {
+      "shelves": [
+        { "shelfId": "S1", "linearFeet": 8, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S2", "linearFeet": 8, "eyeLevel": true, "traffic": "high" },
+        { "shelfId": "S3", "linearFeet": 8, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S4", "linearFeet": 8, "eyeLevel": false, "traffic": "low" },
+        { "shelfId": "S5", "linearFeet": 8, "eyeLevel": false, "traffic": "low" },
+        { "shelfId": "S6", "linearFeet": 8, "eyeLevel": false, "traffic": "low" }
+      ],
+      "totalLinearFeet": 48
+    }
+  },
+  {
+    "storeId": "STORE-0142",
+    "name": "Retailer X - Location 27",
+    "storeType": "Grocery - Value",
+    "region": "Midwest",
+    "demographics": { "medianIncome": 54000, "ageBand": "25-44" },
+    "shelfLayout": {
+      "shelves": [
+        { "shelfId": "S1", "linearFeet": 6, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S2", "linearFeet": 6, "eyeLevel": true, "traffic": "high" },
+        { "shelfId": "S3", "linearFeet": 6, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S4", "linearFeet": 6, "eyeLevel": false, "traffic": "low" }
+      ],
+      "totalLinearFeet": 24
+    }
+  },
+  {
+    "storeId": "STORE-0206",
+    "name": "Retailer Y - Location 5",
+    "storeType": "Specialty Wine Shop",
+    "region": "Northeast",
+    "demographics": { "medianIncome": 97000, "ageBand": "35-64" },
+    "shelfLayout": {
+      "shelves": [
+        { "shelfId": "S1", "linearFeet": 10, "eyeLevel": true, "traffic": "high" },
+        { "shelfId": "S2", "linearFeet": 10, "eyeLevel": true, "traffic": "high" },
+        { "shelfId": "S3", "linearFeet": 10, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S4", "linearFeet": 10, "eyeLevel": false, "traffic": "medium" },
+        { "shelfId": "S5", "linearFeet": 10, "eyeLevel": false, "traffic": "low" }
+      ],
+      "totalLinearFeet": 50
+    }
+  }
+]
