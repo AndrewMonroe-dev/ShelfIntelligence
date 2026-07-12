@@ -13,6 +13,8 @@ const MIN_SECTION_LINEAR_FEET = 4;
 const DEFAULT_SECTION_SHELF_COUNT = 5;
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;
+const MAX_FACINGS_750ML = 3;
+const MAX_FACINGS_SMALL_SET = 2;
 
 // Splits a score-sorted SKU list into `shelfCount` contiguous groups, largest
 // groups first, so the top-scored cluster lands on the best shelf position.
@@ -186,6 +188,15 @@ export function generatePlan(
     // sections aren't case-pack SKUs in the same sense and are unaffected.
     const floorFacings = (usesPriceBandRules && caseOnlyMode) ? CASE_ONLY_FLOOR_FACINGS : STANDARD_FLOOR_FACINGS;
 
+    // 750ml varietal sections cap facings per SKU so a small assortment
+    // can't balloon into dozens of facings of the same wine -- 3 normally,
+    // tightened to 2 when the store's total fixture is under 40ft. Size
+    // sections (3L, 5L, sub-750ml) are brand-blocked, not price-band
+    // sections, and keep the uncapped fill-to-width behavior.
+    const maxFacings = usesPriceBandRules
+      ? (totalLinearFeet < 40 ? MAX_FACINGS_SMALL_SET : MAX_FACINGS_750ML)
+      : Infinity;
+
     // Facings are computed PER ROW, not once for the whole section's SKU
     // list -- the section's width repeats at every shelf level, it isn't
     // divided among the rows. Each row independently fills the same
@@ -194,7 +205,7 @@ export function generatePlan(
       const rowSkus = groups[i] || [];
       const facingsResult = isBota3LSection(section)
         ? computeFacingsWithBotaFloor(rowSkus, scoreMap, linearFeet, bottleDimensions, isBotaBrand, floorFacings)
-        : computeFacings(rowSkus, scoreMap, linearFeet, bottleDimensions, floorFacings);
+        : computeFacings(rowSkus, scoreMap, linearFeet, bottleDimensions, floorFacings, maxFacings);
       const facingsBySkuId = new Map(facingsResult.map((f) => [f.skuId, f]));
 
       return {

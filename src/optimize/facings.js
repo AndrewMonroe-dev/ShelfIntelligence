@@ -32,7 +32,7 @@ export function bottleWidthInches(sku, bottleDimensions) {
 // approach), until no remaining SKU's bottle width fits in the leftover
 // space. As sets get larger relative to SKU count, facings scale up to fill
 // the space rather than leaving it empty.
-export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, floorFacings = 1) {
+export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, floorFacings = 1, maxFacings = Infinity) {
   if (!sectionSkus.length) return [];
   const sectionInches = sectionLinearFeet * 12;
   const widths = sectionSkus.map((sku) => bottleWidthInches(sku, bottleDimensions));
@@ -53,6 +53,7 @@ export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleD
     let bestDeficit = -Infinity;
     for (let i = 0; i < sectionSkus.length; i++) {
       if (widths[i] > remaining) continue;
+      if (facingCounts[i] >= maxFacings) continue;
       const targetShare = scores[i] / totalScore;
       const currentShare = facingCounts[i] / totalFacingsSoFar;
       const deficit = targetShare - currentShare;
@@ -61,7 +62,7 @@ export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleD
         bestIdx = i;
       }
     }
-    if (bestIdx === -1) break; // nothing left fits
+    if (bestIdx === -1) break; // nothing left fits, or everything's capped
     facingCounts[bestIdx]++;
     usedInches += widths[bestIdx];
   }
