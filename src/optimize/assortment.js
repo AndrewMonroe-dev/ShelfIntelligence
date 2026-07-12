@@ -14,8 +14,8 @@ import { computeScoreMap } from '../calc/scoreEngine.js';
 // to reach into the extended pool (see storeBuilder.js for the slider that
 // sets N).
 
-export function selectAssortment(skus, targetCount, metricsConfig) {
-  const scoreMap = computeScoreMap(skus, metricsConfig);
+export function selectAssortment(skus, targetCount, metricsConfig, context = null) {
+  const scoreMap = computeScoreMap(skus, metricsConfig, context);
   const sorted = [...skus].sort((a, b) => {
     const scoreA = scoreMap.get(a.skuId)?.score ?? 0;
     const scoreB = scoreMap.get(b.skuId)?.score ?? 0;

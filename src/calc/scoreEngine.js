@@ -13,7 +13,7 @@ export function getActiveMetrics(metricsConfig, skus) {
     .map((cfg) => ({ cfg, hasData: metricHasData(cfg.id, skus) }));
 }
 
-export function computeScores(skus, metricsConfig) {
+export function computeScores(skus, metricsConfig, context = null) {
   const active = metricsConfig.filter(
     (cfg) => cfg.enabled && METRIC_ACCESSORS[cfg.id] && metricHasData(cfg.id, skus)
   );
@@ -23,7 +23,7 @@ export function computeScores(skus, metricsConfig) {
   const normalizedByMetric = {};
   active.forEach((cfg) => {
     const accessor = METRIC_ACCESSORS[cfg.id];
-    const raw = skus.map((s) => accessor(s));
+    const raw = skus.map((s) => accessor(s, context));
     let normalized = normalizeValues(raw, cfg.normalization);
     if (cfg.inverted) {
       normalized = normalized.map((v) => (v == null ? null : 100 - v));
@@ -46,7 +46,7 @@ export function computeScores(skus, metricsConfig) {
       breakdown.push({
         metricId: cfg.id,
         label: cfg.label,
-        rawValue: METRIC_ACCESSORS[cfg.id](sku),
+        rawValue: METRIC_ACCESSORS[cfg.id](sku, context),
         normalizedValue: norm,
         weightSharePct,
         contribution,
@@ -57,7 +57,7 @@ export function computeScores(skus, metricsConfig) {
   });
 }
 
-export function computeScoreMap(skus, metricsConfig) {
-  const scores = computeScores(skus, metricsConfig);
+export function computeScoreMap(skus, metricsConfig, context = null) {
+  const scores = computeScores(skus, metricsConfig, context);
   return new Map(scores.map((s) => [s.skuId, s]));
 }

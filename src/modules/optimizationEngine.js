@@ -9,12 +9,13 @@ export function mount(el) {
   let selectedStoreId = null;
 
   function regenerateAndSetPlan() {
-    const { stores, skus, metricsConfig, bottleDimensions } = store.getSnapshot();
+    const { stores, skus, metricsConfig, bottleDimensions, sizePackage } = store.getSnapshot();
     const targetStore = stores.find((s) => s.storeId === selectedStoreId);
     const targetCount = store.getTargetSkuCount(selectedStoreId);
     const multipliers = store.getSectionMultipliers(selectedStoreId);
     const shelfCounts = store.getSectionShelfCounts(selectedStoreId);
-    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, multipliers, shelfCounts);
+    const caseOnlyMode = store.getCaseOnlyMode();
+    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, multipliers, shelfCounts, sizePackage, caseOnlyMode);
     store.setPlan(plan);
     return plan;
   }
@@ -38,7 +39,7 @@ export function mount(el) {
     return `
       <div class="card" data-section-key="${section.key}">
         <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
-          <span class="card-label">${section.label} <span class="badge" style="margin-left:6px;">${section.type}</span></span>
+          <span class="card-label">${section.label} <span class="badge" style="margin-left:6px;">${section.type}</span>${section.usesMarketShareSizing ? ' <span class="badge badge-success">real market share</span>' : ''}${section.usesPriceBandRules ? ' <span class="badge badge-success">price-band rules</span>' : ''}</span>
           <span class="section-summary" style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">${section.linearFeet.toFixed(1)} ft &middot; ${section.shelfCount} shelves &middot; ${(section.scoreShare * 100).toFixed(1)}% of set</span>
         </div>
         <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
@@ -134,6 +135,10 @@ export function mount(el) {
           <div class="card-label" style="margin-bottom:6px;">Target SKU Count</div>
           <span style="font-family:var(--font-mono);">${store.getTargetSkuCount(selectedStoreId)} <span style="color:var(--text3);">(set in Store Builder)</span></span>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
+          <input type="checkbox" class="case-only-toggle" ${store.getCaseOnlyMode() ? 'checked' : ''} />
+          Case Only Mode <span style="color:var(--text3);">(750ml facing floor: 2 instead of 1)</span>
+        </label>
         <button class="btn btn-primary generate-btn" style="margin-left:auto;">Generate Plan</button>
       </div>
       <div class="plan-output"></div>
@@ -148,6 +153,10 @@ export function mount(el) {
     el.querySelector('.store-select').addEventListener('change', (e) => {
       selectedStoreId = e.target.value;
       render();
+    });
+
+    el.querySelector('.case-only-toggle').addEventListener('change', (e) => {
+      store.setCaseOnlyMode(e.target.checked);
     });
 
     el.querySelector('.generate-btn').addEventListener('click', () => {

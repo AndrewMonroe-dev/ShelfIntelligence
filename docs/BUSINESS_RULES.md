@@ -200,6 +200,68 @@ proportionality-distorting minimum width) so box size is always a true reflectio
 real allocated linear space, comparable across the whole viewer, not just within one
 section.
 
+## Price-point shelf position rules (2026-07-12)
+
+Applies to **750ml varietal sections only** (Cabernet, Sparkling Wine, etc.) -- size
+sections (3L, 5L, 4L, and anything under 750ml) are exempt entirely. Mostly HARD
+constraints (position-number-based, counted from top=1 to bottom=shelfCount):
+
+- **Under $10**: no higher than the second shelf from the bottom (confined to the bottom
+  2 physical positions).
+- **$10-$14**: cannot be top shelf (allowed everywhere except position 1).
+- **$14-$20**: no lower than second from the bottom (allowed everywhere except the very
+  bottom position).
+- **$20+**: no hard restriction.
+
+Soft preferences layered on top (implemented as a scoring multiplier, not a hard
+exclusion): **eye level mainly goes to $10-14/$14-20** ("TOP SKUs" for those bands);
+**top shelf mostly goes to $20+**. If a section has no SKU in a given band, its reserved
+positions backfill with the next-closest band rather than sitting empty.
+
+**No automated "large brand" override** -- no concrete threshold was defined ("leave it
+open for crazy outliers, prompt when found"). Instead, `optimize/priceBand.js` flags in
+a SKU's explainability reasons when its natural best-scoring position was excluded by
+its price band, for manual review rather than a guessed auto-override rule.
+
+Implemented in `optimize/priceBand.js` + `optimize/placementSolver.js`'s
+`partitionIntoShelvesConstrained`.
+
+## Market-share-based section sizing for size categories (2026-07-12)
+
+For 3L, 4L, 5L, and anything under 747ml: varietal composition is irrelevant (no
+sub-blocking by varietal, unchanged). These sections are sized by their **real national
+market share** (from `data/market/size_package.json`, using the same assumed package
+type already applied to their labels) instead of the sum of their assigned SKUs'
+opportunity scores -- "ranked against other categories... given space according to
+their category share within the overall market." The real share is scaled against the
+same grand-total score used everywhere else so it competes for space on comparable
+footing with score-sized varietal sections. Implemented in `optimize/marketShare.js`.
+
+## Case Only Mode (2026-07-12)
+
+Global toggle (Optimization Engine, alterable before generating a plan): when off
+(default), 750ml SKUs get a facing floor of 1. When on, the floor becomes 2. Applies to
+750ml varietal sections only -- size sections are unaffected.
+
+## Store quality and the "+ Add Store" flow (2026-07-12)
+
+Store Builder has an "+ Add Store" card: name, horizontal size of set (linear feet),
+average number of shelves, and a quality slider (-1 budget .. 0 neutral .. +1 high-end).
+A brand-new store has no real per-shelf traffic data, so a default shelf layout is
+synthesized from the average count (mostly medium traffic, middle shelf marked high).
+
+The quality slider biases the existing **Price Point Strength** metric for that store's
+plan specifically (not a parallel scoring system): its raw value is multiplied by a
+bounded, symmetric factor based on how well a SKU's price aligns with the store's
+quality tier (premium threshold: $15). High-end stores get a real scoring boost for
+$15+ SKUs; budget stores get the boost for sub-$15 SKUs; qualityScore 0/unset (all
+original fixture stores) means no change from prior behavior. Implemented in
+`calc/metricRegistry.js`'s `qualityAlignmentMultiplier`, threaded through
+`scoreEngine.js`/`assortment.js`/`placementSolver.js` as an optional `context` param.
+
+New stores persist to localStorage (`customStores`) and survive a reload, same as every
+other user override.
+
 ## Data sources on file (real market data, not fixtures)
 
 Provided 2026-07-12 as Excel exports from `C:\Users\The Monroes\OneDrive\Desktop\DATA FOR INTELLIGENCE\`:

@@ -11,12 +11,15 @@ const state = {
   metricsConfig: [],
   scenarios: [],
   bottleDimensions: [],
+  sizePackage: [],
   activeScenarioId: 'scenario-a',
   currentPlan: null,
   ready: false,
   targetSkuCounts: {}, // storeId -> desired total SKU count for that store's set
   sectionMultipliers: {}, // storeId -> { sectionKey -> multiplier (default 1) }
   sectionShelfCounts: {}, // storeId -> { sectionKey -> 4 | 5 (default 5) }
+  caseOnlyMode: false, // global toggle: 750ml facing floor 1 -> 2
+  customStores: [], // stores added via Store Builder's "+ Add Store" flow
 };
 
 const DEFAULT_TARGET_SKU_COUNT = 150;
@@ -61,14 +64,60 @@ export function setSectionShelfCount(storeId, sectionKey, shelfCount) {
   persist();
 }
 
+export function getCaseOnlyMode() {
+  return state.caseOnlyMode;
+}
+
+export function setCaseOnlyMode(value) {
+  state.caseOnlyMode = value;
+  bus.emit('caseOnly:changed', value);
+  persist();
+}
+
+// Synthesizes a default shelf layout from just an average shelf count, for
+// stores created via the "+ Add Store" flow (no real per-shelf traffic data
+// exists for a brand-new store) -- mostly medium traffic, the middle shelf
+// marked high, so existing shelf-position/traffic logic works unchanged.
+function synthesizeShelfLayout(avgShelfCount, totalLinearFeet) {
+  const count = Math.max(1, Math.round(avgShelfCount));
+  const middleIndex = Math.floor((count - 1) / 2);
+  const shelves = Array.from({ length: count }, (_, i) => ({
+    shelfId: `S${i + 1}`,
+    linearFeet: totalLinearFeet,
+    eyeLevel: i === middleIndex,
+    traffic: i === middleIndex ? 'high' : 'medium',
+  }));
+  return { shelves, totalLinearFeet };
+}
+
+export function addStore({ name, totalLinearFeet, avgShelfCount, qualityScore }) {
+  const storeId = `CUSTOM-${Date.now()}`;
+  const newStore = {
+    storeId,
+    name,
+    storeType: 'Custom',
+    region: 'Unspecified',
+    demographics: {},
+    shelfLayout: synthesizeShelfLayout(avgShelfCount, totalLinearFeet),
+    qualityScore, // -1 (budget) .. 0 (neutral) .. +1 (high-end), biases Price Point Strength for this store's plan
+    isCustom: true,
+  };
+  state.stores = [...state.stores, newStore];
+  state.customStores = [...state.customStores, newStore];
+  bus.emit('stores:changed', newStore);
+  persist();
+  return newStore;
+}
+
 export async function hydrate() {
-  const [skus, sales, stores, metricsConfig, scenarios, bottleDimensions] = await Promise.all([
+  const [skus, sales, stores, metricsConfig, scenarios, bottleDimensions, sizePackage] = await Promise.all([
     adapter.getSkus(),
     adapter.getSales(),
     adapter.getStores(),
     adapter.getMetricsConfig(),
     adapter.getScenarios(),
     adapter.getBottleDimensions(),
+    adapter.getSizePackage(),
   ]);
   state.skus = skus;
   state.sales = sales;
@@ -76,6 +125,7 @@ export async function hydrate() {
   state.metricsConfig = metricsConfig;
   state.scenarios = scenarios;
   state.bottleDimensions = bottleDimensions;
+  state.sizePackage = sizePackage;
 
   applyPersistedOverrides();
 
@@ -92,6 +142,7 @@ function applyPersistedOverrides() {
   if (persisted.sectionMultipliers) state.sectionMultipliers = persisted.sectionMultipliers;
   if (persisted.sectionShelfCounts) state.sectionShelfCounts = persisted.sectionShelfCounts;
   if (persisted.activeScenarioId) state.activeScenarioId = persisted.activeScenarioId;
+  if (typeof persisted.caseOnlyMode === 'boolean') state.caseOnlyMode = persisted.caseOnlyMode;
 
   if (persisted.metricOverrides) {
     persisted.metricOverrides.forEach((override) => {
@@ -105,6 +156,11 @@ function applyPersistedOverrides() {
 
   if (persisted.importedSales?.length) {
     state.sales = [...state.sales, ...persisted.importedSales];
+  }
+
+  if (persisted.customStores?.length) {
+    state.customStores = persisted.customStores;
+    state.stores = [...state.stores, ...persisted.customStores];
   }
 }
 
@@ -163,5 +219,8 @@ export const store = {
   getSectionShelfCount,
   getSectionShelfCounts,
   setSectionShelfCount,
+  getCaseOnlyMode,
+  setCaseOnlyMode,
+  addStore,
   resetPersistedState,
 };

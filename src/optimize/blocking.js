@@ -28,10 +28,14 @@ export function isSparklingVarietal(varietal) {
 // documented ASSUMPTION instead of a real split: 3L/5L assumed box (box is
 // the overwhelmingly dominant real-world format at these sizes), 4L assumed
 // bottle. The label says "(assumed)" so this is visible, not silent.
-const PACKAGE_TYPE_ASSUMPTIONS = {
+export const PACKAGE_TYPE_ASSUMPTIONS = {
   '3LT': 'Box',
   '5LT': 'Box',
   '4LT': 'Bottle',
+  '0.5LT': 'Bottle',
+  '0.375LT': 'Bottle',
+  '0.25LT': 'Bottle',
+  '0.187LT': 'Bottle',
 };
 
 // Small-format sizes where bottles are physically shorter, so more shelves

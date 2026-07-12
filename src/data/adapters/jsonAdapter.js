@@ -13,4 +13,5 @@ export const jsonAdapter = {
   getMetricsConfig: () => fetchJson('metrics.config.json'),
   getScenarios: () => fetchJson('scenarios.json'),
   getBottleDimensions: () => fetchJson('bottleDimensions.json'),
+  getSizePackage: () => fetchJson('market/size_package.json'),
 };

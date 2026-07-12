@@ -31,6 +31,8 @@ export function savePersistedState(state) {
     metricOverrides: state.metricsConfig.map((m) => ({ id: m.id, enabled: m.enabled, weight: m.weight })),
     activeScenarioId: state.activeScenarioId,
     importedSales: state.sales.filter((r) => !r.synthetic),
+    caseOnlyMode: state.caseOnlyMode,
+    customStores: state.customStores,
     savedAt: new Date().toISOString(),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));

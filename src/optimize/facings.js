@@ -32,15 +32,15 @@ export function bottleWidthInches(sku, bottleDimensions) {
 // approach), until no remaining SKU's bottle width fits in the leftover
 // space. As sets get larger relative to SKU count, facings scale up to fill
 // the space rather than leaving it empty.
-export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions) {
+export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, floorFacings = 1) {
   if (!sectionSkus.length) return [];
   const sectionInches = sectionLinearFeet * 12;
   const widths = sectionSkus.map((sku) => bottleWidthInches(sku, bottleDimensions));
   const scores = sectionSkus.map((sku) => scoreMap.get(sku.skuId)?.score ?? 0);
   const totalScore = scores.reduce((a, b) => a + b, 0) || 1;
 
-  const facingCounts = new Array(sectionSkus.length).fill(1);
-  let usedInches = widths.reduce((a, b) => a + b, 0);
+  const facingCounts = new Array(sectionSkus.length).fill(floorFacings);
+  let usedInches = widths.reduce((a, b) => a + b, 0) * floorFacings;
 
   const minWidth = Math.min(...widths);
   let guard = 0;
@@ -77,7 +77,7 @@ export function computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleD
 // Bota 3L hard rule: within the 3L section, Bota Box/Mini SKUs collectively
 // get 50%+1 of the section's linear space guaranteed, before the remaining
 // space is distributed among the other 3L brands by the normal scoring process.
-export function computeFacingsWithBotaFloor(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, isBotaFn) {
+export function computeFacingsWithBotaFloor(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, isBotaFn, floorFacings = 1) {
   const botaSkus = sectionSkus.filter(isBotaFn);
   const otherSkus = sectionSkus.filter((s) => !isBotaFn(s));
   // Nothing to split the width against -- give the full row budget to
@@ -85,16 +85,16 @@ export function computeFacingsWithBotaFloor(sectionSkus, scoreMap, sectionLinear
   // other brands) instead of artificially half-capping it at 50%+1 and
   // wasting the rest of the row's real space.
   if (!botaSkus.length || !otherSkus.length) {
-    return computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions);
+    return computeFacings(sectionSkus, scoreMap, sectionLinearFeet, bottleDimensions, floorFacings);
   }
 
   const sectionInches = sectionLinearFeet * 12;
   const botaInches = sectionInches * 0.5 + 0.0001; // bare majority, "50% + 1"
   const otherInches = Math.max(0, sectionInches - botaInches);
 
-  const botaFacings = computeFacings(botaSkus, scoreMap, botaInches / 12, bottleDimensions);
+  const botaFacings = computeFacings(botaSkus, scoreMap, botaInches / 12, bottleDimensions, floorFacings);
   const otherFacings = otherSkus.length
-    ? computeFacings(otherSkus, scoreMap, otherInches / 12, bottleDimensions)
+    ? computeFacings(otherSkus, scoreMap, otherInches / 12, bottleDimensions, floorFacings)
     : [];
 
   return [...botaFacings, ...otherFacings];

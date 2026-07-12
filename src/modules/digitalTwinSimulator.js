@@ -78,11 +78,13 @@ export function mount(el) {
     });
 
     el.querySelector('.run-btn').addEventListener('click', () => {
-      const { stores: allStores, skus, metricsConfig, bottleDimensions, sales, scenarios } = store.getSnapshot();
+      const { stores: allStores, skus, metricsConfig, bottleDimensions, sales, scenarios, sizePackage } = store.getSnapshot();
       const targetStore = allStores.find((s) => s.storeId === selectedStoreId);
       const targetCount = store.getTargetSkuCount(selectedStoreId);
       const sectionMultipliers = store.getSectionMultipliers(selectedStoreId);
-      results = runAllScenarios(scenarios, targetStore, skus, metricsConfig, targetCount, bottleDimensions, sales, sectionMultipliers);
+      const sectionShelfCounts = store.getSectionShelfCounts(selectedStoreId);
+      const caseOnlyMode = store.getCaseOnlyMode();
+      results = runAllScenarios(scenarios, targetStore, skus, metricsConfig, targetCount, bottleDimensions, sales, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode);
       output.innerHTML = `<div class="grid grid-3" style="margin-top:14px;">${results.map(renderResultCard).join('')}</div>`;
     });
   }
