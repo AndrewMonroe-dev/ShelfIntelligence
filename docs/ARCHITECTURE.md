@@ -79,6 +79,12 @@ ShelfIntelligence/
 ├── docs/
 │   └── ARCHITECTURE.md         # this file
 ├── assets/
+│   ├── js/
+│   │   └── vendor/
+│   │       └── xlsx.full.min.js  # SheetJS, vendored locally (no CDN dependency).
+│   │                              # Lazy-loaded only by Sales Import, parses CSV/XLS/XLSX
+│   │                              # client-side. First third-party JS dependency in the
+│   │                              # project -- still zero build step, plain <script> load.
 │   ├── css/
 │   │   ├── tokens.css          # MacBane-derived design tokens (§1)
 │   │   ├── layout.css          # grid, sidebar, page shell

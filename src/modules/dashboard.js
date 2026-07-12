@@ -5,7 +5,10 @@ export function mount(el) {
 
   const totalUnits = sales.reduce((sum, r) => sum + r.unitsSold, 0);
   const totalRevenue = sales.reduce((sum, r) => sum + r.revenueUsd, 0);
-  const totalMargin = sales.reduce((sum, r) => sum + r.marginUsd, 0);
+  const hasMarginData = sales.some((r) => r.marginUsd != null);
+  const totalMargin = hasMarginData
+    ? sales.reduce((sum, r) => sum + (r.marginUsd || 0), 0)
+    : null;
 
   el.innerHTML = `
     <div class="page-header">
@@ -23,7 +26,7 @@ export function mount(el) {
       </div>
       <div class="card">
         <div class="card-label">Total Margin (12wk)</div>
-        <div class="kpi-value">$${totalMargin.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+        <div class="kpi-value" style="${hasMarginData ? '' : 'color:var(--text3);font-size:16px;'}">${hasMarginData ? '$' + totalMargin.toLocaleString(undefined, { maximumFractionDigits: 0 }) : 'No margin data'}</div>
       </div>
       <div class="card">
         <div class="card-label">Active SKUs</div>
@@ -40,7 +43,8 @@ export function mount(el) {
       <div class="card">
         <div class="card-label">Data Intelligence Layer Status</div>
         <div class="empty-state" style="text-align:left;padding:16px 0 0;">
-          <div style="color:var(--success);font-size:13px;">SKUs, Sales, Stores, Metrics, Scenarios loaded from data/*.json.</div>
+          <div style="color:var(--success);font-size:13px;">${skus.length} real SKUs loaded from national market data.</div>
+          <div style="color:var(--warning);font-size:12px;margin-top:6px;">Sales figures shown are synthetic demo data, not real POS. No margin data has been provided yet.</div>
         </div>
       </div>
     </div>
