@@ -131,15 +131,42 @@ export function generatePlan(
 
   const totalLinearFeet = store.shelfLayout.totalLinearFeet;
 
+  // The fixture is physically built from 4ft bays, not a continuous ribbon --
+  // "160ft, 5 shelves" means 40 bays of 4ft x 5 shelves each. Section widths
+  // must therefore be whole multiples of 4ft, not an arbitrary float share.
+  // Bays are allocated by score share using largest-remainder apportionment
+  // (each section gets its floor share, then leftover bays go one at a time
+  // to the sections with the largest fractional remainder) so bay counts
+  // always sum to exactly the fixture's total bays, with every section
+  // guaranteed at least 1 bay.
+  const totalBays = Math.max(1, Math.floor(totalLinearFeet / MIN_SECTION_LINEAR_FEET));
+  const sectionKeys = [...sectionsMap.keys()];
+  const rawBays = sectionKeys.map((key) => {
+    const scoreShare = (weightedShares.get(key) || 0) / weightedTotal;
+    return scoreShare * totalBays;
+  });
+  const bayCounts = new Map();
+  let allocatedBays = 0;
+  sectionKeys.forEach((key, i) => {
+    const bays = Math.max(1, Math.floor(rawBays[i]));
+    bayCounts.set(key, bays);
+    allocatedBays += bays;
+  });
+  let remainderBays = totalBays - allocatedBays;
+  if (remainderBays > 0) {
+    const byRemainder = sectionKeys
+      .map((key, i) => ({ key, frac: rawBays[i] - Math.floor(rawBays[i]) }))
+      .sort((a, b) => b.frac - a.frac);
+    for (let i = 0; i < byRemainder.length && remainderBays > 0; i++) {
+      bayCounts.set(byRemainder[i].key, bayCounts.get(byRemainder[i].key) + 1);
+      remainderBays--;
+    }
+  }
+
   const sections = [];
   sectionsMap.forEach((section, key) => {
     const scoreShare = (weightedShares.get(key) || 0) / weightedTotal;
-    // Sections are built in 4-foot blocks minimum -- the score-proportional
-    // width stays continuous (not rounded to a 4ft multiple), it just can't
-    // fall below one block's worth of space. Shelf count is a per-section
-    // setting (4 or 5), not derived from score -- this also means a section
-    // never rounds down to an unrealistic single eye-level-only shelf.
-    const linearFeet = Math.max(MIN_SECTION_LINEAR_FEET, totalLinearFeet * scoreShare);
+    const linearFeet = bayCounts.get(key) * MIN_SECTION_LINEAR_FEET;
     const shelfCount = sectionShelfCounts[key] ?? DEFAULT_SECTION_SHELF_COUNT;
 
     let ranked = isSparklingSection(section)
