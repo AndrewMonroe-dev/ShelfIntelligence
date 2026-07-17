@@ -271,8 +271,14 @@ function applyPersistedOverrides() {
   }
 
   if (persisted.customStores?.length) {
-    state.customStores = persisted.customStores;
-    state.stores = [...state.stores, ...persisted.customStores];
+    // Backfill shelfLayout on any custom store saved before that field
+    // existed -- without this, a legacy/corrupted localStorage record with
+    // no shelfLayout crashes every downstream getPhysicalWidthFt call
+    // (Store Builder, Optimization Engine, etc.) on load, with no recovery.
+    state.customStores = persisted.customStores.map((s) =>
+      s.shelfLayout ? s : { ...s, shelfLayout: synthesizeShelfLayout(6, 5) }
+    );
+    state.stores = [...state.stores, ...state.customStores];
   }
 
   // Applied last, after all stores (built-in + custom) are in state.stores,
