@@ -270,20 +270,26 @@ function applyPersistedOverrides() {
     state.sales = [...state.sales, ...persisted.importedSales];
   }
 
+  const hasValidBays = (shelfLayout) => Array.isArray(shelfLayout?.bays) && shelfLayout.bays.length > 0;
+
   if (persisted.customStores?.length) {
     // Backfill shelfLayout on any custom store saved before that field
-    // existed -- without this, a legacy/corrupted localStorage record with
-    // no shelfLayout crashes every downstream getPhysicalWidthFt call
-    // (Store Builder, Optimization Engine, etc.) on load, with no recovery.
+    // existed, or saved with a malformed/empty `bays` array -- without
+    // this, a legacy/corrupted localStorage record crashes every
+    // downstream getPhysicalWidthFt call (Store Builder, Optimization
+    // Engine, etc.) on load, with no recovery.
     state.customStores = persisted.customStores.map((s) =>
-      s.shelfLayout ? s : { ...s, shelfLayout: synthesizeShelfLayout(6, 5) }
+      hasValidBays(s.shelfLayout) ? s : { ...s, shelfLayout: synthesizeShelfLayout(6, 5) }
     );
     state.stores = [...state.stores, ...state.customStores];
   }
 
   // Applied last, after all stores (built-in + custom) are in state.stores,
-  // so fixture edits to EITHER kind of store survive a reload.
+  // so fixture edits to EITHER kind of store survive a reload. Skips a
+  // corrupted override (missing/empty `bays`) instead of blindly
+  // overwriting an otherwise-valid shelfLayout with it.
   Object.entries(state.shelfLayoutOverrides).forEach(([storeId, shelfLayout]) => {
+    if (!hasValidBays(shelfLayout)) return;
     const targetStore = state.stores.find((s) => s.storeId === storeId);
     if (targetStore) targetStore.shelfLayout = shelfLayout;
   });
