@@ -2,27 +2,37 @@
 // SKU, remaining linear space distributed proportionally to score, converted
 // to a facing count using real bottle width from data/bottleDimensions.json.
 
-// data/skus.json only carries a raw size string (e.g. "0.75LT", "3LT"), not a
-// bottle shape (bordeaux vs. burgundy vs. champagne) or package type. This
-// maps each raw size to a reasonable default bottleDimensions.json entry.
-// Sizes with no close match fall back to a generic width rather than
-// guessing a specific shape.
-const SIZE_TO_DIMENSION_TYPE = {
-  '0.75LT': '750_bordeaux',
-  '1.5LT': '1.5L_magnum',
-  '3LT': '3L_box',
-  '5LT': '5L_box',
-  '1LT': '1L_bottle',
-  '0.375LT': '375_half',
-  '0.187LT': '187_split',
-  '0.25LT': '250_can',
-};
-const FALLBACK_WIDTH_IN = 3.0; // used only when no size mapping exists at all
+// data/bottleDimensions.json (2026-07-16 rewrite) holds Andrew's own
+// corrected measurements, keyed by the EXACT bottleSizeRaw string ("0.75LT",
+// "0.187LT X4", etc.) -- sourced from
+// "D:\Jarvis\Suggested Measurements of wine sizes.xlsx", not derived or
+// estimated. No per-size mapping table needed anymore: bottleSizeRaw *is*
+// the dimension type. A size with no entry (e.g. the single-SKU "0.72LT")
+// falls back to a generic width rather than guessing a specific shape.
+const FALLBACK_WIDTH_IN = 3.1; // matches the measured 0.75LT width -- used only when a raw size has no dimension entry at all
 
 export function bottleWidthInches(sku, bottleDimensions) {
-  const dimType = SIZE_TO_DIMENSION_TYPE[sku.bottleSizeRaw];
-  const dim = dimType && bottleDimensions.find((d) => d.type === dimType);
+  const dim = bottleDimensions.find((d) => d.type === sku.bottleSizeRaw);
   return dim ? dim.widthIn : FALLBACK_WIDTH_IN;
+}
+
+// Given a category's SKUs already ranked in fill order, returns the
+// longest PREFIX that fits within widthInches at floorFacings each -- this
+// is what decides how many DISTINCT SKUs populate a row, before
+// computeFacings spends any leftover width as bonus facings on that same
+// prefix. Always includes at least one SKU (if the pool is non-empty and
+// width > 0) even if it alone exceeds the budget, consistent with the
+// "never leave a row artificially empty" philosophy below.
+export function fitSkusToWidth(rankedSkus, widthInches, bottleDimensions, floorFacings) {
+  const included = [];
+  let used = 0;
+  for (const sku of rankedSkus) {
+    const w = bottleWidthInches(sku, bottleDimensions) * floorFacings;
+    if (used + w > widthInches && included.length > 0) break;
+    included.push(sku);
+    used += w;
+  }
+  return included;
 }
 
 // Guarantees a section's full allocated width is always consumed -- "no set

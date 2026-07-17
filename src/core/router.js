@@ -31,6 +31,11 @@ async function render() {
   }
 
   contentEl.innerHTML = `<div class="empty-state">Loading...</div>`;
-  const mod = await loader();
-  currentUnmount = mod.mount(contentEl);
+  try {
+    const mod = await loader();
+    currentUnmount = mod.mount(contentEl);
+  } catch (err) {
+    console.error(`Failed to load/mount ${hash}:`, err);
+    contentEl.innerHTML = `<div class="empty-state" style="color:var(--danger);text-align:left;white-space:pre-wrap;">Failed to load this page: ${err.message}\n\nSee the browser console for the full error.</div>`;
+  }
 }

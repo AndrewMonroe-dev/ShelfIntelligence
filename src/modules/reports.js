@@ -84,6 +84,7 @@ export function mount(el) {
     const rows = flattenPlan(currentPlan);
     const planSkus = collectPlanSkus(currentPlan);
     const topByScore = [...planSkus].sort((a, b) => b.sku.score - a.sku.score).slice(0, 15);
+    const totalLinearFeet = currentPlan.sections.reduce((s, sec) => s + sec.linearFeet, 0) || 1;
 
     el.innerHTML = `
       <div class="page-header">
@@ -116,7 +117,7 @@ export function mount(el) {
               <th style="padding:10px 14px;">Type</th>
               <th style="padding:10px 14px;">Linear Ft</th>
               <th style="padding:10px 14px;">Shelves</th>
-              <th style="padding:10px 14px;">Share of Set</th>
+              <th style="padding:10px 14px;">% of Fixture Width</th>
             </tr>
           </thead>
           <tbody>
@@ -126,7 +127,7 @@ export function mount(el) {
                 <td style="padding:8px 14px;color:var(--text2);">${s.type}</td>
                 <td style="padding:8px 14px;">${s.linearFeet.toFixed(1)}</td>
                 <td style="padding:8px 14px;">${s.shelfCount}</td>
-                <td style="padding:8px 14px;">${(s.scoreShare * 100).toFixed(1)}%</td>
+                <td style="padding:8px 14px;">${(s.linearFeet / totalLinearFeet * 100).toFixed(1)}%</td>
               </tr>
             `).join('')}
           </tbody>

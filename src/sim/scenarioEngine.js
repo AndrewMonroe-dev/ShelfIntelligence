@@ -15,7 +15,7 @@ export function mergeScenarioMetrics(baseMetricsConfig, scenario) {
   });
 }
 
-export function runScenario(scenario, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode) {
+export function runScenario(scenario, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionAllocations, sizePackage, caseOnlyMode, overrides) {
   const baseline = computeBaseline(store.storeId, sales, allSkus);
   const k = calibrateVelocity(baseline);
 
@@ -25,7 +25,7 @@ export function runScenario(scenario, store, allSkus, baseMetricsConfig, targetS
   }
 
   const scenarioMetricsConfig = mergeScenarioMetrics(baseMetricsConfig, scenario);
-  const plan = generatePlan(store, allSkus, scenarioMetricsConfig, targetSkuCount, bottleDimensions, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode);
+  const plan = generatePlan(store, allSkus, scenarioMetricsConfig, targetSkuCount, bottleDimensions, sectionAllocations, sectionMultipliers, sizePackage, caseOnlyMode, overrides);
 
   const skuPriceById = new Map(allSkus.map((s) => [s.skuId, s.priceUsd]));
   const prediction = predictPlanTotals(plan, k, skuPriceById);
@@ -34,8 +34,8 @@ export function runScenario(scenario, store, allSkus, baseMetricsConfig, targetS
   return { scenario, plan, baseline, prediction, comparison };
 }
 
-export function runAllScenarios(scenarios, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode) {
+export function runAllScenarios(scenarios, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionAllocations, sizePackage, caseOnlyMode, overrides) {
   return scenarios.map((scenario) =>
-    runScenario(scenario, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode)
+    runScenario(scenario, store, allSkus, baseMetricsConfig, targetSkuCount, bottleDimensions, sales, sectionMultipliers, sectionAllocations, sizePackage, caseOnlyMode, overrides)
   );
 }

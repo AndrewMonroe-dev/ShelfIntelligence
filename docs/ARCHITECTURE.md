@@ -1,6 +1,6 @@
 # Shelf Intelligence™ — Architecture Document
 
-Status: DRAFT — awaiting approval before Phase 3 (UI shell) implementation begins.
+Status: Phases 1-9 built. This document reflects the original architecture plan; implementation has progressed past the draft stage described below.
 Deployment target: GitHub Pages (static). Stack: HTML5, CSS3, vanilla JS (ES6 modules), JSON.
 
 ---
@@ -316,4 +316,4 @@ No phase begins until the prior phase's deliverable is reviewed.
 
 ---
 
-*This document defines the foundation only. No application code has been written. Awaiting approval to proceed to Phase 2 (data model fixtures).*
+*This document defined the original foundation plan. Phases 1-9 have since been built; see src/ for current implementation.*

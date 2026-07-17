@@ -262,6 +262,141 @@ original fixture stores) means no change from prior behavior. Implemented in
 New stores persist to localStorage (`customStores`) and survive a reload, same as every
 other user override.
 
+## Regional section (2026-07-15)
+
+Resolves the "what data field defines regional" block flagged 2026-07-13. **Regional is
+domestic/local, not the existing `region` field** (which is country-of-origin and stays
+as-is for everything else -- France, Italy, Argentina, etc.). A SKU is Regional if its raw
+product-name text contains **Michigan or Indiana** -- the two in-market domestic
+production sources identified in the Michigan-specific dataset (`MI Specific Data.xlsx`).
+Michigan and Indiana hits merge into one combined **Regional** category rather than staying
+two separate sections, same pattern as the existing Sparkling merge (Prosecco/Asti/Cava/etc.
+-> one section). Applied in the offline categorization pass (`run_categorize.js`): 173 SKUs
+(158 Michigan + 15 Indiana, all above the $1,000 sales floor) landed in Regional out of the
+4,117-SKU categorized set. Not yet wired into `data/skus.json` or the live placement
+algorithm -- still pending the brand-parsing and skus.json rebuild work.
+
+## 3L assortment exclusions (glass, not box)
+
+Some brands' "3L" catalog entries are glass bottles, not the 3L box format the 3L
+section assumes (see `PACKAGE_TYPE_ASSUMPTIONS` in `blocking.js`) -- excluded from the
+assortment entirely via `isExcludedSku`, not just deprioritized:
+
+- **Carlo Rossi 3L** (Andrew, 2026-07-15): doesn't come in a 3L box, not endemic to
+  Michigan.
+- **Riunite 3L** (Andrew, 2026-07-16): glass, not a box.
+
+## Data quirk: "0.748LT" is actually a 4-pack of 187ml (2026-07-16)
+
+16 SKUs (Sutter Home x8, Cook's, Woodbridge x2, Barefoot Bubbly, Sutter Home Sweet Red,
+Korbel, Cavit, Barefoot Pinot Grigio, Woodbridge Cabernet) carried raw size `0.748LT` --
+the summed volume of a 4-pack of 187ml splits, not a real size code. Andrew confirmed
+these are 4-packs. Relabeled to `0.187LT X4` in `data/skus.json` so they form their own
+"4-Pack" section (`CONFIRMED_PACKAGE_TYPES` in `blocking.js`) instead of scattering into
+either the 750ml varietal sections or the true single-mini `0.187LT` section (La Marca,
+Sutter Home Pinot Grigio/Chardonnay minis, which are real singles and stay separate).
+(Its bottle-width entry was an estimate at the time; superseded by the authoritative
+measurement table below, same day.)
+
+## Bottle/box widths now sourced from Andrew's measurement table (2026-07-16)
+
+`data/bottleDimensions.json` and `facings.js`'s width lookup were rebuilt from scratch
+from `D:\Jarvis\Suggested Measurements of wine sizes.xlsx` -- Andrew's own corrected
+measurements, not derived or estimated. This replaces every prior width figure in the
+file, including ones that predate this session (750ml, 1.5L, 3L, 5L, etc. all changed,
+some significantly -- e.g. 3L box width was 7.4in, corrected to 4.75in; 1.5L was 4.5in,
+corrected to 4.0in). Context: a shelf was visibly overcrowded (many more SKUs rendering
+than 48in of physical shelf could hold) because several size codes -- `0.5LT` (39 SKUs),
+`4LT` (8 SKUs, all Carlo Rossi jugs), and every multi-pack size except `0.187LT X4` --
+had no real dimension entry and were silently defaulting to a flat 3.0in fallback
+regardless of true footprint. Two rounds of self-corrected estimates for those gaps
+turned out to still be assumptions Andrew hadn't validated, so the fix is now sourced
+directly from his own measurement research instead.
+
+`bottleDimensions.json` entries are now keyed by the exact `bottleSizeRaw` string
+(`"0.75LT"`, `"0.187LT X4"`, etc.) -- `facings.js`'s `bottleWidthInches()` looks up that
+key directly, no more per-size mapping table or derived multi-pack formula. A size with
+no entry at all (only the single-SKU `0.72LT`, which does have its own entry) falls back
+to 3.1in (the measured 0.75LT width).
+
+Two package types the table explicitly flags as not belonging in a set at all --
+`0.187LT X5` ("These do not belong in sets. Period.") and `0.187LT X24`, the 24-bottle
+advent-calendar carton ("DOES NOT BELONG IN SET") -- are now excluded via `isExcludedSku`
+in `blocking.js`, same mechanism as the Carlo Rossi/Riunite 3L exclusions.
+
+## Seasonal assortment exclusions (2026-07-16)
+
+Menage a Trois Assorted (UPC 0196383007961, was its own `2.25LT` size section) and Stella
+Rosa Assorted (UPC 0087872635091, was its own `0.935LT` size section) are seasonal
+assortment packs -- Andrew ruled both out for future use. Excluded via `isExcludedSku` by
+exact UPC (not brand regex) since both brand families have many other legitimate
+single-varietal SKUs that must stay in the assortment.
+
+## Live data source replaced with Michigan-specific sales (2026-07-16)
+
+`data/skus.json` was rebuilt from `MI Specific Data.xlsx` (Michigan-only $ Sales/ARP/IRI
+PODs/YoY-change, 8,271 raw products) and now **replaces** the national top-1000 file as
+the app's entire SKU universe -- the national file reflected national top sellers, not
+what actually sells in Michigan, per Andrew's direction. Build pipeline (not yet a
+committed repo script -- ran from a scratchpad, needs to be relocated into the repo next
+session per the standing open item on `run_categorize.js`/`parse_brands.js`):
+
+1. Parse each row's blended `Product` string (format `NAME N CT SIZE LT - UPC`, a few
+   reordered variants handled) into name, pack count (CT), per-pack size, and UPC.
+2. Drop every row under $1,000 in sales (Andrew's standing floor, confirmed 2026-07-16),
+   plus the full standing seasonal/multi-pack exclusion list (`mi_seasonal_pack_deletes.csv`
+   -- Menage a Trois Assorted, Stella Rosa Assorted, Bev Glam Rose, Holiday Cheer/12 Days
+   Advent Calendars, Opera Prima Mimosa, Silk & Spice Assorted, Sutter Home WZ 2CT/3LT,
+   Bubly Wine Refresher Assorted, Sofia Mini Blanc de Blancs, both Spritz Society flavors,
+   all 11 Barefoot Spritzer SKUs).
+3. Brand: matched against the national `data/skus.json`'s already-corrected brand
+   vocabulary (longest-prefix match) after stripping a trailing region/state/country
+   word from the raw name. Falls back to a 2-word guess when no vocab match -- not
+   re-verified against raw source the way the national 07-15 rebuild was, so brand
+   fidelity here is lower confidence than the national file's.
+4. Region/category (750ml only): Michigan/Indiana keyword -> `varietal: "REGIONAL"`;
+   foreign-country keyword (no US state) with no grape-varietal match -> `varietal` set
+   to the country name (e.g. `"ITALY"`), same generic section mechanism as a real
+   varietal; flavored/sweet keyword (spritzer, sangria, bellini, mimosa, cooler,
+   fruit-flavor words) -> `"FLAVORED/SWEET"`; else keyword-matched against the standard
+   grape-varietal list (Claret folds into Cabernet; Prosecco/Asti/Cava/Brut/
+   Frizzante/Champagne/Spumante fold into Sparkling; bare "RED" folds into Red Blend);
+   else the Andrew-approved manual fills from `mi_no_varietal.csv` by UPC; else left
+   unassigned (lands in the existing "Unspecified Varietal" catch-all section, ~3.5% of
+   750ml SKUs vs. ~24% in the old national file).
+5. Multi-packs (CT > 1, mostly 187ml mini 4-packs) get their own size section keyed
+   `{size}LT X{count}` (e.g. `"0.187LT X4"`) instead of being folded into either the
+   750ml varietal sections or the true single-mini size section -- same fix as the
+   `0.748LT` bug from earlier in this session, just applied dataset-wide instead of as
+   a one-off patch.
+6. Ranked by $ Sales descending. Top 750 = `assortmentTier: "base"`, next 1,000 (ranks
+   751-1750) = `"extended"`, everything beyond rank 1,750 dropped entirely (Andrew,
+   2026-07-16) -- so the live SKU universe is 1,750 total, not 1,000.
+7. Scoring fields recomputed from the MI file's own numbers, not carried over from the
+   national cross-reference exports: `sales9L`/`share9L` now hold **dollar** sales/share
+   (not 9L volume -- consistent with the metric switch approved 2026-07-14),
+   `brandSales9L`/`varietalSales9L`/`regionSales9L`/`sizeSales9L` and their `*Share9L`
+   pairs summed within the final 1,750-SKU pool, `podsDistribution` from the MI file's
+   `IRI PODs` column directly, `growthPct9L` from its `$ % Chg vs YA` column directly
+   (the MI file has real YoY data, unlike originally assumed 2026-07-14).
+   `priceSegmentShare9L` uses a new, cleaner non-overlapping ARP band scheme (Value
+   $0-4.49 / Popular $4.50-7.99 / Premium $8-10.99 / Super Premium $11-14.99 / Ultra
+   Premium $15+) rather than reusing the national file's box/bottle-conflated labels.
+8. `strategicSupplierPriority` carried over by brand-prefix match against the same
+   supplier list flagged `true` in the old national file (Bota Box/Mini, Gnarly Head,
+   Noble Vines, Relax, Schmitt Sohne, Three Finger Jack, Z Alexander Brown, Black
+   Stallion, 1924) -- this was a manual designation, not derived from sales data, so it
+   just transfers as-is.
+9. `image`/`skuId`: where a MI SKU's UPC exactly matches a national-file SKU (849 of
+   1,750), its existing `skuId` and image path carry over unchanged. The remaining 901
+   MI-only SKUs get new sequential IDs (`001001`+) and a null `image` (the app doesn't
+   currently render per-SKU images anywhere in the UI -- Planogram Viewer uses text
+   spine labels -- so this has no visible effect today, but would need real images if
+   that ever changes).
+
+Backups: pre-replacement national file at
+`D:\Jarvis\skus_backup_2026-07-16_pre-MI-replacement_NATIONAL.json`.
+
 ## Data sources on file (real market data, not fixtures)
 
 Provided 2026-07-12 as Excel exports from `C:\Users\The Monroes\OneDrive\Desktop\DATA FOR INTELLIGENCE\`:

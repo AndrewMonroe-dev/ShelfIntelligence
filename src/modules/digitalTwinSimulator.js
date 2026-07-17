@@ -47,7 +47,7 @@ export function mount(el) {
 
   function render() {
     const { stores } = store.getSnapshot();
-    if (!selectedStoreId) selectedStoreId = stores[0]?.storeId;
+    if (!selectedStoreId) selectedStoreId = store.getActiveStoreId() || stores[0]?.storeId;
 
     el.innerHTML = `
       <div class="page-header">
@@ -73,6 +73,7 @@ export function mount(el) {
 
     el.querySelector('.store-select').addEventListener('change', (e) => {
       selectedStoreId = e.target.value;
+      store.setActiveStoreId(selectedStoreId);
       results = null;
       render();
     });
@@ -82,9 +83,11 @@ export function mount(el) {
       const targetStore = allStores.find((s) => s.storeId === selectedStoreId);
       const targetCount = store.getTargetSkuCount(selectedStoreId);
       const sectionMultipliers = store.getSectionMultipliers(selectedStoreId);
-      const sectionShelfCounts = store.getSectionShelfCounts(selectedStoreId);
+      let sectionAllocations = store.getSectionAllocations(selectedStoreId);
+      if (!sectionAllocations.length) sectionAllocations = store.autoAllocateSections(selectedStoreId);
       const caseOnlyMode = store.getCaseOnlyMode();
-      results = runAllScenarios(scenarios, targetStore, skus, metricsConfig, targetCount, bottleDimensions, sales, sectionMultipliers, sectionShelfCounts, sizePackage, caseOnlyMode);
+      const overrides = store.getOverrides(selectedStoreId);
+      results = runAllScenarios(scenarios, targetStore, skus, metricsConfig, targetCount, bottleDimensions, sales, sectionMultipliers, sectionAllocations, sizePackage, caseOnlyMode, overrides);
       output.innerHTML = `<div class="grid grid-3" style="margin-top:14px;">${results.map(renderResultCard).join('')}</div>`;
     });
   }

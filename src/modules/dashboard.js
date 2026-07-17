@@ -1,6 +1,8 @@
 import { store } from '../core/store.js';
+import { bus } from '../core/bus.js';
 
 export function mount(el) {
+  function render() {
   const { skus, sales, stores } = store.getSnapshot();
 
   const totalUnits = sales.reduce((sum, r) => sum + r.unitsSold, 0);
@@ -37,7 +39,12 @@ export function mount(el) {
       <div class="card">
         <div class="card-label">Stores</div>
         <div class="empty-state" style="text-align:left;padding:16px 0 0;">
-          ${stores.map((s) => `<div style="padding:6px 0;color:var(--text);font-size:13px;">${s.name} <span class="badge" style="margin-left:6px;">${s.storeType}</span></div>`).join('')}
+          ${stores.map((s) => `
+            <div data-store-id="${s.storeId}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;color:var(--text);font-size:13px;">
+              <span>${s.name} <span class="badge" style="margin-left:6px;">${s.storeType}</span></span>
+              ${s.isCustom ? '<button class="btn delete-store-btn" style="font-size:11px;padding:2px 8px;color:var(--danger);">Delete</button>' : ''}
+            </div>
+          `).join('')}
         </div>
       </div>
       <div class="card">
@@ -50,5 +57,17 @@ export function mount(el) {
     </div>
   `;
 
-  return () => { el.innerHTML = ''; };
+  el.querySelectorAll('.delete-store-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const storeId = e.target.closest('[data-store-id]').dataset.storeId;
+      const targetStore = stores.find((s) => s.storeId === storeId);
+      if (!confirm(`Delete "${targetStore?.name}"? This removes it and all its settings completely.`)) return;
+      store.removeStore(storeId);
+    });
+  });
+  }
+
+  render();
+  const unsubscribe = bus.on('stores:changed', render);
+  return () => { unsubscribe(); el.innerHTML = ''; };
 }

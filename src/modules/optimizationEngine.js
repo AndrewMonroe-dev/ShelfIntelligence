@@ -1,9 +1,6 @@
 import { store } from '../core/store.js';
-import { generatePlan } from '../optimize/placementSolver.js';
-import { isSmallFormatSection } from '../optimize/blocking.js';
-
-const STANDARD_SHELF_OPTIONS = [4, 5];
-const SMALL_FORMAT_SHELF_OPTIONS = [4, 5, 6, 7, 8];
+import { generatePlan, THIN_SECTION_WIDTH_FT } from '../optimize/placementSolver.js';
+import { getPhysicalWidthFt } from '../optimize/shelfPosition.js';
 
 export function mount(el) {
   let selectedStoreId = null;
@@ -13,14 +10,41 @@ export function mount(el) {
     const targetStore = stores.find((s) => s.storeId === selectedStoreId);
     const targetCount = store.getTargetSkuCount(selectedStoreId);
     const multipliers = store.getSectionMultipliers(selectedStoreId);
-    const shelfCounts = store.getSectionShelfCounts(selectedStoreId);
+    let allocations = store.getSectionAllocations(selectedStoreId);
+    if (!allocations.length) allocations = store.autoAllocateSections(selectedStoreId);
     const caseOnlyMode = store.getCaseOnlyMode();
-    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, multipliers, shelfCounts, sizePackage, caseOnlyMode);
+    const overrides = store.getOverrides(selectedStoreId);
+    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, allocations, multipliers, sizePackage, caseOnlyMode, overrides);
     store.setPlan(plan);
     return plan;
   }
 
-  function renderSectionCard(section) {
+  // Resizing one section's width via the slider shrinks/grows every other
+  // section proportionally so the total stays fixed at the fixture's
+  // physical width -- mirrors the old score-multiplier "others compensate"
+  // behavior, now operating on the persisted allocation directly.
+  function adjustSectionWidth(storeId, sectionKey, newWidthFt, physicalWidthFt) {
+    const allocations = store.getSectionAllocations(storeId);
+    const target = allocations.find((a) => a.key === sectionKey);
+    if (!target) return;
+    const others = allocations.filter((a) => a.key !== sectionKey);
+    const othersTotal = others.reduce((sum, a) => sum + a.widthFt, 0) || 1;
+    const minOthersTotal = others.length; // 1ft floor per other section
+    const clampedNew = Math.max(1, Math.min(newWidthFt, physicalWidthFt - minOthersTotal));
+    const remainingForOthers = Math.max(minOthersTotal, physicalWidthFt - clampedNew);
+    const scale = remainingForOthers / othersTotal;
+
+    const updated = allocations
+      .map((a) => (a.key === sectionKey ? { ...a, widthFt: clampedNew } : { ...a, widthFt: Math.max(1, a.widthFt * scale) }))
+      .sort((a, b) => a.order - b.order);
+
+    let cursor = 0;
+    updated.forEach((a) => { a.startFt = cursor; cursor += a.widthFt; });
+
+    store.setSectionAllocations(storeId, updated);
+  }
+
+  function renderSectionCard(section, physicalWidthFt) {
     const shelvesHtml = section.shelves.map((shelf) => `
       <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px;">
@@ -40,21 +64,15 @@ export function mount(el) {
       <div class="card" data-section-key="${section.key}">
         <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;">
           <span class="card-label">${section.label} <span class="badge" style="margin-left:6px;">${section.type}</span>${section.usesMarketShareSizing ? ' <span class="badge badge-success">real market share</span>' : ''}${section.usesPriceBandRules ? ' <span class="badge badge-success">price-band rules</span>' : ''}</span>
-          <span class="section-summary" style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">${section.linearFeet.toFixed(1)} ft &middot; ${section.shelfCount} shelves &middot; ${(section.scoreShare * 100).toFixed(1)}% of set</span>
+          <span class="section-summary" style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">${section.linearFeet.toFixed(1)} ft &middot; ${section.shelfCount} shelves &middot; ${section.shelves.reduce((sum, sh) => sum + sh.skus.length, 0)} SKUs</span>
         </div>
-        <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
-          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Section size</span>
-          <input type="range" class="section-mult-slider" min="0.5" max="2" step="0.1" value="${section.multiplier}" style="flex:1;" />
-          <span class="section-mult-value" style="font-family:var(--font-mono);font-size:12px;width:34px;">${section.multiplier.toFixed(1)}x</span>
-        </div>
-        <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
-          <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Shelves per block${isSmallFormatSection(section) ? ' (small format, extended range)' : ''}</span>
-          <div class="tabs shelf-count-tabs">
-            ${(isSmallFormatSection(section) ? SMALL_FORMAT_SHELF_OPTIONS : STANDARD_SHELF_OPTIONS)
-              .map((n) => `<div class="tab shelf-count-tab ${section.shelfCount === n ? 'active' : ''}" data-shelf-count="${n}">${n}</div>`)
-              .join('')}
-          </div>
-        </div>
+        ${section.type === 'merged'
+          ? `<div style="margin-top:10px;font-size:11.5px;color:var(--text2);">Combined section (each category here is ≤${THIN_SECTION_WIDTH_FT}ft) -- resize the individual categories in Set Layout.</div>`
+          : `<div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;color:var(--text2);white-space:nowrap;">Section size</span>
+              <input type="range" class="section-width-slider" min="1" max="${physicalWidthFt}" step="0.5" value="${section.linearFeet}" style="flex:1;" />
+              <span class="section-width-value" style="font-family:var(--font-mono);font-size:12px;width:44px;">${section.linearFeet.toFixed(1)}ft</span>
+            </div>`}
         <div style="margin-top:12px;">${shelvesHtml}</div>
       </div>
     `;
@@ -68,7 +86,7 @@ export function mount(el) {
     return Math.max(section.linearFeet, maxRowInches / 12);
   }
 
-  function renderPlan(plan) {
+  function renderPlan(plan, physicalWidthFt) {
     const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     return `
       <div class="page-header" style="margin-top:20px;">
@@ -83,42 +101,33 @@ export function mount(el) {
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;">
           ${plan.sections.map((s) => `<span class="badge" style="font-family:var(--font-mono);">${s.label}: ${actualSectionFeet(s).toFixed(1)}ft</span>`).join('')}
         </div>
-        ${(plan.droppedSections || []).length ? `<div class="badge badge-warning" style="margin-top:10px;">Fixture too small for every category -- dropped ${plan.droppedSections.length} lowest-opportunity section${plan.droppedSections.length === 1 ? '' : 's'} (${plan.droppedSections.reduce((sum, d) => sum + d.skuCount, 0)} SKUs): ${plan.droppedSections.map((d) => d.label).join(', ')}</div>` : ''}
+        ${plan.isOverflowing ? `<div class="badge badge-warning" style="margin-top:10px;">Allocated sections exceed the fixture by ${plan.overflowFt.toFixed(1)}ft -- reduce section widths or add bays</div>` : ''}
       </div>
-      ${plan.sections.map(renderSectionCard).join('')}
+      ${plan.sections.map((s) => renderSectionCard(s, physicalWidthFt)).join('')}
     `;
   }
 
-  function bindPlanOutputListeners(output) {
-    output.querySelectorAll('.section-mult-slider').forEach((slider) => {
+  function bindPlanOutputListeners(output, physicalWidthFt) {
+    output.querySelectorAll('.section-width-slider').forEach((slider) => {
       slider.addEventListener('input', (e) => {
-        const valueLabel = e.target.closest('[data-section-key]').querySelector('.section-mult-value');
-        valueLabel.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+        const valueLabel = e.target.closest('[data-section-key]').querySelector('.section-width-value');
+        valueLabel.textContent = parseFloat(e.target.value).toFixed(1) + 'ft';
       });
       slider.addEventListener('change', (e) => {
         const sectionKey = e.target.closest('[data-section-key]').dataset.sectionKey;
-        store.setSectionMultiplier(selectedStoreId, sectionKey, parseFloat(e.target.value));
+        adjustSectionWidth(selectedStoreId, sectionKey, parseFloat(e.target.value), physicalWidthFt);
         const plan = regenerateAndSetPlan();
-        output.innerHTML = renderPlan(plan);
-        bindPlanOutputListeners(output);
-      });
-    });
-
-    output.querySelectorAll('.shelf-count-tab').forEach((tab) => {
-      tab.addEventListener('click', (e) => {
-        const sectionKey = e.target.closest('[data-section-key]').dataset.sectionKey;
-        const shelfCount = parseInt(e.target.dataset.shelfCount, 10);
-        store.setSectionShelfCount(selectedStoreId, sectionKey, shelfCount);
-        const plan = regenerateAndSetPlan();
-        output.innerHTML = renderPlan(plan);
-        bindPlanOutputListeners(output);
+        output.innerHTML = renderPlan(plan, physicalWidthFt);
+        bindPlanOutputListeners(output, physicalWidthFt);
       });
     });
   }
 
   function render() {
     const { stores, currentPlan } = store.getSnapshot();
-    if (!selectedStoreId) selectedStoreId = stores[0]?.storeId;
+    if (!selectedStoreId) selectedStoreId = store.getActiveStoreId() || stores[0]?.storeId;
+    const selectedStore = stores.find((s) => s.storeId === selectedStoreId);
+    const physicalWidthFt = selectedStore ? getPhysicalWidthFt(selectedStore.shelfLayout) : 0;
 
     el.innerHTML = `
       <div class="page-header">
@@ -133,8 +142,8 @@ export function mount(el) {
           </select>
         </div>
         <div>
-          <div class="card-label" style="margin-bottom:6px;">Target SKU Count</div>
-          <span style="font-family:var(--font-mono);">${store.getTargetSkuCount(selectedStoreId)} <span style="color:var(--text3);">(set in Store Builder)</span></span>
+          <div class="card-label" style="margin-bottom:6px;">SKU Count Seed Target</div>
+          <span style="font-family:var(--font-mono);">${store.getTargetSkuCount(selectedStoreId)} <span style="color:var(--text3);">(set in Store Builder -- actual count is space-driven per section, see generated plan)</span></span>
         </div>
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;">
           <input type="checkbox" class="case-only-toggle" ${store.getCaseOnlyMode() ? 'checked' : ''} />
@@ -147,12 +156,13 @@ export function mount(el) {
 
     const output = el.querySelector('.plan-output');
     if (currentPlan && currentPlan.storeId === selectedStoreId) {
-      output.innerHTML = renderPlan(currentPlan);
-      bindPlanOutputListeners(output);
+      output.innerHTML = renderPlan(currentPlan, physicalWidthFt);
+      bindPlanOutputListeners(output, physicalWidthFt);
     }
 
     el.querySelector('.store-select').addEventListener('change', (e) => {
       selectedStoreId = e.target.value;
+      store.setActiveStoreId(selectedStoreId);
       render();
     });
 
@@ -162,8 +172,8 @@ export function mount(el) {
 
     el.querySelector('.generate-btn').addEventListener('click', () => {
       const plan = regenerateAndSetPlan();
-      output.innerHTML = renderPlan(plan);
-      bindPlanOutputListeners(output);
+      output.innerHTML = renderPlan(plan, physicalWidthFt);
+      bindPlanOutputListeners(output, physicalWidthFt);
     });
   }
 

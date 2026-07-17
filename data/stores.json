@@ -4,17 +4,204 @@
     "name": "Retailer X - Location 12",
     "storeType": "Grocery - Upscale",
     "region": "Pacific Northwest",
-    "demographics": { "medianIncome": 82000, "ageBand": "35-54" },
+    "demographics": {
+      "medianIncome": 82000,
+      "ageBand": "35-54"
+    },
     "shelfLayout": {
-      "shelves": [
-        { "shelfId": "S1", "linearFeet": 8, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S2", "linearFeet": 8, "eyeLevel": true, "traffic": "high" },
-        { "shelfId": "S3", "linearFeet": 8, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S4", "linearFeet": 8, "eyeLevel": false, "traffic": "low" },
-        { "shelfId": "S5", "linearFeet": 8, "eyeLevel": false, "traffic": "low" },
-        { "shelfId": "S6", "linearFeet": 8, "eyeLevel": false, "traffic": "low" }
-      ],
-      "totalLinearFeet": 48
+      "bays": [
+        {
+          "bayId": "B1",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B1-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B1-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B1-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B2",
+          "shelfCount": 6,
+          "shelves": [
+            {
+              "shelfId": "B2-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B2-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B2-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B2-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B3",
+          "shelfCount": 6,
+          "shelves": [
+            {
+              "shelfId": "B3-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B3-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B4",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B4-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B4-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B4-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B5",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B5-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B5-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B5-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B5-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B5-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B6",
+          "shelfCount": 4,
+          "shelves": [
+            {
+              "shelfId": "B6-S1",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B6-S2",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B6-S3",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B6-S4",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        }
+      ]
     }
   },
   {
@@ -22,15 +209,127 @@
     "name": "Retailer X - Location 27",
     "storeType": "Grocery - Value",
     "region": "Midwest",
-    "demographics": { "medianIncome": 54000, "ageBand": "25-44" },
+    "demographics": {
+      "medianIncome": 54000,
+      "ageBand": "25-44"
+    },
     "shelfLayout": {
-      "shelves": [
-        { "shelfId": "S1", "linearFeet": 6, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S2", "linearFeet": 6, "eyeLevel": true, "traffic": "high" },
-        { "shelfId": "S3", "linearFeet": 6, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S4", "linearFeet": 6, "eyeLevel": false, "traffic": "low" }
-      ],
-      "totalLinearFeet": 24
+      "bays": [
+        {
+          "bayId": "B1",
+          "shelfCount": 4,
+          "shelves": [
+            {
+              "shelfId": "B1-S1",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S2",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B1-S3",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S4",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B2",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B2-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B2-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B2-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B3",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B3-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B3-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B4",
+          "shelfCount": 4,
+          "shelves": [
+            {
+              "shelfId": "B4-S1",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S2",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B4-S3",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S4",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        }
+      ]
     }
   },
   {
@@ -38,16 +337,296 @@
     "name": "Retailer Y - Location 5",
     "storeType": "Specialty Wine Shop",
     "region": "Northeast",
-    "demographics": { "medianIncome": 97000, "ageBand": "35-64" },
+    "demographics": {
+      "medianIncome": 97000,
+      "ageBand": "35-64"
+    },
     "shelfLayout": {
-      "shelves": [
-        { "shelfId": "S1", "linearFeet": 10, "eyeLevel": true, "traffic": "high" },
-        { "shelfId": "S2", "linearFeet": 10, "eyeLevel": true, "traffic": "high" },
-        { "shelfId": "S3", "linearFeet": 10, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S4", "linearFeet": 10, "eyeLevel": false, "traffic": "medium" },
-        { "shelfId": "S5", "linearFeet": 10, "eyeLevel": false, "traffic": "low" }
-      ],
-      "totalLinearFeet": 50
+      "bays": [
+        {
+          "bayId": "B1",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B1-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B1-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B1-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B1-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B2",
+          "shelfCount": 6,
+          "shelves": [
+            {
+              "shelfId": "B2-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B2-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B2-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B2-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B2-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B3",
+          "shelfCount": 7,
+          "shelves": [
+            {
+              "shelfId": "B3-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S2",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S3",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S4",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B3-S5",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B3-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B3-S7",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B4",
+          "shelfCount": 7,
+          "shelves": [
+            {
+              "shelfId": "B4-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B4-S2",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B4-S3",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S4",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B4-S5",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B4-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B4-S7",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B5",
+          "shelfCount": 6,
+          "shelves": [
+            {
+              "shelfId": "B5-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B5-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B5-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B5-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B5-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B5-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B6",
+          "shelfCount": 6,
+          "shelves": [
+            {
+              "shelfId": "B6-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B6-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B6-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B6-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B6-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B6-S6",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B7",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B7-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B7-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B7-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B7-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B7-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        },
+        {
+          "bayId": "B8",
+          "shelfCount": 5,
+          "shelves": [
+            {
+              "shelfId": "B8-S1",
+              "eyeLevel": false,
+              "traffic": "low"
+            },
+            {
+              "shelfId": "B8-S2",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B8-S3",
+              "eyeLevel": true,
+              "traffic": "high"
+            },
+            {
+              "shelfId": "B8-S4",
+              "eyeLevel": false,
+              "traffic": "medium"
+            },
+            {
+              "shelfId": "B8-S5",
+              "eyeLevel": false,
+              "traffic": "low"
+            }
+          ]
+        }
+      ]
     }
   }
 ]
