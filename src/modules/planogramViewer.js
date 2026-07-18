@@ -34,7 +34,7 @@ function buildBayRowMap(sections, bayCount) {
     const sectionStartInches = section.startFt * 12;
     section.shelves.forEach((shelf) => {
       let cumulative = 0;
-      shelf.skus.forEach((sku) => {
+      shelf.skus.forEach((sku, columnIndex) => {
         const w = sku.allocatedInches ?? sku.facings * (sku.widthInches ?? 3);
         const absoluteStart = sectionStartInches + cumulative;
         // Clamp rather than drop: a section can land a hair past the store's
@@ -47,7 +47,10 @@ function buildBayRowMap(sections, bayCount) {
         if (!map.has(bayIndex)) map.set(bayIndex, new Map());
         const rowMap = map.get(bayIndex);
         if (!rowMap.has(shelf.position)) rowMap.set(shelf.position, []);
-        rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf });
+        // columnIndex: this SKU's left-to-right slot within its row (Andrew,
+        // 2026-07-18) -- lets a drag-drop swap target the exact position
+        // another SKU occupied, not just "somewhere in this row."
+        rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
         cumulative += w;
       });
     });
@@ -60,7 +63,7 @@ function buildBayRowMap(sections, bayCount) {
 // section the way it actually looks on the real shelf, and reads as
 // immediately obvious rather than requiring you to parse a facings count.
 function renderSkuBox(entry) {
-  const { sku, sectionKey, shelfDef } = entry;
+  const { sku, sectionKey, shelfDef, columnIndex } = entry;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
   const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
@@ -69,7 +72,7 @@ function renderSkuBox(entry) {
   // it stays readable at facing-width instead of truncating to "BOTA ..."
   // in a box only 1-2in wide. Andrew's rule 2026-07-15.
   const box = `
-    <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}">
+    <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
       <div class="planogram-box-facing-controls">
         <button type="button" class="planogram-facing-btn planogram-facing-minus" draggable="false" title="${sku.facings <= 1 ? 'Remove from set' : 'Remove one facing'}">&minus;</button>
@@ -133,7 +136,9 @@ function renderBayRow(rowEntries, position, bay) {
     const lastGroup = groups[groups.length - 1];
     const lastEntry = lastGroup.entries[lastGroup.entries.length - 1];
     const targetSectionKey = realSectionKeyFor(lastGroup.sectionKey, lastEntry.sku);
-    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
+    // Trailing slot -- its implied column position is after everything
+    // already in this row.
+    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" data-column-index="${rowEntries.length}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
   }
 
   return `
@@ -447,8 +452,8 @@ export function mount(el) {
 
   // Shared by the Add SKU search results, empty-slot drops, and box-swap
   // drops -- always routes through the same override mechanism.
-  function placeSku(skuId, sectionKey, shelfPosition, facings) {
-    store.addOverride(selectedStoreId, { skuId, action: 'place', sectionKey, shelfPosition, facings: facings || 1 });
+  function placeSku(skuId, sectionKey, shelfPosition, facings, columnIndex = null) {
+    store.addOverride(selectedStoreId, { skuId, action: 'place', sectionKey, shelfPosition, facings: facings || 1, columnIndex });
   }
 
   // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
@@ -524,13 +529,13 @@ export function mount(el) {
       // positions (each keeps its own facings count); drag it onto an
       // empty slot to relocate it there instead (handled below).
       box.addEventListener('dragstart', (e) => {
-        console.log('[planogram] dragstart', box.dataset.skuId);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', JSON.stringify({
           skuId: box.dataset.skuId,
           facings: parseInt(box.dataset.facings, 10) || 1,
           sectionKey: box.dataset.sectionKey,
           shelfPosition: parseInt(box.dataset.shelfPosition, 10),
+          columnIndex: parseInt(box.dataset.columnIndex, 10),
         }));
       });
       box.addEventListener('dragover', (e) => e.preventDefault());
@@ -540,30 +545,31 @@ export function mount(el) {
         e.preventDefault();
         e.stopPropagation();
         box.classList.remove('drag-over-target');
-        console.log('[planogram] drop fired on', box.dataset.skuId);
         let dragged;
-        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { console.log('[planogram] drop: failed to parse dataTransfer', err); return; }
-        console.log('[planogram] drop: dragged payload =', dragged);
+        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
         const targetSkuId = box.dataset.skuId;
-        if (!dragged?.skuId || dragged.skuId === targetSkuId) { console.log('[planogram] drop: bailing (same sku or missing payload)'); return; }
+        if (!dragged?.skuId || dragged.skuId === targetSkuId) return;
 
         const { skus } = store.getSnapshot();
         const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
         const targetSku = skus.find((s) => s.skuId === targetSkuId);
-        if (!draggedSku || !targetSku) { console.log('[planogram] drop: sku lookup failed', { draggedSku: !!draggedSku, targetSku: !!targetSku }); return; }
+        if (!draggedSku || !targetSku) return;
 
         const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
         const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
+        const targetColumnIndex = parseInt(box.dataset.columnIndex, 10);
         const targetFacings = parseInt(box.dataset.facings, 10) || 1;
         const originSectionKey = realSectionKeyFor(dragged.sectionKey, draggedSku);
         const originShelfPosition = dragged.shelfPosition;
-        console.log('[planogram] drop: swapping', { dragged: dragged.skuId, targetSkuId, targetSectionKey, targetShelfPosition, originSectionKey, originShelfPosition });
+        const originColumnIndex = dragged.columnIndex;
 
-        placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings);
-        placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings);
+        // The swap: dragged takes target's exact row+column, target takes
+        // dragged's -- this is what actually reorders two SKUs already on
+        // the same row, not just assigning them both "this row" and hoping.
+        placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings, targetColumnIndex);
+        placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings, originColumnIndex);
         openSkuId = null;
         commitAndRender([dragged.skuId, targetSkuId]);
-        console.log('[planogram] drop: swap committed');
       });
     });
 
@@ -590,8 +596,9 @@ export function mount(el) {
         try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
         const sectionKey = slot.dataset.sectionKey;
         const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
+        const columnIndex = slot.dataset.columnIndex ? parseInt(slot.dataset.columnIndex, 10) : null;
         if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
-        placeSku(dragged.skuId, sectionKey, shelfPosition, dragged.facings);
+        placeSku(dragged.skuId, sectionKey, shelfPosition, dragged.facings, columnIndex);
         commitAndRender(dragged.skuId);
       });
     });

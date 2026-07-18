@@ -524,8 +524,38 @@ export function generatePlan(
     if (!sku) return;
     const natural = sectionForSku(sku);
     const targetKey = allocationByKey.has(o.sectionKey) ? o.sectionKey : natural.key;
-    placementsBySkuId.set(o.skuId, { sku, sectionKey: targetKey, shelfPosition: o.shelfPosition, facings: o.facings });
+    // columnIndex (Andrew, 2026-07-18): left-to-right slot within the row,
+    // set by dragging one box onto another -- shelfPosition alone only
+    // controls which ROW a locked SKU lands on, so swapping two SKUs
+    // already on the SAME row was a visual no-op (both just got appended
+    // to that row's array in whatever order, ignoring the swap). Null
+    // means "no preference, append at the end" (the Add SKU form and the
+    // manual override panel don't have a natural column to reference).
+    placementsBySkuId.set(o.skuId, {
+      sku, sectionKey: targetKey, shelfPosition: o.shelfPosition, facings: o.facings,
+      columnIndex: o.columnIndex ?? null,
+    });
   });
+
+  // Inserts each row's locked SKUs at their requested column position
+  // instead of always appending -- processed in ascending columnIndex order
+  // so a clean two-way swap (each wants the other's original slot) lands
+  // both SKUs in the right relative position. Items with no columnIndex
+  // preference (null) go to the end, after everything else.
+  function insertLockedIntoRow(rowArray, lockedSkusForRow) {
+    const withIndex = lockedSkusForRow
+      .map((sku) => ({ sku, columnIndex: placementsBySkuId.get(sku.skuId)?.columnIndex }));
+    withIndex.sort((a, b) => {
+      if (a.columnIndex == null && b.columnIndex == null) return 0;
+      if (a.columnIndex == null) return 1;
+      if (b.columnIndex == null) return -1;
+      return a.columnIndex - b.columnIndex;
+    });
+    withIndex.forEach(({ sku, columnIndex }) => {
+      const insertAt = columnIndex == null ? rowArray.length : Math.max(0, Math.min(columnIndex, rowArray.length));
+      rowArray.splice(insertAt, 0, sku);
+    });
+  }
 
   // Builds one allocation's category pool, ranking, and locked-SKU split --
   // identical regardless of whether the section ends up thin/merged or not.
@@ -654,11 +684,14 @@ export function generatePlan(
     }
 
     rowGroups = rowGroups.map((group) => [...group]);
+    const lockedByRow = new Map();
     lockedForSection.forEach((sku) => {
       const position = placementsBySkuId.get(sku.skuId).shelfPosition;
       const clamped = Math.max(1, Math.min(shelfCount, position || 1));
-      rowGroups[clamped - 1].push(sku);
+      if (!lockedByRow.has(clamped)) lockedByRow.set(clamped, []);
+      lockedByRow.get(clamped).push(sku);
     });
+    lockedByRow.forEach((skusForRow, clamped) => insertLockedIntoRow(rowGroups[clamped - 1], skusForRow));
 
     // Facings are computed PER ROW, not once for the whole section's SKU
     // list -- the section's width repeats at every shelf level, it isn't
@@ -806,13 +839,18 @@ export function generatePlan(
 
     // Splice locked/override SKUs into their exact stated shelf position
     // (clamped to this merged section's own shelf count), same pattern as
-    // buildSectionOutput's standalone path.
+    // buildSectionOutput's standalone path -- and, at their requested
+    // columnIndex within that row (see insertLockedIntoRow), so swapping
+    // two SKUs already on the same row actually reorders them instead of
+    // both just landing at the row's end regardless.
     rowGroups = rowGroups.map((group) => [...group]);
+    const lockedByRow = new Map();
     withSkus.forEach((d) => {
       d.lockedForSection.forEach((sku) => {
         const position = placementsBySkuId.get(sku.skuId)?.shelfPosition;
         const clamped = Math.max(1, Math.min(shelfCount, position || 1));
-        rowGroups[clamped - 1].push(sku);
+        if (!lockedByRow.has(clamped)) lockedByRow.set(clamped, []);
+        lockedByRow.get(clamped).push(sku);
         const widthInches = bottleWidthInches(sku, bottleDimensions);
         const override = placementsBySkuId.get(sku.skuId);
         blockFacingsBySkuId.set(sku.skuId, {
@@ -820,6 +858,7 @@ export function generatePlan(
         });
       });
     });
+    lockedByRow.forEach((skusForRow, clamped) => insertLockedIntoRow(rowGroups[clamped - 1], skusForRow));
 
     const shelves = shelfDefs.map((shelfDef, i) => {
       const rowSkus = rowGroups[i] || [];
