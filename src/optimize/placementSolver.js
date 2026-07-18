@@ -191,122 +191,19 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
   return { rowGroups, facingsBySkuId };
 }
 
-// Andrew, 2026-07-17 (revised after first pass): small-format sizes (187s,
-// 4-packs, mini multi-packs, 375s, 500mls) get a genuine TWO-LEVEL layout.
-// Level 1 -- each exact size code (0.5LT, 0.187LT X4, 0.375LT, etc.) keeps
-// its own dedicated shelf row(s), proportional to that size's combined
-// score share, never interleaved with another size ("a shelf of 4-packs,
-// two shelves of .5L, half a shelf of 375s" -- rows are the closest
-// available unit to "half a shelf" without a sub-row model). Level 2 --
-// WITHIN a size's own allotted rows, brand blocking (best brand on the best
-// of that size's rows) only applies if the size actually got more than one
-// row; a single-row (or single-brand) allotment just ranks all its SKUs by
-// score and fills as many distinct ones as fit. Facings are always 1 per
-// SKU in both levels -- Andrew, 2026-07-17: "these should all be 1 facing
-// SKUs going down the dollar sales list," i.e. fill width with breadth
-// (more distinct SKUs) rather than depth (more facings on one SKU).
-function allocateRowsBySize(naturalPool, shelfDefs, scoreMap, totalWidthInches, bottleDimensions) {
-  const bySize = new Map();
-  naturalPool.forEach((sku) => {
-    const key = sku.bottleSizeRaw || 'UNSPECIFIED';
-    if (!bySize.has(key)) bySize.set(key, []);
-    bySize.get(key).push(sku);
-  });
-  const groups = [...bySize.entries()].map(([size, skus]) => ({
-    size, skus,
-    totalScore: skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0),
-    // Sum of every SKU's own width at 1 facing -- the real amount of shelf
-    // this size's actual inventory needs to show its full breadth.
-    floorWidthInches: skus.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions), 0),
-  })).sort((a, b) => b.totalScore - a.totalScore);
-
-  const shelfCount = shelfDefs.length;
-  // More size codes present than rows to give them -- keep the highest-
-  // scoring ones (at least 1 row each), same drop-lowest philosophy already
-  // used for width elsewhere in this file.
-  const kept = groups.length > shelfCount ? groups.slice(0, shelfCount) : groups;
-  const n = kept.length;
-  if (!n) return [];
-
-  // Andrew, 2026-07-18 (third pass on row allocation): row count per size
-  // should track how many rows that size's OWN real inventory can actually
-  // fill, not a fixed split. A rigid "minor size gets 1 row" rule (tried
-  // previously) made sense when the minor size genuinely only had a
-  // handful of SKUs, but broke down once the extended-tier catalog gate
-  // was removed and BOTH sizes could have plenty of real content -- "a big
-  // sub-750 area with a lot of shelves would have a lot of 500mls AND
-  // 4-packs to work with... 3 shelves of 4-pack, or 3 shelves of .5L."
-  const contentNeeded = kept.map((g) => Math.max(1, Math.ceil(g.floorWidthInches / totalWidthInches)));
-  const totalNeeded = contentNeeded.reduce((s, r) => s + r, 0);
-
-  let rowCounts;
-  if (totalNeeded <= shelfCount) {
-    // Andrew, 2026-07-18: every shelf gets filled, full stop -- that's the
-    // priority over anything else. Start from what each size's own
-    // inventory needs, then hand out any genuinely leftover rows as BONUS
-    // rows (largest-remainder by score share, same mechanism used
-    // everywhere else in this file) rather than leaving them unassigned.
-    // A size that gets more rows than its strict content need cycles back
-    // through its own ranked list from the top to fill them (see
-    // fillSmallFormatGroupRows) -- the same product can appear on more
-    // than one shelf, which is different from stacking extra facings on
-    // one SKU within a single row.
-    rowCounts = [...contentNeeded];
-    const leftover = shelfCount - totalNeeded;
-    if (leftover > 0) {
-      const totalScoreAll = kept.reduce((s, g) => s + g.totalScore, 0) || 1;
-      const shares = kept.map((g) => (g.totalScore / totalScoreAll) * leftover);
-      const bonus = kept.map((_, i) => Math.floor(shares[i]));
-      let distributed = bonus.reduce((s, b) => s + b, 0);
-      const remainders = kept.map((_, i) => ({ i, frac: shares[i] - Math.floor(shares[i]) })).sort((a, b) => b.frac - a.frac);
-      for (let k = 0; distributed < leftover && k < remainders.length; k++, distributed++) {
-        bonus[remainders[k].i]++;
-      }
-      rowCounts = rowCounts.map((r, i) => r + bonus[i]);
-    }
-  } else {
-    // Not enough rows for everyone's full breadth -- fall back to score-
-    // proportional (1-row floor, largest-remainder for the rest, same
-    // approach computeFacings uses for bonus facings), then still cap each
-    // size at what its OWN content needs and hand back anything reclaimed
-    // to whichever other size could still use more.
-    const extra = shelfCount - n;
-    const totalScoreAll = kept.reduce((s, g) => s + g.totalScore, 0) || 1;
-    const shares = kept.map((g) => (g.totalScore / totalScoreAll) * extra);
-    rowCounts = kept.map((_, i) => 1 + Math.floor(shares[i]));
-    let distributed = rowCounts.reduce((s, r) => s + r, 0);
-    const remainders = kept.map((_, i) => ({ i, frac: shares[i] - Math.floor(shares[i]) })).sort((a, b) => b.frac - a.frac);
-    for (let k = 0; distributed < shelfCount && k < remainders.length; k++, distributed++) {
-      rowCounts[remainders[k].i]++;
-    }
-    let reclaimed = 0;
-    kept.forEach((g, i) => {
-      if (rowCounts[i] > contentNeeded[i]) {
-        reclaimed += rowCounts[i] - contentNeeded[i];
-        rowCounts[i] = contentNeeded[i];
-      }
-    });
-    let guard = 0;
-    while (reclaimed > 0 && guard < shelfCount) {
-      guard++;
-      const needMore = kept.map((_, i) => i).filter((i) => rowCounts[i] < contentNeeded[i]);
-      if (!needMore.length) break; // nobody else can productively use another row
-      const target = needMore.reduce((best, i) => (kept[i].totalScore > kept[best].totalScore ? i : best));
-      rowCounts[target]++;
-      reclaimed--;
-    }
-    if (reclaimed > 0) rowCounts[0] += reclaimed; // truly nothing left to use it -- give it to the top scorer rather than stranding it
-  }
-
-  const rankedShelves = [...shelfDefs].sort((a, b) => b.shelfScore - a.shelfScore);
-  let cursor = 0;
-  return kept.map((g, i) => {
-    const rows = rankedShelves.slice(cursor, cursor + rowCounts[i]);
-    cursor += rowCounts[i];
-    return { ...g, rows };
-  });
-}
-
+// Andrew, 2026-07-18 (sixth pass -- replaces the "N dedicated rows per
+// size" model entirely): small-format sizes (187s, 4-packs, mini multi-
+// packs, 375s, 500mls) stay grouped together HORIZONTALLY as much as
+// possible -- one size's SKUs are never interleaved bottle-by-bottle with
+// another size's within the same contiguous run -- but a size is no longer
+// capped at exactly one dedicated row just because there are more size
+// codes than shelves. A size's own content can span as many rows as it
+// actually needs, and once it runs out (or its next chunk stops fitting),
+// the next size in priority order picks up filling the REST of that same
+// row, sharing space instead of every size getting an artificially
+// exclusive row. See layoutSmallFormatSection below for the bin-packing
+// that replaced the old row-quota math (allocateRowsBySize).
+//
 // Andrew, 2026-07-17 (third pass) -- root cause of "Bota split across two
 // shelves with 1 SKU stranded on the second": brandGroups() (used
 // elsewhere for regular-size vertical blocking) groups by the EXACT brand
@@ -357,68 +254,69 @@ function collapseToRootBrand(skus, scoreMap) {
   return pinBotaBlackBoxFamilyOrder(ordered);
 }
 
-// Andrew, 2026-07-18 (fifth pass on small-format row filling): the previous
-// wraparound fill walked a FLAT SKU list, which could cut a brand family in
-// half at a row boundary (e.g. Black Box's first few SKUs finishing one row
-// and the rest spilling into the next) -- exactly the "families must never
-// split across shelves" rule from earlier undone by "fill every shelf."
-// Both hold at once by making the FAMILY the atomic unit here instead of
-// the SKU: walk the family list (Bota-before-Black-Box order preserved),
-// add whole families to a row while they still fit, move to the next row
-// once the next family wouldn't fit, and wrap back to the first family for
-// the next row once the list is exhausted -- same "every shelf gets
-// product, cycling if needed" behavior, just never splitting a family
-// mid-row. A lone family wider than one full row still gets included whole
-// (never leave a row artificially empty), matching the same exception
-// fitSkusToWidth already uses at the SKU level.
-function fillSmallFormatGroupRows(skus, rows, totalWidthInches, scoreMap, bottleDimensions, floorFacings) {
-  const byPosition = new Map();
-  const families = collapseToRootBrand(skus, scoreMap);
-  if (!families.length) return byPosition;
-  const familyWidth = (fam) => fam.sorted.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
-
-  let cursor = 0;
-  // Andrew, 2026-07-18: the previous `steps < families.length` bound stopped
-  // each row after visiting every family once, even when a lot of width was
-  // still unused -- it never actually took the "wrap back to the first
-  // family" cycling the comment above describes. A family can now repeat
-  // within the same row (and across rows) as many times as it takes to
-  // genuinely fill the width; the safety ceiling below is just a backstop
-  // against a true infinite loop, not a realistic limit.
-  const maxStepsPerRow = families.length * 200;
-  rows.forEach((row) => {
-    const rowSkus = [];
-    let used = 0;
-    for (let steps = 0; steps < maxStepsPerRow; steps++) {
-      if (cursor >= families.length) cursor = 0;
-      const fam = families[cursor];
-      const w = familyWidth(fam);
-      if (used > 0 && used + w > totalWidthInches) break; // next family doesn't fit alongside what's already placed -- save it for the next row
-      rowSkus.push(...fam.sorted);
-      used += w;
-      cursor++;
-    }
-    if (rowSkus.length) byPosition.set(row.position, rowSkus);
-  });
-  return byPosition;
-}
-
+// Andrew, 2026-07-18 (sixth pass): unified two-level bin-packing. Each SIZE
+// is grouped internally into brand families (collapseToRootBrand, same
+// family-atomic ordering as before -- Bota's own SKUs, for instance, always
+// stay together within their size's run). Sizes are then walked in score
+// order and bin-packed directly into rows: a size keeps contributing its
+// own family-chunks (contiguous, never interleaved with another size)
+// across as many rows as its content actually needs; once its next chunk
+// doesn't fit in the current row, the NEXT size in priority order fills the
+// rest of that same row instead of the row being left half-empty. Both
+// "grouped together horizontally" and "not limited to one shelf each" hold
+// at once this way. Sizes cycle back to their own top families (same
+// wraparound-fill philosophy as everywhere else in this file) once their
+// natural content runs out but rows remain.
 function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scoreMap, bottleDimensions, floorFacings) {
   const shelfCount = shelfDefs.length;
   const rowGroups = Array.from({ length: shelfCount }, () => []);
   const facingsBySkuId = new Map();
   if (!naturalPool.length) return { rowGroups, facingsBySkuId };
 
-  const sizeAllocations = allocateRowsBySize(naturalPool, shelfDefs, scoreMap, totalWidthInches, bottleDimensions);
-  sizeAllocations.forEach(({ skus, rows }) => {
-    const byPosition = fillSmallFormatGroupRows(skus, rows, totalWidthInches, scoreMap, bottleDimensions, floorFacings);
-    byPosition.forEach((fitted, position) => {
-      rowGroups[position - 1].push(...fitted);
-      fitted.forEach((sku) => {
+  const familyWidth = (fam) => fam.sorted.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
+
+  const bySize = new Map();
+  naturalPool.forEach((sku) => {
+    const key = sku.bottleSizeRaw || 'UNSPECIFIED';
+    if (!bySize.has(key)) bySize.set(key, []);
+    bySize.get(key).push(sku);
+  });
+  const sizeGroups = [...bySize.entries()].map(([size, skus]) => {
+    const families = collapseToRootBrand(skus, scoreMap);
+    const totalScore = skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0);
+    return { size, families, totalScore, familyCursor: 0 };
+  }).sort((a, b) => b.totalScore - a.totalScore).filter((g) => g.families.length > 0);
+  if (!sizeGroups.length) return { rowGroups, facingsBySkuId };
+
+  let sizeCursor = 0;
+  const maxStepsPerRow = sizeGroups.reduce((s, g) => s + g.families.length, 0) * 200;
+
+  shelfDefs.forEach((row) => {
+    const rowSkus = [];
+    let used = 0;
+    for (let steps = 0; steps < maxStepsPerRow; steps++) {
+      if (sizeCursor >= sizeGroups.length) sizeCursor = 0;
+      const group = sizeGroups[sizeCursor];
+      if (group.familyCursor >= group.families.length) group.familyCursor = 0;
+      const fam = group.families[group.familyCursor];
+      const w = familyWidth(fam);
+      if (used > 0 && used + w > totalWidthInches) break; // this size's next chunk doesn't fit -- stop the row here
+      rowSkus.push(...fam.sorted);
+      used += w;
+      group.familyCursor++;
+      // Keep pulling from the SAME size (grouped horizontally) until it
+      // completes a full lap through its own families -- only then does the
+      // next size in priority order get a turn, sharing whatever room is
+      // left in this row (or starting fresh on the next one).
+      if (group.familyCursor >= group.families.length) sizeCursor++;
+    }
+    if (rowSkus.length) {
+      rowGroups[row.position - 1].push(...rowSkus);
+      rowSkus.forEach((sku) => {
         const widthInches = bottleWidthInches(sku, bottleDimensions);
         facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
       });
-    });
+    }
   });
 
   return { rowGroups, facingsBySkuId };
@@ -527,7 +425,7 @@ export function generatePlan(
   // required a store's total fixture to exceed 112ft before "extended"
   // SKUs became eligible at all). A 20ft .5L section should be able to
   // grab everything ranked into that space regardless of the store's
-  // OVERALL size -- space-driven fill (fitSkusToWidth/allocateRowsBySize)
+  // OVERALL size -- space-driven fill (fitSkusToWidth/layoutSmallFormatSection)
   // already determines how deep into the ranked pool a section actually
   // reaches, so a separate store-wide gate on top of that was just cutting
   // off real inventory (half the 0.5LT catalog, in one real case) before
@@ -951,7 +849,7 @@ export function generatePlan(
     // an adjacent small-format section, regardless of width/sparsity --
     // that's the only way row real estate can be arbitrated between sizes
     // (e.g. capping a sparse 4-pack group to 1 row and handing the rest to
-    // 500ml, see allocateRowsBySize) instead of each size independently
+    // 500ml, see layoutSmallFormatSection) instead of each size independently
     // claiming every row in its own standalone section. The smallFormatMatches
     // check below still keeps this from merging into a NON-small-format
     // neighbor.
