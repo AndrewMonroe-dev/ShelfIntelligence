@@ -1,6 +1,17 @@
 import { store } from '../core/store.js';
 import { generatePlan } from '../optimize/placementSolver.js';
-import { getPhysicalWidthFt, BAY_WIDTH_FT } from '../optimize/shelfPosition.js';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, getShelvesForSpan } from '../optimize/shelfPosition.js';
+import { sectionForSku } from '../optimize/blocking.js';
+
+// A rendered section's own key is only a valid override target when it's a
+// real sectionAllocations entry -- merged (small-format cluster) sections
+// are a rendering-only composite, not something generatePlan's override
+// resolution recognizes. For those, fall back to the SKU's own natural
+// section key (sectionForSku), which IS a real allocation underneath the
+// merged visual wrapper. Andrew, 2026-07-18 (drag-and-drop + click-to-add).
+function realSectionKeyFor(rawKey, sku) {
+  return rawKey && rawKey.startsWith('merged:') ? sectionForSku(sku).key : rawKey;
+}
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
@@ -58,7 +69,7 @@ function renderSkuBox(entry) {
   // it stays readable at facing-width instead of truncating to "BOTA ..."
   // in a box only 1-2in wide. Andrew's rule 2026-07-15.
   const box = `
-    <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each)" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}">
+    <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
       <div class="planogram-box-label"><span>${label}</span></div>
       <div class="planogram-box-footer">
@@ -89,6 +100,10 @@ function shortenDividerLabel(label, maxParts = 3, maxChars = 60) {
 // Renders one bay's row: groups the row's entries by contiguous section so
 // a bay shared by two categories (a section boundary fell inside it) shows
 // a small divider badge at the handoff point, keeping them distinguishable.
+// Andrew, 2026-07-18: any leftover width in the row (or the whole row, if
+// it's bare) renders as a clickable/droppable "+ Add SKU" slot -- click
+// opens the Add SKU search pre-scoped to that section/shelf, or drop a
+// dragged box onto it to relocate that SKU there.
 function renderBayRow(rowEntries, position, bay) {
   const shelfDef = rowEntries[0]?.shelfDef;
   const groups = [];
@@ -98,6 +113,25 @@ function renderBayRow(rowEntries, position, bay) {
     else groups.push({ sectionKey: entry.sectionKey, sectionLabel: entry.sectionLabel, entries: [entry] });
   });
 
+  const usedInches = rowEntries.reduce(
+    (sum, e) => sum + (e.sku.allocatedInches ?? e.sku.facings * (e.sku.widthInches ?? 3)),
+    0
+  );
+  const leftoverInches = Math.max(0, BAY_INCHES - usedInches);
+
+  let emptySlotHtml = '';
+  if (!groups.length) {
+    // Nothing placed on this row at all -- no SKU to derive a real section
+    // key from, so this opens the Add SKU form unscoped (pick a section
+    // manually) rather than guessing one.
+    emptySlotHtml = `<div class="planogram-empty-slot planogram-empty-slot-full" title="Click to add a SKU here">+ Add SKU</div>`;
+  } else if (leftoverInches > 1) {
+    const lastGroup = groups[groups.length - 1];
+    const lastEntry = lastGroup.entries[lastGroup.entries.length - 1];
+    const targetSectionKey = realSectionKeyFor(lastGroup.sectionKey, lastEntry.sku);
+    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
+  }
+
   return `
     <div class="planogram-shelf-row">
       <div class="planogram-shelf-label">Shelf ${position}${shelfDef ? ` &middot; ${shelfDef.zone} &middot; ${shelfDef.traffic} traffic` : ''}</div>
@@ -105,7 +139,8 @@ function renderBayRow(rowEntries, position, bay) {
         ${groups.map((g) => `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
           ${g.entries.map(renderSkuBox).join('')}
-        `).join('') || '<div class="empty-state" style="padding:8px;font-size:10px;">Empty</div>'}
+        `).join('')}
+        ${emptySlotHtml}
       </div>
     </div>
   `;
@@ -132,10 +167,30 @@ export function mount(el) {
   let selectedStoreId = null;
   let openSkuId = null; // skuId whose override panel is currently expanded
   let addSectionKey = ''; // "+ Add SKU" form state
+  let addShelfPosition = null; // pre-set when opened by clicking an empty slot
   let addSearchTerm = '';
 
   function currentStore() {
     return store.getSnapshot().stores.find((s) => s.storeId === selectedStoreId);
+  }
+
+  // Andrew, 2026-07-18: the real, addressable override targets are whatever
+  // sectionAllocations actually has -- including small-format sizes that
+  // only ever appear inside a rendering-only "merged" section in the plan
+  // output. Building the selectable list from the allocations themselves
+  // (rather than currentPlan.sections, which hides merged-away individual
+  // sizes entirely) means every size -- 0.5LT, 0.187LT X4, etc. -- can
+  // actually be targeted by the Add SKU form and the override panel, not
+  // just the always-standalone varietal sections.
+  function realSelectableSections() {
+    const targetStore = currentStore();
+    if (!targetStore) return [];
+    const allocations = store.getSectionAllocations(selectedStoreId);
+    return allocations.map((a) => ({
+      key: a.key,
+      label: a.label,
+      shelfCount: getShelvesForSpan(targetStore.shelfLayout, a.startFt, a.widthFt).length,
+    }));
   }
 
   function regenerateAndSetPlan() {
@@ -176,12 +231,10 @@ export function mount(el) {
 
   function renderAddSkuForm(currentPlan) {
     const { skus } = store.getSnapshot();
-    // Merged sections (adjacent thin categories sharing one shelf stack)
-    // aren't a real sectionAllocations entry to target -- exclude them as
-    // an override destination.
-    const sections = currentPlan.sections.filter((s) => s.type !== 'merged');
+    const sections = realSelectableSections();
     const chosenSection = sections.find((s) => s.key === addSectionKey) || sections[0];
-    const shelfOptions = chosenSection ? chosenSection.shelves.map((sh) => sh.position) : [];
+    const shelfOptions = chosenSection ? Array.from({ length: chosenSection.shelfCount }, (_, i) => i + 1) : [];
+    const chosenShelf = addShelfPosition && shelfOptions.includes(addShelfPosition) ? addShelfPosition : shelfOptions[0];
     const matches = addSearchTerm.trim().length >= 2
       ? skus.filter((s) => `${s.brand} ${s.varietal || ''} ${s.skuId}`.toLowerCase().includes(addSearchTerm.toLowerCase())).slice(0, 8)
       : [];
@@ -199,7 +252,7 @@ export function mount(el) {
           <div>
             <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Shelf</div>
             <select class="add-sku-shelf">
-              ${shelfOptions.map((p) => `<option value="${p}">${p}</option>`).join('')}
+              ${shelfOptions.map((p) => `<option value="${p}" ${p === chosenShelf ? 'selected' : ''}>${p}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -226,15 +279,34 @@ export function mount(el) {
     const sku = skus.find((s) => s.skuId === openSkuId);
     if (!sku) return '';
     const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === openSkuId);
-    const sections = currentPlan.sections.filter((s) => s.type !== 'merged');
+
+    // Find where this SKU actually sits right now by searching every
+    // rendered section (including merged ones) -- a merged section's own
+    // key isn't itself selectable, so it's resolved to the real underlying
+    // key via realSectionKeyFor below.
+    let currentRenderedSectionKey = null;
+    let currentShelfPosition = null;
+    let currentFacingsFound = null;
+    outer: for (const s of currentPlan.sections) {
+      for (const sh of s.shelves) {
+        const found = sh.skus.find((k) => k.skuId === openSkuId);
+        if (found) {
+          currentRenderedSectionKey = s.key;
+          currentShelfPosition = sh.position;
+          currentFacingsFound = found.facings;
+          break outer;
+        }
+      }
+    }
+
+    const sections = realSelectableSections();
     const currentSectionKey = existing?.sectionKey
-      || sections.find((s) => s.shelves.some((sh) => sh.skus.some((k) => k.skuId === openSkuId)))?.key
+      || (currentRenderedSectionKey ? realSectionKeyFor(currentRenderedSectionKey, sku) : null)
       || sections[0]?.key;
     const chosenSection = sections.find((s) => s.key === currentSectionKey) || sections[0];
-    const shelfOptions = chosenSection ? chosenSection.shelves.map((sh) => sh.position) : [];
-    const currentFacings = existing?.facings
-      || sections.flatMap((s) => s.shelves.flatMap((sh) => sh.skus)).find((k) => k.skuId === openSkuId)?.facings
-      || 1;
+    const shelfOptions = chosenSection ? Array.from({ length: chosenSection.shelfCount }, (_, i) => i + 1) : [];
+    const chosenShelf = existing?.shelfPosition || currentShelfPosition || shelfOptions[0];
+    const currentFacings = existing?.facings || currentFacingsFound || 1;
 
     return `
       <div class="card override-panel" style="margin-bottom:14px;">
@@ -252,7 +324,7 @@ export function mount(el) {
           <div>
             <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Shelf</div>
             <select class="override-shelf">
-              ${shelfOptions.map((p) => `<option value="${p}">${p}</option>`).join('')}
+              ${shelfOptions.map((p) => `<option value="${p}" ${p === chosenShelf ? 'selected' : ''}>${p}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -369,14 +441,91 @@ export function mount(el) {
     bindListeners(output);
   }
 
+  // Shared by the Add SKU search results, empty-slot drops, and box-swap
+  // drops -- always routes through the same override mechanism.
+  function placeSku(skuId, sectionKey, shelfPosition, facings) {
+    store.addOverride(selectedStoreId, { skuId, action: 'place', sectionKey, shelfPosition, facings: facings || 1 });
+  }
+
   function bindListeners(output) {
     output.querySelectorAll('.planogram-box').forEach((box) => {
       box.addEventListener('click', () => {
         const skuId = box.dataset.skuId;
         openSkuId = openSkuId === skuId ? null : skuId;
         addSectionKey = '';
+        addShelfPosition = null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
+      });
+
+      // Andrew, 2026-07-18: drag a box onto another box to SWAP their
+      // positions (each keeps its own facings count); drag it onto an
+      // empty slot to relocate it there instead (handled below).
+      box.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+          skuId: box.dataset.skuId,
+          facings: parseInt(box.dataset.facings, 10) || 1,
+          sectionKey: box.dataset.sectionKey,
+          shelfPosition: parseInt(box.dataset.shelfPosition, 10),
+        }));
+      });
+      box.addEventListener('dragover', (e) => e.preventDefault());
+      box.addEventListener('dragenter', () => box.classList.add('drag-over-target'));
+      box.addEventListener('dragleave', () => box.classList.remove('drag-over-target'));
+      box.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        box.classList.remove('drag-over-target');
+        let dragged;
+        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+        const targetSkuId = box.dataset.skuId;
+        if (!dragged?.skuId || dragged.skuId === targetSkuId) return;
+
+        const { skus } = store.getSnapshot();
+        const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
+        const targetSku = skus.find((s) => s.skuId === targetSkuId);
+        if (!draggedSku || !targetSku) return;
+
+        const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
+        const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
+        const targetFacings = parseInt(box.dataset.facings, 10) || 1;
+        const originSectionKey = realSectionKeyFor(dragged.sectionKey, draggedSku);
+        const originShelfPosition = dragged.shelfPosition;
+
+        placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings);
+        placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings);
+        openSkuId = null;
+        renderOutput(regenerateAndSetPlan());
+      });
+    });
+
+    output.querySelectorAll('.planogram-empty-slot').forEach((slot) => {
+      slot.addEventListener('click', () => {
+        openSkuId = null;
+        addSectionKey = slot.dataset.sectionKey || '';
+        addShelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
+        addSearchTerm = '';
+        renderOutput(store.getSnapshot().currentPlan);
+        requestAnimationFrame(() => {
+          const input = document.querySelector('.add-sku-search');
+          if (input) { input.scrollIntoView({ block: 'center', behavior: 'smooth' }); input.focus(); }
+        });
+      });
+      slot.addEventListener('dragover', (e) => e.preventDefault());
+      slot.addEventListener('dragenter', () => slot.classList.add('drag-over-target'));
+      slot.addEventListener('dragleave', () => slot.classList.remove('drag-over-target'));
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        slot.classList.remove('drag-over-target');
+        let dragged;
+        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+        const sectionKey = slot.dataset.sectionKey;
+        const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
+        if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
+        placeSku(dragged.skuId, sectionKey, shelfPosition, dragged.facings);
+        renderOutput(regenerateAndSetPlan());
       });
     });
 
@@ -389,7 +538,7 @@ export function mount(el) {
       const sectionKey = output.querySelector('.override-section').value;
       const shelfPosition = parseInt(output.querySelector('.override-shelf').value, 10);
       const facings = parseInt(output.querySelector('.override-facings').value, 10);
-      store.addOverride(selectedStoreId, { skuId: openSkuId, action: 'place', sectionKey, shelfPosition, facings });
+      placeSku(openSkuId, sectionKey, shelfPosition, facings);
       openSkuId = null;
       renderOutput(regenerateAndSetPlan());
     });
@@ -422,6 +571,7 @@ export function mount(el) {
 
     output.querySelector('.add-sku-section')?.addEventListener('change', (e) => {
       addSectionKey = e.target.value;
+      addShelfPosition = null; // shelf options change with the section -- let it default to the first
       renderOutput(store.getSnapshot().currentPlan);
     });
 
@@ -430,16 +580,27 @@ export function mount(el) {
       renderOutput(store.getSnapshot().currentPlan);
     });
 
+    // Andrew, 2026-07-18: "I enter it in, hit enter" -- Enter picks the
+    // top search match directly, no need to click the result row too.
+    output.querySelector('.add-sku-search')?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const topMatch = output.querySelector('.add-sku-result');
+      if (topMatch) topMatch.click();
+    });
+
+    function addSkuFromForm(skuId) {
+      const sectionKey = output.querySelector('.add-sku-section').value;
+      const shelfPosition = parseInt(output.querySelector('.add-sku-shelf').value, 10);
+      const facings = parseInt(output.querySelector('.add-sku-facings').value, 10);
+      placeSku(skuId, sectionKey, shelfPosition, facings);
+      addSearchTerm = '';
+      addSectionKey = '';
+      addShelfPosition = null;
+      renderOutput(regenerateAndSetPlan());
+    }
+
     output.querySelectorAll('.add-sku-result').forEach((row) => {
-      row.addEventListener('click', () => {
-        const sectionKey = output.querySelector('.add-sku-section').value;
-        const shelfPosition = parseInt(output.querySelector('.add-sku-shelf').value, 10);
-        const facings = parseInt(output.querySelector('.add-sku-facings').value, 10);
-        store.addOverride(selectedStoreId, { skuId: row.dataset.skuId, action: 'place', sectionKey, shelfPosition, facings });
-        addSearchTerm = '';
-        addSectionKey = '';
-        renderOutput(regenerateAndSetPlan());
-      });
+      row.addEventListener('click', () => addSkuFromForm(row.dataset.skuId));
     });
   }
 
