@@ -524,6 +524,7 @@ export function mount(el) {
       // positions (each keeps its own facings count); drag it onto an
       // empty slot to relocate it there instead (handled below).
       box.addEventListener('dragstart', (e) => {
+        console.log('[planogram] dragstart', box.dataset.skuId);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', JSON.stringify({
           skuId: box.dataset.skuId,
@@ -539,26 +540,30 @@ export function mount(el) {
         e.preventDefault();
         e.stopPropagation();
         box.classList.remove('drag-over-target');
+        console.log('[planogram] drop fired on', box.dataset.skuId);
         let dragged;
-        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+        try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch (err) { console.log('[planogram] drop: failed to parse dataTransfer', err); return; }
+        console.log('[planogram] drop: dragged payload =', dragged);
         const targetSkuId = box.dataset.skuId;
-        if (!dragged?.skuId || dragged.skuId === targetSkuId) return;
+        if (!dragged?.skuId || dragged.skuId === targetSkuId) { console.log('[planogram] drop: bailing (same sku or missing payload)'); return; }
 
         const { skus } = store.getSnapshot();
         const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
         const targetSku = skus.find((s) => s.skuId === targetSkuId);
-        if (!draggedSku || !targetSku) return;
+        if (!draggedSku || !targetSku) { console.log('[planogram] drop: sku lookup failed', { draggedSku: !!draggedSku, targetSku: !!targetSku }); return; }
 
         const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
         const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
         const targetFacings = parseInt(box.dataset.facings, 10) || 1;
         const originSectionKey = realSectionKeyFor(dragged.sectionKey, draggedSku);
         const originShelfPosition = dragged.shelfPosition;
+        console.log('[planogram] drop: swapping', { dragged: dragged.skuId, targetSkuId, targetSectionKey, targetShelfPosition, originSectionKey, originShelfPosition });
 
         placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings);
         placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings);
         openSkuId = null;
         commitAndRender([dragged.skuId, targetSkuId]);
+        console.log('[planogram] drop: swap committed');
       });
     });
 
