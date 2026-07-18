@@ -12,8 +12,6 @@ import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPrice
 
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;
-const MAX_FACINGS_750ML = 3;
-const MAX_FACINGS_SMALL_SET = 2;
 // A section that can't fill more than this much width can't realistically
 // use more than one shelf row's worth of distinct product -- it defaults to
 // its top shelf only. When adjacent thin sections exist, they merge into
@@ -610,9 +608,12 @@ export function generatePlan(
 
     const usesPriceBandRules = appliesPriceBandRules(section);
     const floorFacings = (usesPriceBandRules && caseOnlyMode) ? CASE_ONLY_FLOOR_FACINGS : STANDARD_FLOOR_FACINGS;
-    const maxFacings = usesPriceBandRules
-      ? (physicalWidthFt < 40 ? MAX_FACINGS_SMALL_SET : MAX_FACINGS_750ML)
-      : Infinity;
+    // Andrew, 2026-07-18: 1-facing-max (breadth, not depth) extended to 750ml
+    // varietal sections too -- same reasoning as the 07-17 extension to
+    // 3L/4L/5L blocks. No more bonus facings on top scorers; leftover width
+    // goes to showing more distinct SKUs instead. Case Only Mode's raised
+    // floor (2) still applies as both floor and ceiling when active.
+    const maxFacings = floorFacings;
 
     function lockedInchesForRow(rowIndex) {
       const lockedInRow = lockedForSection.filter((sku) => {
