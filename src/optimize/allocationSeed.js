@@ -1,6 +1,6 @@
 import { computeScoreMap } from '../calc/scoreEngine.js';
 import { selectAssortment } from './assortment.js';
-import { groupBySection } from './blocking.js';
+import { groupBySection, isSmallFormatSection } from './blocking.js';
 import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
 import { getPhysicalWidthFt } from './shelfPosition.js';
 
@@ -50,14 +50,35 @@ export function seedSectionAllocation(store, allSkus, metricsConfig, targetSkuCo
 
   const widths = rawShares.map((share, i) => flooredWidths[i] + share * remainingWidth);
 
+  // Andrew, 2026-07-18: every small-format size (0.5LT, 0.187LT, 4-packs,
+  // etc.) needs to land physically ADJACENT to each other so the merge in
+  // placementSolver.js actually combines them into one section -- pure
+  // per-section score sorting scattered them among unrelated varietal
+  // sections whenever an individual size's own score happened to fall
+  // between two non-small-format sections. Small-format sections now sort
+  // as one contiguous cluster (positioned by the cluster's combined score,
+  // so it still lands in a sensible spot overall), ranked internally by
+  // each size's own score -- "ranked within the 4-pack sets," not just
+  // eligible to merge with them.
+  const smallFormatClusterScore = sectionKeys.reduce((sum, key) => {
+    const isSmall = isSmallFormatSection(sectionsMap.get(key));
+    return isSmall ? sum + (sectionScores.get(key) || 0) : sum;
+  }, 0);
+
   const ordered = sectionKeys
     .map((key, i) => ({
       key,
       label: sectionsMap.get(key).label,
       totalScore: sectionScores.get(key) || 0,
       widthFt: widths[i],
+      isSmallFormat: isSmallFormatSection(sectionsMap.get(key)),
     }))
-    .sort((a, b) => b.totalScore - a.totalScore);
+    .sort((a, b) => {
+      const aRank = a.isSmallFormat ? smallFormatClusterScore : a.totalScore;
+      const bRank = b.isSmallFormat ? smallFormatClusterScore : b.totalScore;
+      if (aRank !== bRank) return bRank - aRank;
+      return b.totalScore - a.totalScore; // within the cluster (or an exact tie), rank by own score
+    });
 
   let cursor = 0;
   return ordered.map((section, order) => {
