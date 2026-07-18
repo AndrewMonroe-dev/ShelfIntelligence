@@ -105,6 +105,30 @@
 .planogram-box.locked{border-color:var(--premium);box-shadow:0 0 0 1px rgba(201,162,39,.25) inset;}
 .planogram-box.drag-over-target{border-color:rgba(59,130,246,.8);box-shadow:0 0 0 2px rgba(59,130,246,.35) inset;}
 
+/* Andrew, 2026-07-18: per-box facing +/- controls. Sit at the top of the
+   box so they stay reachable even at facing-width (1-2in) boxes; stacked
+   vertically to fit that width. Minus deletes the SKU from the set
+   entirely once facings would drop below 1. */
+.planogram-box-facing-controls{
+  display:flex;
+  flex-direction:column;
+  z-index:1;
+}
+.planogram-facing-btn{
+  border:none;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+  color:var(--text2);
+  font-family:var(--font-mono);
+  font-size:11px;
+  line-height:1;
+  padding:3px 0;
+  cursor:pointer;
+  transition:background .15s ease,color .15s ease;
+}
+.planogram-facing-btn:hover{background:rgba(59,130,246,.15);color:var(--text);}
+.planogram-facing-minus:hover{background:rgba(220,80,80,.18);color:#f0a0a0;}
+
 /* Andrew, 2026-07-18: clickable/droppable empty space -- click opens the
    Add SKU search pre-scoped to this exact section/shelf, or drop a
    dragged box here to relocate it. Sized to the row's real leftover

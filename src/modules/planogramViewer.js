@@ -71,6 +71,10 @@ function renderSkuBox(entry) {
   const box = `
     <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
+      <div class="planogram-box-facing-controls">
+        <button type="button" class="planogram-facing-btn planogram-facing-minus" draggable="false" title="${sku.facings <= 1 ? 'Remove from set' : 'Remove one facing'}">&minus;</button>
+        <button type="button" class="planogram-facing-btn planogram-facing-plus" draggable="false" title="Add one facing">&plus;</button>
+      </div>
       <div class="planogram-box-label"><span>${label}</span></div>
       <div class="planogram-box-footer">
         <span class="planogram-box-price">${sku.priceUsd != null ? '$' + sku.priceUsd.toFixed(2) : '--'}</span>
@@ -456,6 +460,31 @@ export function mount(el) {
         addShelfPosition = null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
+      });
+
+      // Andrew, 2026-07-18: +/- facing buttons. Plus adds one facing;
+      // minus removes one, or removes the SKU from the set entirely once
+      // facings would drop below 1. stopPropagation so these don't also
+      // trigger the box's own click-to-open-edit-panel handler.
+      const currentFacings = parseInt(box.dataset.facings, 10) || 1;
+      const sectionKey = realSectionKeyFor(box.dataset.sectionKey, store.getSnapshot().skus.find((s) => s.skuId === box.dataset.skuId));
+      const shelfPosition = parseInt(box.dataset.shelfPosition, 10);
+
+      box.querySelector('.planogram-facing-plus')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings + 1);
+        renderOutput(regenerateAndSetPlan());
+      });
+
+      box.querySelector('.planogram-facing-minus')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (currentFacings <= 1) {
+          store.addOverride(selectedStoreId, { skuId: box.dataset.skuId, action: 'remove' });
+        } else {
+          placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings - 1);
+        }
+        if (openSkuId === box.dataset.skuId) openSkuId = null;
+        renderOutput(regenerateAndSetPlan());
       });
 
       // Andrew, 2026-07-18: drag a box onto another box to SWAP their
