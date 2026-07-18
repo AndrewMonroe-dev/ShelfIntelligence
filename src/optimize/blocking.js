@@ -268,39 +268,35 @@ export function brandGroups(skus, scoreMap) {
   return pinBotaBlackBoxFamilyOrder(orderedGroups);
 }
 
-// Andrew, 2026-07-16: Bota Breeze, Bota (plain), and Bota Nighthawk must
-// always block together left-to-right in that order, with Black Box
-// (whatever its own sub-brands) always immediately after Nighthawk --
-// regardless of score. Score-only ordering was scattering them (e.g. plain
-// Bota Box could outscore and land ahead of Bota Breeze, or Black Box could
-// land in the middle of the Bota family instead of after it). Any other
-// Bota sub-line not called out explicitly (Redvolution, Brightside) sits in
-// the "plain Bota" slot -- least-surprising default until Andrew specifies
-// otherwise. This only reorders the family's own members relative to each
-// other; every other brand in the section keeps its normal score order, and
-// the whole family is spliced back in at the position its first (highest-
-// scoring) member originally held, so it doesn't jump ahead of unrelated
-// higher-scoring brands.
-function botaBlackBoxFamilyRank(groupLabel) {
+// Andrew, 2026-07-16, simplified 2026-07-18: Bota Breeze, Bota (plain), and
+// Bota Nighthawk always block together left-to-right in that order, and the
+// whole Bota family always lands in a better spot than any OTHER brand in
+// the same size/section -- not tied to beating Black Box specifically
+// (dropped 2026-07-18: pinning Black Box immediately after Bota regardless
+// of its own score was an unnecessary special case; Black Box now just
+// keeps its normal score-based position among every other non-Bota brand).
+// Any other Bota sub-line not called out explicitly (Redvolution,
+// Brightside) sits in the "plain Bota" slot -- least-surprising default
+// until Andrew specifies otherwise.
+function botaFamilyRank(groupLabel) {
   if (/^BOTA/.test(groupLabel)) {
     if (groupLabel.includes('BREEZE')) return 0;
     if (groupLabel.includes('NIGHTHAWK')) return 2;
     return 1; // plain Bota + any other unlisted Bota sub-line
   }
-  if (/^BLACK BOX/.test(groupLabel)) return 3;
   return null;
 }
 
 export function pinBotaBlackBoxFamilyOrder(orderedGroups) {
   const familyIndices = [];
-  orderedGroups.forEach((g, i) => { if (botaBlackBoxFamilyRank(g.label) != null) familyIndices.push(i); });
-  if (familyIndices.length < 2) return orderedGroups;
+  orderedGroups.forEach((g, i) => { if (botaFamilyRank(g.label) != null) familyIndices.push(i); });
+  if (!familyIndices.length) return orderedGroups;
 
   const family = familyIndices.map((i) => orderedGroups[i])
-    .sort((a, b) => botaBlackBoxFamilyRank(a.label) - botaBlackBoxFamilyRank(b.label));
+    .sort((a, b) => botaFamilyRank(a.label) - botaFamilyRank(b.label));
 
   const result = orderedGroups.filter((_, i) => !familyIndices.includes(i));
-  result.splice(familyIndices[0], 0, ...family);
+  result.unshift(...family); // Bota always goes first, ahead of every other brand
   return result;
 }
 
