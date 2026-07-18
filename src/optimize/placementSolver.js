@@ -779,7 +779,14 @@ export function generatePlan(
       // dedicated row(s) within the merged pool -- never interleaved with
       // another size -- and only brand-blocks within a size's own rows when
       // it actually got more than one. Andrew, 2026-07-17 (revised).
-      const pooled = withSkus.flatMap((d) => [...d.naturalPool, ...d.lockedForSection]);
+      // Andrew, 2026-07-18: locked/override SKUs must NOT go through this
+      // pool -- they were previously mixed in with naturalPool and treated
+      // as ordinary ranked candidates, so a manual placement's facings and
+      // shelf position were silently ignored (or the SKU dropped entirely
+      // if it didn't score high enough to win a bin-packing slot). They're
+      // spliced in afterward at their exact stated position instead, same
+      // as the standalone (non-merged) section path already does.
+      const pooled = withSkus.flatMap((d) => [...d.naturalPool]);
       const result = layoutSmallFormatSection(
         pooled, shelfDefs, combinedWidth * 12, scoreMap, bottleDimensions, STANDARD_FLOOR_FACINGS
       );
@@ -788,7 +795,7 @@ export function generatePlan(
     } else {
       const categoryGroups = withSkus.map((d) => ({
         label: d.section.label,
-        sorted: [...d.naturalPool, ...d.lockedForSection],
+        sorted: [...d.naturalPool],
       }));
       const result = layoutGroupsAsBlocks(
         categoryGroups, shelfCount, combinedWidth * 12, scoreMap, bottleDimensions, STANDARD_FLOOR_FACINGS
@@ -796,6 +803,23 @@ export function generatePlan(
       rowGroups = result.rowGroups;
       blockFacingsBySkuId = result.facingsBySkuId;
     }
+
+    // Splice locked/override SKUs into their exact stated shelf position
+    // (clamped to this merged section's own shelf count), same pattern as
+    // buildSectionOutput's standalone path.
+    rowGroups = rowGroups.map((group) => [...group]);
+    withSkus.forEach((d) => {
+      d.lockedForSection.forEach((sku) => {
+        const position = placementsBySkuId.get(sku.skuId)?.shelfPosition;
+        const clamped = Math.max(1, Math.min(shelfCount, position || 1));
+        rowGroups[clamped - 1].push(sku);
+        const widthInches = bottleWidthInches(sku, bottleDimensions);
+        const override = placementsBySkuId.get(sku.skuId);
+        blockFacingsBySkuId.set(sku.skuId, {
+          skuId: sku.skuId, facings: override.facings, widthInches, allocatedInches: widthInches * override.facings,
+        });
+      });
+    });
 
     const shelves = shelfDefs.map((shelfDef, i) => {
       const rowSkus = rowGroups[i] || [];
