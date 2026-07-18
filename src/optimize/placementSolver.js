@@ -284,6 +284,9 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
     });
     return [...bySize.entries()].map(([size, skus]) => {
       const families = collapseToRootBrand(skus, scoreMap);
+      // Bota gets its one guaranteed best-slot appearance and is never
+      // reused again as repeat-fill, per Andrew, 2026-07-18.
+      families.forEach((f) => { f.noRepeat = /^BOTA/i.test(f.label); });
       const totalScore = skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0);
       return { size, families, totalScore, familyCursor: 0 };
     }).filter((g) => g.families.length > 0);
@@ -292,20 +295,18 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
   // Bin-packs a fixed, already-ORDERED list of size-groups into a given set
   // of rows -- same cycling/wraparound mechanism as the previous pass, just
   // scoped to whichever rows its tier is allowed to use.
-  // Andrew, 2026-07-18 (eighth pass): a pinned-first group (Bota, via
-  // pinBotaBlackBoxFamilyOrder) was the thing that got pulled back in on
-  // every wraparound once everything else had a turn -- since it's always
-  // first in the ordering, wrapping the cursor to the front always hits it
-  // again, which could land it on the WORST remaining row. That directly
-  // undercuts "Bota should be in a better spot than any other brand."
-  // Fix: at both the size level and the family level, always prefer
-  // whichever item hasn't appeared at all yet over repeating one that
-  // already has -- only once EVERYTHING in a list has had its one
-  // guaranteed turn does fair round-robin repeating kick in.
+  // Andrew, 2026-07-18 (ninth pass): Bota doesn't just deserve fair
+  // treatment on wraparound -- it should never repeat at all. It shows up
+  // exactly once, in its guaranteed best slot, full stop; lower-priority
+  // brands absorb ALL cycling/repeat-fill duty from then on, even if that
+  // means a row ends up short of full width. `noRepeat` items are excluded
+  // entirely once they've had their one appearance, never reused as filler.
   function pickIndex(items, currentIdx) {
     if (items[currentIdx] && !items[currentIdx].hasAppeared) return currentIdx;
     const unshown = items.findIndex((it) => !it.hasAppeared);
-    return unshown !== -1 ? unshown : currentIdx;
+    if (unshown !== -1) return unshown;
+    const repeatable = items.findIndex((it) => !it.noRepeat);
+    return repeatable !== -1 ? repeatable : -1; // -1: nothing left that's allowed to appear again
   }
 
   function packGroupsIntoRows(orderedGroups, rows) {
@@ -321,11 +322,21 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
       let used = 0;
       for (let steps = 0; steps < maxStepsPerRow; steps++) {
         if (groupCursor >= orderedGroups.length) groupCursor = 0;
-        groupCursor = pickIndex(orderedGroups, groupCursor);
+        const gIdx = pickIndex(orderedGroups, groupCursor);
+        if (gIdx === -1) break; // nothing left anywhere that's allowed to appear again
+        groupCursor = gIdx;
         const group = orderedGroups[groupCursor];
 
         if (group.familyCursor >= group.families.length) group.familyCursor = 0;
-        group.familyCursor = pickIndex(group.families, group.familyCursor);
+        const fIdx = pickIndex(group.families, group.familyCursor);
+        if (fIdx === -1) {
+          // this size's own families are all exhausted/non-repeatable --
+          // move on to the next size group instead of stalling this row
+          group.hasAppeared = true;
+          groupCursor++;
+          continue;
+        }
+        group.familyCursor = fIdx;
         const fam = group.families[group.familyCursor];
 
         const w = familyWidth(fam);
