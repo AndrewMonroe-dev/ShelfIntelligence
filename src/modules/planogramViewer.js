@@ -451,6 +451,39 @@ export function mount(el) {
     store.addOverride(selectedStoreId, { skuId, action: 'place', sectionKey, shelfPosition, facings: facings || 1 });
   }
 
+  // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
+  // from the row's normal fill budget (known limitation, documented at the
+  // block-layout call site in placementSolver.js) -- so a forced facings
+  // count or a swap can genuinely push a shelf row's real content past the
+  // physical 4ft bay width without the placement itself being rejected.
+  // Warn explicitly rather than let it silently overflow the row.
+  function warnIfRowOverflows(plan, targetStore, skuIds) {
+    if (!plan || !targetStore) return;
+    const rowMap = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
+    const warned = new Set();
+    for (const [bayIndex, rows] of rowMap.entries()) {
+      for (const [position, entries] of rows.entries()) {
+        if (!entries.some((e) => skuIds.includes(e.sku.skuId))) continue;
+        const usedInches = entries.reduce(
+          (sum, e) => sum + (e.sku.allocatedInches ?? e.sku.facings * (e.sku.widthInches ?? 3)),
+          0
+        );
+        const overageInches = usedInches - BAY_INCHES;
+        const key = `${bayIndex}-${position}`;
+        if (overageInches > 0.5 && !warned.has(key)) {
+          warned.add(key);
+          alert(`Bay ${bayIndex + 1}, Shelf ${position} now exceeds its available space by ${(overageInches / 12).toFixed(1)}ft. It will still render, but consider fewer facings or moving something out.`);
+        }
+      }
+    }
+  }
+
+  function commitAndRender(skuIdsToCheck) {
+    const plan = regenerateAndSetPlan();
+    warnIfRowOverflows(plan, currentStore(), Array.isArray(skuIdsToCheck) ? skuIdsToCheck : [skuIdsToCheck]);
+    renderOutput(plan);
+  }
+
   function bindListeners(output) {
     output.querySelectorAll('.planogram-box').forEach((box) => {
       box.addEventListener('click', () => {
@@ -473,7 +506,7 @@ export function mount(el) {
       box.querySelector('.planogram-facing-plus')?.addEventListener('click', (e) => {
         e.stopPropagation();
         placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings + 1);
-        renderOutput(regenerateAndSetPlan());
+        commitAndRender(box.dataset.skuId);
       });
 
       box.querySelector('.planogram-facing-minus')?.addEventListener('click', (e) => {
@@ -525,7 +558,7 @@ export function mount(el) {
         placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings);
         placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings);
         openSkuId = null;
-        renderOutput(regenerateAndSetPlan());
+        commitAndRender([dragged.skuId, targetSkuId]);
       });
     });
 
@@ -554,7 +587,7 @@ export function mount(el) {
         const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
         if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
         placeSku(dragged.skuId, sectionKey, shelfPosition, dragged.facings);
-        renderOutput(regenerateAndSetPlan());
+        commitAndRender(dragged.skuId);
       });
     });
 
@@ -568,8 +601,9 @@ export function mount(el) {
       const shelfPosition = parseInt(output.querySelector('.override-shelf').value, 10);
       const facings = parseInt(output.querySelector('.override-facings').value, 10);
       placeSku(openSkuId, sectionKey, shelfPosition, facings);
+      const placedSkuId = openSkuId;
       openSkuId = null;
-      renderOutput(regenerateAndSetPlan());
+      commitAndRender(placedSkuId);
     });
 
     output.querySelector('.override-remove-btn')?.addEventListener('click', () => {
@@ -625,7 +659,7 @@ export function mount(el) {
       addSearchTerm = '';
       addSectionKey = '';
       addShelfPosition = null;
-      renderOutput(regenerateAndSetPlan());
+      commitAndRender(skuId);
     }
 
     output.querySelectorAll('.add-sku-result').forEach((row) => {
