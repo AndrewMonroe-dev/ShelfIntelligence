@@ -254,19 +254,19 @@ function collapseToRootBrand(skus, scoreMap) {
   return pinBotaBlackBoxFamilyOrder(ordered);
 }
 
-// Andrew, 2026-07-18 (sixth pass): unified two-level bin-packing. Each SIZE
-// is grouped internally into brand families (collapseToRootBrand, same
-// family-atomic ordering as before -- Bota's own SKUs, for instance, always
-// stay together within their size's run). Sizes are then walked in score
-// order and bin-packed directly into rows: a size keeps contributing its
-// own family-chunks (contiguous, never interleaved with another size)
-// across as many rows as its content actually needs; once its next chunk
-// doesn't fit in the current row, the NEXT size in priority order fills the
-// rest of that same row instead of the row being left half-empty. Both
-// "grouped together horizontally" and "not limited to one shelf each" hold
-// at once this way. Sizes cycle back to their own top families (same
-// wraparound-fill philosophy as everywhere else in this file) once their
-// natural content runs out but rows remain.
+// Andrew, 2026-07-18 (seventh pass): fixed vertical tiering by size instead
+// of pure score priority between sizes. 0.187LT singles and 0.375LT only
+// look right on the very top shelf of a small-format section ("on any
+// other shelf they look strange") -- ranked by sales, top shelf ONLY, never
+// spilling further down. 0.5LT claims the row(s) below that next. Every
+// other small multi-pack size (4-packs, X2/X3/X6 packs, etc.) fills
+// whatever rows are left after 500ml, each exact size still its own
+// contiguous group (never interleaved), ranked by that size's own SKU
+// score among its tier-3 siblings. Within each tier, sizes/families still
+// bin-pack and cycle exactly as before (see packGroupsIntoRows) -- this
+// only changes WHICH rows a tier is allowed to use, not how it fills them.
+const SMALL_FORMAT_TOP_SHELF_SIZES = new Set(['0.187LT', '0.375LT']);
+
 function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scoreMap, bottleDimensions, floorFacings) {
   const shelfCount = shelfDefs.length;
   const rowGroups = Array.from({ length: shelfCount }, () => []);
@@ -275,49 +275,72 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
 
   const familyWidth = (fam) => fam.sorted.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
 
-  const bySize = new Map();
-  naturalPool.forEach((sku) => {
-    const key = sku.bottleSizeRaw || 'UNSPECIFIED';
-    if (!bySize.has(key)) bySize.set(key, []);
-    bySize.get(key).push(sku);
-  });
-  const sizeGroups = [...bySize.entries()].map(([size, skus]) => {
-    const families = collapseToRootBrand(skus, scoreMap);
-    const totalScore = skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0);
-    return { size, families, totalScore, familyCursor: 0 };
-  }).sort((a, b) => b.totalScore - a.totalScore).filter((g) => g.families.length > 0);
-  if (!sizeGroups.length) return { rowGroups, facingsBySkuId };
+  function buildSizeGroups(pool) {
+    const bySize = new Map();
+    pool.forEach((sku) => {
+      const key = sku.bottleSizeRaw || 'UNSPECIFIED';
+      if (!bySize.has(key)) bySize.set(key, []);
+      bySize.get(key).push(sku);
+    });
+    return [...bySize.entries()].map(([size, skus]) => {
+      const families = collapseToRootBrand(skus, scoreMap);
+      const totalScore = skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0);
+      return { size, families, totalScore, familyCursor: 0 };
+    }).filter((g) => g.families.length > 0);
+  }
 
-  let sizeCursor = 0;
-  const maxStepsPerRow = sizeGroups.reduce((s, g) => s + g.families.length, 0) * 200;
+  // Bin-packs a fixed, already-ORDERED list of size-groups into a given set
+  // of rows -- same cycling/wraparound mechanism as the previous pass, just
+  // scoped to whichever rows its tier is allowed to use.
+  function packGroupsIntoRows(orderedGroups, rows) {
+    if (!orderedGroups.length || !rows.length) return;
+    let groupCursor = 0;
+    const maxStepsPerRow = orderedGroups.reduce((s, g) => s + g.families.length, 0) * 200;
+    rows.forEach((row) => {
+      const rowSkus = [];
+      let used = 0;
+      for (let steps = 0; steps < maxStepsPerRow; steps++) {
+        if (groupCursor >= orderedGroups.length) groupCursor = 0;
+        const group = orderedGroups[groupCursor];
+        if (group.familyCursor >= group.families.length) group.familyCursor = 0;
+        const fam = group.families[group.familyCursor];
+        const w = familyWidth(fam);
+        if (used > 0 && used + w > totalWidthInches) break; // this size's next chunk doesn't fit -- stop the row here
+        rowSkus.push(...fam.sorted);
+        used += w;
+        group.familyCursor++;
+        if (group.familyCursor >= group.families.length) groupCursor++;
+      }
+      if (rowSkus.length) {
+        rowGroups[row.position - 1].push(...rowSkus);
+        rowSkus.forEach((sku) => {
+          const widthInches = bottleWidthInches(sku, bottleDimensions);
+          facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
+        });
+      }
+    });
+  }
 
-  shelfDefs.forEach((row) => {
-    const rowSkus = [];
-    let used = 0;
-    for (let steps = 0; steps < maxStepsPerRow; steps++) {
-      if (sizeCursor >= sizeGroups.length) sizeCursor = 0;
-      const group = sizeGroups[sizeCursor];
-      if (group.familyCursor >= group.families.length) group.familyCursor = 0;
-      const fam = group.families[group.familyCursor];
-      const w = familyWidth(fam);
-      if (used > 0 && used + w > totalWidthInches) break; // this size's next chunk doesn't fit -- stop the row here
-      rowSkus.push(...fam.sorted);
-      used += w;
-      group.familyCursor++;
-      // Keep pulling from the SAME size (grouped horizontally) until it
-      // completes a full lap through its own families -- only then does the
-      // next size in priority order get a turn, sharing whatever room is
-      // left in this row (or starting fresh on the next one).
-      if (group.familyCursor >= group.families.length) sizeCursor++;
-    }
-    if (rowSkus.length) {
-      rowGroups[row.position - 1].push(...rowSkus);
-      rowSkus.forEach((sku) => {
-        const widthInches = bottleWidthInches(sku, bottleDimensions);
-        facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
-      });
-    }
-  });
+  const topShelfPool = naturalPool.filter((s) => SMALL_FORMAT_TOP_SHELF_SIZES.has(s.bottleSizeRaw));
+  const halfLiterPool = naturalPool.filter((s) => s.bottleSizeRaw === '0.5LT');
+  const otherPool = naturalPool.filter((s) =>
+    !SMALL_FORMAT_TOP_SHELF_SIZES.has(s.bottleSizeRaw) && s.bottleSizeRaw !== '0.5LT'
+  );
+
+  const sortedShelves = [...shelfDefs].sort((a, b) => a.position - b.position);
+  // Only reserve the physical top shelf if this section actually has any
+  // 187/375 content -- otherwise that row would sit needlessly empty while
+  // 500ml/other sizes go begging for space below it.
+  const reserveTopShelf = topShelfPool.length > 0 && sortedShelves.length > 0;
+  const topShelf = reserveTopShelf ? [sortedShelves[0]] : [];
+  const remainingShelves = reserveTopShelf ? sortedShelves.slice(1) : sortedShelves;
+
+  const topGroups = buildSizeGroups(topShelfPool).sort((a, b) => b.totalScore - a.totalScore);
+  packGroupsIntoRows(topGroups, topShelf);
+
+  const halfLiterGroups = buildSizeGroups(halfLiterPool);
+  const otherGroups = buildSizeGroups(otherPool).sort((a, b) => b.totalScore - a.totalScore);
+  packGroupsIntoRows([...halfLiterGroups, ...otherGroups], remainingShelves);
 
   return { rowGroups, facingsBySkuId };
 }
