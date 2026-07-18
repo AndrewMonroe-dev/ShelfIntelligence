@@ -378,10 +378,18 @@ function fillSmallFormatGroupRows(skus, rows, totalWidthInches, scoreMap, bottle
   const familyWidth = (fam) => fam.sorted.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
 
   let cursor = 0;
+  // Andrew, 2026-07-18: the previous `steps < families.length` bound stopped
+  // each row after visiting every family once, even when a lot of width was
+  // still unused -- it never actually took the "wrap back to the first
+  // family" cycling the comment above describes. A family can now repeat
+  // within the same row (and across rows) as many times as it takes to
+  // genuinely fill the width; the safety ceiling below is just a backstop
+  // against a true infinite loop, not a realistic limit.
+  const maxStepsPerRow = families.length * 200;
   rows.forEach((row) => {
     const rowSkus = [];
     let used = 0;
-    for (let steps = 0; steps < families.length; steps++) {
+    for (let steps = 0; steps < maxStepsPerRow; steps++) {
       if (cursor >= families.length) cursor = 0;
       const fam = families[cursor];
       const w = familyWidth(fam);
