@@ -244,7 +244,7 @@ export function mount(el) {
       : [];
 
     return `
-      <div class="card" style="margin-bottom:14px;">
+      <div class="card" style="margin-bottom:14px;overflow:visible;">
         <span class="card-label">+ Add SKU to Plan</span>
         <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-end;">
           <div>
@@ -640,7 +640,17 @@ export function mount(el) {
 
     output.querySelector('.add-sku-search')?.addEventListener('input', (e) => {
       addSearchTerm = e.target.value;
+      const cursorPos = e.target.selectionStart;
       renderOutput(store.getSnapshot().currentPlan);
+      // renderOutput replaces the whole DOM subtree via innerHTML, which
+      // destroys and recreates the input -- without this, focus is lost
+      // after every single keystroke, so only one letter could be typed
+      // before having to click back in. Andrew, 2026-07-18.
+      const freshInput = output.querySelector('.add-sku-search');
+      if (freshInput) {
+        freshInput.focus();
+        freshInput.setSelectionRange(cursorPos, cursorPos);
+      }
     });
 
     // Andrew, 2026-07-18: "I enter it in, hit enter" -- Enter picks the
