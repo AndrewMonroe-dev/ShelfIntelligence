@@ -80,7 +80,14 @@ export function isSmallFormatSection(section) {
 // Rosa Assorted (UPC 0087872635091) are seasonal assortment packs, ruled out
 // for future use -- excluded by UPC (each brand has other, legitimate
 // single-varietal SKUs that must stay).
-const EXCLUDED_UPCS = new Set(['0196383007961', '0087872635091']);
+// Andrew, 2026-07-18: Manos Detroit (x2 UPCs), Kolbie Regular, The Barber,
+// and Worlds End -- flagged during the 750ml null-varietal review as not
+// belonging in sets. Excluded by UPC, same as the seasonal-pack exclusions
+// above.
+const EXCLUDED_UPCS = new Set([
+  '0196383007961', '0087872635091',
+  '0810196750451', '0810196750241', '4061462873131', '0852743002811', '0670087475591'
+]);
 // Andrew, 2026-07-16, per "Suggested Measurements of wine sizes.xlsx":
 // 0.187LT X5 ("These do not belong in sets. Period.") and 0.187LT X24, the
 // advent-calendar box ("DOES NOT BELONG IN SET") -- excluded by size code
