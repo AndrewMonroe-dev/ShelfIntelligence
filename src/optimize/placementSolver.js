@@ -636,10 +636,18 @@ export function generatePlan(
       // decision, then fit-to-width each resulting row (a rare trim, since
       // the constrained assignment already quotas by count). Falls back to
       // partitionIntoShelvesSparse when there aren't enough SKUs to cover
-      // every shelf under the hard band constraint.
-      const result = naturalPool.length < shelfCount
+      // every shelf under the hard band constraint -- either by raw count,
+      // or (Andrew, 2026-07-18) when the category's SKUs happen to cluster
+      // in one or two price bands (e.g. Germany/Riesling skewing cheap) and
+      // the hard band restrictions leave a shelf with zero eligible SKUs
+      // even though there's plenty of product overall. "No set should have
+      // empty space" wins over the price-band rule in that case.
+      let result = naturalPool.length < shelfCount
         ? partitionIntoShelvesSparse(naturalPool, shelfDefs)
         : partitionIntoShelvesConstrained(naturalPool, shelfDefs);
+      if (result.groups.some((rowSkus) => rowSkus.length === 0) && naturalPool.length >= shelfCount) {
+        result = partitionIntoShelvesSparse(naturalPool, shelfDefs);
+      }
       constraintNotes = result.constraintNotes;
       rowGroups = result.groups.map((rowSkus, i) => {
         const widthInches = Math.max(0, linearFeet * 12 - lockedInchesForRow(i));
