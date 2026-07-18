@@ -59,10 +59,17 @@ export const CONFIRMED_PACKAGE_TYPES = {
 // small-format family (single minis, multi-mini packs, and the 4-pack) all
 // genuinely qualify -- this previously only listed the four single-bottle
 // codes and missed every multi-pack variant.
+// Andrew, 2026-07-18: 0.748LT X4 is a 4-pack (same shelf category as the
+// other X4 packs, not its own size) and 0.2LT -- despite its raw ct=1
+// label -- is also effectively a 4-pack for shelf purposes. Every other
+// odd/rare container size surfaced by the pool-cap removal (0.72LT, 1LT,
+// 1LT X4, 0.8LT X4, 1.42LT X4, 0.561LT X3, 4LT, 1.25LT X2, 9.464LT X12)
+// stays OUT of this set on purpose -- those are real standalone categories,
+// choosable independently like any other size, not small-format.
 export const SMALL_FORMAT_SIZES = new Set([
   '0.5LT', '0.375LT', '0.25LT', '0.187LT',
   '0.187LT X2', '0.187LT X3', '0.187LT X4', '0.187LT X6',
-  '0.2LT X4', '0.275LT X4', '0.355LT X4',
+  '0.2LT X4', '0.275LT X4', '0.355LT X4', '0.748LT X4', '0.2LT',
 ]);
 
 export function isSmallFormatSection(section) {
