@@ -292,8 +292,28 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
   // Bin-packs a fixed, already-ORDERED list of size-groups into a given set
   // of rows -- same cycling/wraparound mechanism as the previous pass, just
   // scoped to whichever rows its tier is allowed to use.
+  // Andrew, 2026-07-18 (eighth pass): a pinned-first group (Bota, via
+  // pinBotaBlackBoxFamilyOrder) was the thing that got pulled back in on
+  // every wraparound once everything else had a turn -- since it's always
+  // first in the ordering, wrapping the cursor to the front always hits it
+  // again, which could land it on the WORST remaining row. That directly
+  // undercuts "Bota should be in a better spot than any other brand."
+  // Fix: at both the size level and the family level, always prefer
+  // whichever item hasn't appeared at all yet over repeating one that
+  // already has -- only once EVERYTHING in a list has had its one
+  // guaranteed turn does fair round-robin repeating kick in.
+  function pickIndex(items, currentIdx) {
+    if (items[currentIdx] && !items[currentIdx].hasAppeared) return currentIdx;
+    const unshown = items.findIndex((it) => !it.hasAppeared);
+    return unshown !== -1 ? unshown : currentIdx;
+  }
+
   function packGroupsIntoRows(orderedGroups, rows) {
     if (!orderedGroups.length || !rows.length) return;
+    orderedGroups.forEach((g) => {
+      g.hasAppeared = false;
+      g.families.forEach((f) => { f.hasAppeared = false; });
+    });
     let groupCursor = 0;
     const maxStepsPerRow = orderedGroups.reduce((s, g) => s + g.families.length, 0) * 200;
     rows.forEach((row) => {
@@ -301,15 +321,24 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
       let used = 0;
       for (let steps = 0; steps < maxStepsPerRow; steps++) {
         if (groupCursor >= orderedGroups.length) groupCursor = 0;
+        groupCursor = pickIndex(orderedGroups, groupCursor);
         const group = orderedGroups[groupCursor];
+
         if (group.familyCursor >= group.families.length) group.familyCursor = 0;
+        group.familyCursor = pickIndex(group.families, group.familyCursor);
         const fam = group.families[group.familyCursor];
+
         const w = familyWidth(fam);
         if (used > 0 && used + w > totalWidthInches) break; // this size's next chunk doesn't fit -- stop the row here
         rowSkus.push(...fam.sorted);
         used += w;
+        fam.hasAppeared = true;
         group.familyCursor++;
-        if (group.familyCursor >= group.families.length) groupCursor++;
+        if (group.familyCursor >= group.families.length) {
+          group.familyCursor = 0;
+          group.hasAppeared = true;
+          groupCursor++;
+        }
       }
       if (rowSkus.length) {
         rowGroups[row.position - 1].push(...rowSkus);
