@@ -94,15 +94,33 @@ function buildBayRowMap(sections, bayCount) {
   const pinned = sections.filter((s) => s.pinnedBayIndex != null);
   const normal = sections.filter((s) => s.pinnedBayIndex == null);
 
+  // Andrew, 2026-07-20 (second bug in the same feature): every pinned
+  // section shares the SAME dense-bay index (placementSolver.js computes
+  // one densest bay for the whole store), so if Set Layout ever produces
+  // more than one separate small-format section -- e.g. small-format
+  // categories aren't all adjacent in the order list, so they don't merge
+  // into a single combined block -- each one independently started at
+  // `pinnedBayIndex * BAY_INCHES` and they all landed on top of each
+  // other, 100% of the time. Pinned sections now sequence one after
+  // another from that shared starting point instead, same compaction
+  // principle as the normal sections below, just anchored to the dense
+  // bay instead of bay 0.
   const reservedBayIndices = new Set();
-  pinned.forEach((section) => {
-    const startInches = section.pinnedBayIndex * BAY_INCHES;
-    const contentInches = placeSectionBoxes(map, section, (localOffset) => startInches + localOffset, bayCount);
-    spans.set(section.key, { startFt: startInches / 12, endFt: (startInches + contentInches) / 12 });
-    const bayspan = Math.max(1, Math.ceil(contentInches / BAY_INCHES));
-    const upperBound = bayCount != null ? bayCount : section.pinnedBayIndex + bayspan;
-    for (let i = section.pinnedBayIndex; i < Math.min(section.pinnedBayIndex + bayspan, upperBound); i++) reservedBayIndices.add(i);
-  });
+  if (pinned.length) {
+    const pinnedAnchorInches = pinned[0].pinnedBayIndex * BAY_INCHES;
+    let pinnedCursorInches = pinnedAnchorInches;
+    pinned.forEach((section) => {
+      const startInches = pinnedCursorInches;
+      const contentInches = placeSectionBoxes(map, section, (localOffset) => startInches + localOffset, bayCount);
+      spans.set(section.key, { startFt: startInches / 12, endFt: (startInches + contentInches) / 12 });
+      pinnedCursorInches += contentInches;
+    });
+    const pinnedTotalInches = pinnedCursorInches - pinnedAnchorInches;
+    const bayspan = Math.max(1, Math.ceil(pinnedTotalInches / BAY_INCHES));
+    const startBay = pinned[0].pinnedBayIndex;
+    const upperBound = bayCount != null ? bayCount : startBay + bayspan;
+    for (let i = startBay; i < Math.min(startBay + bayspan, upperBound); i++) reservedBayIndices.add(i);
+  }
 
   const availableBayIndices = [];
   if (bayCount != null) {
