@@ -599,16 +599,36 @@ export function generatePlan(
 // only when the pool itself is too shallow to cover that, with a
 // tolerance of one average bottle width so the last unavoidable partial
 // slot doesn't false-positive.
-function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimensions, floorFacings) {
+// Andrew, 2026-07-20: measures from the shelves that were ACTUALLY built,
+// not a theoretical naturalPool-width estimate. The theoretical estimate
+// summed every distinct SKU's width once and compared it to shelfCount *
+// linearFeet -- correct in spirit, but it doesn't account for brand-FAMILY
+// grouping (no-repeat operates on families, not individual SKUs) reducing
+// how many "rounds" the pool can actually support, nor for a family too
+// wide to fit a given row. Real per-row placed content already reflects
+// both; summing it directly is the honest number ("shelf 6 has one SKU"
+// stays invisible if you only ever look at the widest row or a raw SKU
+// count -- see the 2026-07-20 achievedInches fix in the redistribution
+// pass above for the same class of bug).
+function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
   const neededInches = shelfCount * linearFeet * 12;
-  const availableInches = naturalPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
-  const avgBottleWidth = naturalPool.length
-    ? naturalPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions), 0) / naturalPool.length
+  const achievedInches = shelves.reduce((s, sh) => s + rowInches(sh), 0);
+  const allPlaced = shelves.flatMap((sh) => sh.skus);
+  const avgBottleWidth = allPlaced.length
+    ? allPlaced.reduce((s, sk) => s + (sk.widthInches ?? 3), 0) / allPlaced.length
     : 0;
-  const shortfallInches = neededInches - availableInches;
-  const skuDepthExhausted = shortfallInches > Math.max(avgBottleWidth, 1);
+  const shortfallInches = neededInches - achievedInches;
+  // Andrew, 2026-07-20: tolerance scales PER ROW (shelfCount * one bottle
+  // width), not a single flat bottle-width regardless of row count.
+  // Ordinary "no bonus facings" rounding (2026-07-18) leaves up to about
+  // one bottle-width unused on EVERY row, not once for the whole section
+  // -- a flat tolerance made a well-filled 5-row section (Cabernet, 390
+  // real SKUs, only 5% short) flag as "exhausted" right alongside a
+  // section that's genuinely out of distinct product, drowning the real
+  // signal in normal bin-packing noise.
+  const skuDepthExhausted = shortfallInches > Math.max(avgBottleWidth * shelfCount, shelfCount);
   const depthExhaustedNote = skuDepthExhausted
-    ? `Only ${naturalPool.length} distinct SKU${naturalPool.length === 1 ? '' : 's'} available -- ${(availableInches / 12).toFixed(1)}ft of real inventory width vs ${(neededInches / 12).toFixed(1)}ft needed to fill every row without repeating.`
+    ? `Only ${poolSize} distinct SKU${poolSize === 1 ? '' : 's'} available -- ${(achievedInches / 12).toFixed(1)}ft actually placed vs ${(neededInches / 12).toFixed(1)}ft needed to fill every row without repeating.`
     : null;
   return { skuDepthExhausted, depthExhaustedNote };
 }
@@ -821,7 +841,7 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
       };
     });
 
-    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimensions, floorFacings);
+    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(shelves, shelfCount, linearFeet, naturalPool.length);
 
     return {
       key,
@@ -962,7 +982,7 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     });
 
     const combinedPool = withSkus.flatMap((d) => d.naturalPool);
-    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(combinedPool, shelfCount, combinedWidth, bottleDimensions, STANDARD_FLOOR_FACINGS);
+    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(shelves, shelfCount, combinedWidth, combinedPool.length);
 
     return {
       key: `merged:${memberAllocations.map((a) => a.key).join('+')}`,
@@ -1159,6 +1179,24 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     return widest;
   }
 
+  // Andrew, 2026-07-20: the same force-first-unit overflow applies to
+  // regular (non-small-format) block sections -- layoutGroupsAsBlocks'
+  // chunkEvenlyAcrossRows/fitSkusToWidth also always includes at least one
+  // BRAND block even if that whole block is wider than the row, so a
+  // heavily-shrunk tiny size section (3LT/5LT/1LT box, etc.) can end up
+  // narrower than even its own single widest brand -- same bug, smaller
+  // scale, surfaced once the small-format fix above stopped masking it.
+  // Uses brandGroups (the actual grouping layoutGroupsAsBlocks uses),
+  // where small-format uses collapseToRootBrand's per-size grouping.
+  function widestBlockFamilyInches(pool, floorFacings) {
+    let widest = 0;
+    brandGroups(pool, scoreMap).forEach((fam) => {
+      const w = fam.sorted.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
+      widest = Math.max(widest, w);
+    });
+    return widest;
+  }
+
   const groupInfo = groups.map((group) => {
     const dataList = group.map((g) => g.data);
     const groupAllocations = group.map((g) => g.allocation);
@@ -1169,13 +1207,29 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     const maxInventoryInches = combinedPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
     const neededInches = shelfCount * groupAllocations.reduce((s, a) => s + a.widthFt, 0) * 12;
     const currentWidthFt = groupAllocations.reduce((s, a) => s + a.widthFt, 0);
-    const widestFamilyInches = isSmallFormat ? widestSmallFormatFamilyInches(combinedPool, floorFacings) : 0;
+    // Price-band varietal sections (750ml) place SKUs individually via
+    // fitSkusToWidth per shelf position, never force a whole multi-SKU
+    // brand block together -- no family-width floor applies there, only
+    // to 'size' blocks and merged runs that actually use brandGroups.
+    const usesPriceBandRulesHere = dataList.length === 1 && appliesPriceBandRules(dataList[0].section);
+    const widestFamilyInches = isSmallFormat
+      ? widestSmallFormatFamilyInches(combinedPool, floorFacings)
+      : (usesPriceBandRulesHere ? 0 : widestBlockFamilyInches(combinedPool, floorFacings));
     const totalScore = combinedPool.reduce((s, sku) => s + (scoreMap.get(sku.skuId)?.score ?? 0), 0);
     // Trial build at the ORIGINAL (pre-redistribution) width to measure what
     // this group actually achieves, across every row -- the real yardstick
     // for shortfall, not just theoretical inventory count.
+    //
+    // Andrew, 2026-07-20: summed across every row (the TRUE total placed),
+    // not shelfCount * the single widest row. No-repeat means each brand
+    // family only appears once across the WHOLE section, so once the
+    // deepest rows consume the best families, later rows in the cycling
+    // order can run dry even while the widest row looks completely full --
+    // multiplying that one best row by shelfCount silently assumed every
+    // row could match it, masking exactly the "shelf 6 has one SKU" case
+    // this measurement exists to catch.
     const trialOut = buildGroupOutput(groupAllocations, dataList);
-    const achievedInches = trialOut ? shelfCount * Math.max(...trialOut.shelves.map(rowInches), 0) : 0;
+    const achievedInches = trialOut ? trialOut.shelves.reduce((s, sh) => s + rowInches(sh), 0) : 0;
     return { group, shelfCount, maxInventoryInches, neededInches, achievedInches, currentWidthFt, widestFamilyInches, totalScore };
   });
 
