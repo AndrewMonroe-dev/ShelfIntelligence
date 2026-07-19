@@ -630,9 +630,18 @@ export function mount(el) {
       const sectionKey = realSectionKeyFor(box.dataset.sectionKey, store.getSnapshot().skus.find((s) => s.skuId === box.dataset.skuId));
       const shelfPosition = parseInt(box.dataset.shelfPosition, 10);
 
+      // Andrew, 2026-07-20: pass the box's own columnIndex through --
+      // placeSku's override defaults columnIndex to null when omitted, and
+      // insertLockedIntoRow (placementSolver.js) treats a null columnIndex
+      // as "insert at the end of the row," which is why a facing change
+      // was jumping the SKU (and its new facing) to the far right instead
+      // of staying put.
+      const columnIndex = parseInt(box.dataset.columnIndex, 10);
+      const currentColumnIndex = Number.isNaN(columnIndex) ? null : columnIndex;
+
       box.querySelector('.planogram-facing-plus')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings + 1);
+        placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings + 1, currentColumnIndex);
         commitAndRender(box.dataset.skuId);
       });
 
@@ -641,7 +650,7 @@ export function mount(el) {
         if (currentFacings <= 1) {
           store.addOverride(selectedStoreId, { skuId: box.dataset.skuId, action: 'remove' });
         } else {
-          placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings - 1);
+          placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings - 1, currentColumnIndex);
         }
         if (openSkuId === box.dataset.skuId) openSkuId = null;
         renderOutput(regenerateAndSetPlan());
