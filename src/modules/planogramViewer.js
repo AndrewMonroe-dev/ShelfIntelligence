@@ -46,7 +46,8 @@ function rowInches(shelf) {
 // a reserved bay still jumps over it correctly instead of overlapping it.
 // Returns how many local-offset inches of real content the section
 // actually used (its widest row).
-function placeSectionBoxes(map, section, mapper, bayCount) {
+function placeSectionBoxes(map, section, mapper, bays) {
+  const bayCount = bays ? bays.length : null;
   let sectionContentInches = 0;
   section.shelves.forEach((shelf) => {
     let cumulative = 0;
@@ -62,11 +63,21 @@ function placeSectionBoxes(map, section, mapper, bayCount) {
       const bayIndex = bayCount != null ? Math.min(rawBayIndex, bayCount - 1) : rawBayIndex;
       if (!map.has(bayIndex)) map.set(bayIndex, new Map());
       const rowMap = map.get(bayIndex);
-      if (!rowMap.has(shelf.position)) rowMap.set(shelf.position, []);
+      // Andrew, 2026-07-20: a section's shelf rows are computed from its
+      // NOMINAL Set Layout position (getShelvesForSpan), but compaction /
+      // dense-bay pinning can relocate its content into a bay with a
+      // DIFFERENT shelf count. renderBay only draws positions 1..the
+      // bay's own shelfCount, so a 5-row section landing in a 4-shelf bay
+      // silently lost its 5th row (confirmed live: Merlot's shelf-5 SKUs
+      // invisible in Bay 6). Fold overflow rows into the bay's last real
+      // shelf instead of dropping them.
+      const bayShelfCount = bays ? bays[bayIndex].shelfCount : null;
+      const rowPosition = bayShelfCount != null ? Math.min(shelf.position, bayShelfCount) : shelf.position;
+      if (!rowMap.has(rowPosition)) rowMap.set(rowPosition, []);
       // columnIndex: this SKU's left-to-right slot within its row (Andrew,
       // 2026-07-18) -- lets a drag-drop swap target the exact position
       // another SKU occupied, not just "somewhere in this row."
-      rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
+      rowMap.get(rowPosition).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
       cumulative += w;
     });
     sectionContentInches = Math.max(sectionContentInches, cumulative);
@@ -87,7 +98,8 @@ function placeSectionBoxes(map, section, mapper, bayCount) {
 // more/shorter shelves. Every OTHER section still compacts left-to-right
 // by real content width (2026-07-19), but now skips over whatever bay
 // range the pinned content actually consumes instead of overlapping it.
-function buildBayRowMap(sections, bayCount) {
+function buildBayRowMap(sections, bays) {
+  const bayCount = bays ? bays.length : null;
   const map = new Map();
   const spans = new Map();
 
@@ -111,7 +123,7 @@ function buildBayRowMap(sections, bayCount) {
     let pinnedCursorInches = pinnedAnchorInches;
     pinned.forEach((section) => {
       const startInches = pinnedCursorInches;
-      const contentInches = placeSectionBoxes(map, section, (localOffset) => startInches + localOffset, bayCount);
+      const contentInches = placeSectionBoxes(map, section, (localOffset) => startInches + localOffset, bays);
       spans.set(section.key, { startFt: startInches / 12, endFt: (startInches + contentInches) / 12 });
       pinnedCursorInches += contentInches;
     });
@@ -159,7 +171,7 @@ function buildBayRowMap(sections, bayCount) {
   let runningCompactedInches = 0;
   normal.forEach((section) => {
     const compactedStart = runningCompactedInches;
-    const contentInches = placeSectionBoxes(map, section, (localOffset) => toRealInches(compactedStart + localOffset), bayCount);
+    const contentInches = placeSectionBoxes(map, section, (localOffset) => toRealInches(compactedStart + localOffset), bays);
     const realStartInches = toRealInches(compactedStart);
     const realEndInches = toRealInches(compactedStart + contentInches);
     spans.set(section.key, { startFt: realStartInches / 12, endFt: realEndInches / 12 });
@@ -512,7 +524,7 @@ export function mount(el) {
     const actualSectionFeet = (s) => Math.max(...s.shelves.map(rowInches), 0) / 12;
     const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     const physicalWidthFt = getPhysicalWidthFt(targetStore.shelfLayout);
-    const { map: rowMap, spans: bayCompactedSpans } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
+    const { map: rowMap, spans: bayCompactedSpans } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays);
 
     output.innerHTML = `
       ${renderOverridesList()}
@@ -587,7 +599,7 @@ export function mount(el) {
   // Warn explicitly rather than let it silently overflow the row.
   function warnIfRowOverflows(plan, targetStore, skuIds) {
     if (!plan || !targetStore) return;
-    const { map: rowMap } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
+    const { map: rowMap } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays);
     const warned = new Set();
     for (const [bayIndex, rows] of rowMap.entries()) {
       for (const [position, entries] of rows.entries()) {
