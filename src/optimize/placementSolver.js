@@ -106,6 +106,19 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
   // entirely (greedy best-fit by score, most valuable blocks kept first)
   // until what remains actually fits at floor -- staying within the bay's
   // real linear feet takes priority over guaranteeing every brand a column.
+  // Andrew, 2026-07-20 (bug found via 3LT Box investigation): the TOP
+  // scorer is always force-kept regardless of its own width ("usedFloor
+  // === 0" branch), so a single wide block (Bota Box, 11 SKUs) can alone
+  // exceed the row and poison `usedFloor` past totalWidthInches -- every
+  // smaller block checked afterward then fails, even a 1-SKU brand that
+  // would trivially fit. But that force-kept oversized block gets scaled
+  // DOWN afterward anyway (see floorTotal/scale below), so this drop
+  // decision was made against a width nothing actually ends up needing.
+  // Result: 20 of 25 real brands for Retailer X - Location 12's 3LT Box
+  // were dropped entirely while every shelf row sat 45%+ empty. Dropped
+  // blocks are now kept aside and backfilled below once real leftover
+  // space (after scaling) is known, instead of being discarded for good.
+  const droppedBlocks = [];
   const totalFloorAll = blockInfo.reduce((s, b) => s + b.maxRowFloorWidth, 0);
   if (totalFloorAll > totalWidthInches) {
     const byScoreDesc = [...blockInfo].sort((a, b) => b.totalScore - a.totalScore);
@@ -115,6 +128,8 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
       if (usedFloor === 0 || usedFloor + b.maxRowFloorWidth <= totalWidthInches) {
         kept.push(b);
         usedFloor += b.maxRowFloorWidth;
+      } else {
+        droppedBlocks.push(b);
       }
     }
     blockInfo = kept;
@@ -166,6 +181,7 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
   }
 
   const rowGroups = Array.from({ length: shelfCount }, () => []);
+  const rowUsedInches = new Array(shelfCount).fill(0);
   const facingsBySkuId = new Map();
   blockInfo.forEach((b, gi) => {
     const budgetInches = targetWidths[gi];
@@ -192,8 +208,52 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
         facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
       });
       rowGroups[rowIdx].push(...fitted);
+      rowUsedInches[rowIdx] += fitted.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
     });
   });
+
+  // Andrew, 2026-07-20 (bug found via 3LT Box investigation -- Retailer X
+  // - Location 12, every shelf row 30-45% empty while 20 of 25 real
+  // brands were dropped entirely): `targetWidths` above always sums to
+  // exactly totalWidthInches by construction (scaled or bonus-filled), so
+  // there's never leftover AT THAT STAGE to backfill dropped blocks into.
+  // The real gap only appears here, per ROW, once a kept block's own
+  // limited SKU roster can't fill the width it was allotted (no bonus
+  // facings are spent to close that, per the 07-18 rule above). Backfill
+  // now happens from REAL post-build leftover, per row -- highest-scoring
+  // dropped block first, placed into whichever row has room for its own
+  // (un-scaled) floor width, using that block's own row-chunking so a
+  // family still only appears once across the whole section (no-repeat).
+  if (droppedBlocks.length) {
+    // A dropped block's `.rows` chunking (from chunkEvenlyAcrossRows) pins
+    // a small block's few SKUs to specific row INDICES -- fine for a kept
+    // block maintaining one consistent vertical column, but wrong for
+    // backfill: a 1-SKU block ends up pinned to row 0 only, so if row 0
+    // happens to be full it can never use wide-open space on row 5 or 6.
+    // Flatten back to the block's real SKU list and place each SKU
+    // individually into whichever row CURRENTLY has the most room that
+    // still fits it -- greedy fullest-remaining-bin, so backfill spreads
+    // naturally across whatever rows are actually short instead of being
+    // stuck wherever the pre-drop row math happened to put it.
+    const byScoreDesc = [...droppedBlocks].sort((a, b) => b.totalScore - a.totalScore);
+    for (const b of byScoreDesc) {
+      const allSkus = b.rows.flat();
+      allSkus.forEach((sku) => {
+        const widthInches = bottleWidthInches(sku, bottleDimensions);
+        const w = widthInches * floorFacings;
+        let bestRow = -1;
+        let bestRoom = -1;
+        for (let rowIdx = 0; rowIdx < shelfCount; rowIdx++) {
+          const room = totalWidthInches - rowUsedInches[rowIdx];
+          if (room >= w && room > bestRoom) { bestRow = rowIdx; bestRoom = room; }
+        }
+        if (bestRow === -1) return; // doesn't fit in any row's remaining space
+        facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
+        rowGroups[bestRow].push(sku);
+        rowUsedInches[bestRow] += w;
+      });
+    }
+  }
 
   return { rowGroups, facingsBySkuId };
 }
