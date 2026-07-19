@@ -1062,16 +1062,102 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
   });
   if (currentThinRun.length) groups.push(currentThinRun);
 
+  // Andrew, 2026-07-20: leftover space from a section that can't fill its
+  // allocation (not enough real distinct SKUs, same yardstick as
+  // skuDepthExhausted) used to just shrink the whole set at render time --
+  // recovered space piled up as dead space at the tail of the fixture
+  // instead of ever being used. Redistribute it BEFORE building sections
+  // instead: shrink each under-capacity group's allocation down to what it
+  // can actually use, pool the freed width, then hand that pool to
+  // over-capacity groups (real inventory deeper than their current
+  // allocation) in descending order of total opportunity score --
+  // best-selling first -- each capped at how much more it can genuinely
+  // use. The fixture stays full edge-to-edge; savings from thin categories
+  // go to top performers instead of evaporating.
+  function groupFloorFacings(dataList) {
+    if (dataList.length > 1) return STANDARD_FLOOR_FACINGS; // merged groups never use price-band/case-only rules
+    const usesPriceBandRules = appliesPriceBandRules(dataList[0].section);
+    return (usesPriceBandRules && caseOnlyMode) ? CASE_ONLY_FLOOR_FACINGS : STANDARD_FLOOR_FACINGS;
+  }
+
+  // A section's real inventory (naturalPool) is shared ACROSS every shelf
+  // row it spans -- no-repeat means the same distinct-SKU width can only be
+  // "spent" once total, not once per row. So the true capacity comparison
+  // is against shelfCount * widthFt (every row's worth), same `neededInches`
+  // math as skuDepthExhausted -- comparing against widthFt alone (one row)
+  // would badly understate how much a multi-shelf section actually needs.
+  function groupShelfCount(dataList, groupAllocations) {
+    const isSmallFormat = isSmallFormatSection(dataList[0].section);
+    const combinedWidth = groupAllocations.reduce((s, a) => s + a.widthFt, 0);
+    const startFt = groupAllocations[0].startFt;
+    const storeShelves = (isSmallFormat && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, combinedWidth);
+    return storeShelves.length;
+  }
+
+  const groupInfo = groups.map((group) => {
+    const dataList = group.map((g) => g.data);
+    const groupAllocations = group.map((g) => g.allocation);
+    const combinedPool = dataList.flatMap((d) => d.naturalPool);
+    const floorFacings = groupFloorFacings(dataList);
+    const shelfCount = groupShelfCount(dataList, groupAllocations);
+    const maxInventoryInches = combinedPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
+    const neededInches = shelfCount * groupAllocations.reduce((s, a) => s + a.widthFt, 0) * 12;
+    const totalScore = combinedPool.reduce((s, sku) => s + (scoreMap.get(sku.skuId)?.score ?? 0), 0);
+    return { group, shelfCount, maxInventoryInches, neededInches, totalScore };
+  });
+
+  // Shrink/grow amounts are expressed per-ROW (divided by shelfCount) since
+  // widthFt is a per-row budget applied uniformly across every shelf --
+  // shrinking/growing the group's widthFt by X automatically changes its
+  // total capacity by X * shelfCount.
+  const shrinkToWidthFtByGroup = new Map();
+  groupInfo.forEach((g) => {
+    if (g.neededInches > g.maxInventoryInches) {
+      shrinkToWidthFtByGroup.set(g.group, g.maxInventoryInches / g.shelfCount / 12);
+    }
+  });
+
+  // `remaining`/`capacity` stay in TOTAL inches (summed across every row of
+  // the contributing/absorbing sections) throughout -- only converted to a
+  // per-row widthFt (divide by shelfCount) at the moment it's recorded.
+  const totalShortfallInches = groupInfo.reduce((s, g) => s + Math.max(0, g.neededInches - g.maxInventoryInches), 0);
+  const extraWidthFtByGroup = new Map();
+  if (totalShortfallInches > 0) {
+    const growable = groupInfo.filter((g) => g.maxInventoryInches > g.neededInches).sort((a, b) => b.totalScore - a.totalScore);
+    let remaining = totalShortfallInches;
+    for (const g of growable) {
+      if (remaining <= 0) break;
+      const capacity = g.maxInventoryInches - g.neededInches; // total inches this group can still absorb
+      const take = Math.min(capacity, remaining);
+      if (take > 0) { extraWidthFtByGroup.set(g.group, take / g.shelfCount / 12); remaining -= take; }
+    }
+  }
+
+  // Applies a group's redistribution result to its member allocations,
+  // scaling every member's widthFt so the group's TOTAL hits the target --
+  // preserves each member's relative share within a merged group.
+  function applyRedistribution(group, groupAllocations) {
+    const shrinkTo = shrinkToWidthFtByGroup.get(group);
+    const extra = extraWidthFtByGroup.get(group) ?? 0;
+    if (shrinkTo == null && extra === 0) return groupAllocations;
+    const currentTotal = groupAllocations.reduce((s, a) => s + a.widthFt, 0);
+    const targetTotal = (shrinkTo ?? currentTotal) + extra;
+    const scale = currentTotal > 0 ? targetTotal / currentTotal : 0;
+    return groupAllocations.map((a) => ({ ...a, widthFt: a.widthFt * scale }));
+  }
+
   const sections = [];
   groups.forEach((group) => {
-    const groupAllocations = group.map((g) => g.allocation);
+    const rawAllocations = group.map((g) => g.allocation);
     const dataList = group.map((g) => g.data);
+    const groupAllocations = applyRedistribution(group, rawAllocations);
 
     if (groupAllocations.length === 1) {
       // Standalone section -- always fills every shelf row (block width
       // applies uniformly per shelf; buildSectionOutput's own sparse
       // fallback already handles genuinely low-SKU-count cases).
-      const sectionOut = buildSectionOutput(dataList[0]);
+      const widenedData = groupAllocations[0] === rawAllocations[0] ? dataList[0] : { ...dataList[0], allocation: groupAllocations[0] };
+      const sectionOut = buildSectionOutput(widenedData);
       if (sectionOut) sections.push(sectionOut);
       return;
     }
