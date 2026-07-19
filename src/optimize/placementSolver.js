@@ -481,17 +481,29 @@ export function generatePlan(
   const physicalWidthFt = getPhysicalWidthFt(store.shelfLayout);
 
   // Andrew, 2026-07-20: small-format product (187s, 375s, 4-packs, 500mls)
-  // is physically shorter, so a bay built with more/shorter shelves in the
-  // same vertical height fits it better -- but a section's bay was always
-  // chosen purely by horizontal position (getShelvesForSpan), which only
-  // lands small-format content in the shelf-dense bay by accident of Set
-  // Layout's cumulative width math. Instead, ALL small-format content is
-  // now pinned directly to whichever bay has the most shelves, regardless
-  // of Set Layout order -- Set Layout width still controls how much total
-  // space it gets, just not which physical bay it renders in.
-  const denseBayIndex = store.shelfLayout.bays.length
-    ? store.shelfLayout.bays.reduce((bestIdx, bay, i, arr) => (bay.shelfCount > arr[bestIdx].shelfCount ? i : bestIdx), 0)
-    : null;
+  // is physically shorter, so a bay DELIBERATELY BUILT with more/shorter
+  // shelves in the same vertical height fits it better -- but a section's
+  // bay was always chosen purely by horizontal position (getShelvesForSpan),
+  // which only lands small-format content in a shelf-dense bay by accident
+  // of Set Layout's cumulative width math. Small-format content pins
+  // directly to whichever bay has the most shelves, regardless of Set
+  // Layout order -- Set Layout width still controls how much total space
+  // it gets, just not which physical bay it renders in.
+  //
+  // Andrew, 2026-07-20 (correction): this must only activate when a bay is
+  // ACTUALLY built denser than the rest -- reduce() always returns SOME
+  // index even when every bay has the identical shelf count, which forced
+  // pinning unconditionally and broke stores with uniform shelving ("if
+  // there WAS a set designed for them, they'd populate there -- cutting
+  // them when they're the same shelf height as the others is not the
+  // fix"). No real density difference means no special bay: small-format
+  // sections fall through to ordinary position-based bay assignment, same
+  // as every other section.
+  const shelfCounts = store.shelfLayout.bays.map((b) => b.shelfCount);
+  const maxShelfCount = shelfCounts.length ? Math.max(...shelfCounts) : 0;
+  const minShelfCount = shelfCounts.length ? Math.min(...shelfCounts) : 0;
+  const hasDenseBay = maxShelfCount > minShelfCount;
+  const denseBayIndex = hasDenseBay ? shelfCounts.indexOf(maxShelfCount) : null;
   const denseBayShelves = denseBayIndex != null ? store.shelfLayout.bays[denseBayIndex].shelves : null;
 
   // Each section now pulls from its OWN full category pool (dedup'd,
