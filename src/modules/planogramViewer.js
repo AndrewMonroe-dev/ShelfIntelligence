@@ -37,44 +37,100 @@ function rowInches(shelf) {
 // widthFt allocations are untouched by this -- they're still exactly what
 // feeds the Optimization Engine as each section's target/cap; only the
 // VISUAL bay-bucket position changes here.
+// Places one section's boxes into `map`. `mapper(localOffsetInches)` turns
+// this section's own running content offset (0 at its first box) into a
+// real absolute inch position on the fixture -- lets pinned sections map
+// straight through (offset -> pinnedBayStart + offset) while normal
+// sections map through the reserved-bay skip logic below, PER BOX rather
+// than just at the section's start, so content wide enough to itself reach
+// a reserved bay still jumps over it correctly instead of overlapping it.
+// Returns how many local-offset inches of real content the section
+// actually used (its widest row).
+function placeSectionBoxes(map, section, mapper, bayCount) {
+  let sectionContentInches = 0;
+  section.shelves.forEach((shelf) => {
+    let cumulative = 0;
+    shelf.skus.forEach((sku, columnIndex) => {
+      const w = sku.allocatedInches ?? sku.facings * (sku.widthInches ?? 3);
+      const absoluteStart = mapper(cumulative);
+      // Clamp rather than drop: a section can land a hair past the store's
+      // real bay count on a rounding-level overshoot (content width sums
+      // fractionally past the nominal allocation) -- render it in the last
+      // real bay instead of silently vanishing with no warning. Genuine
+      // over-allocation is still surfaced separately via `plan.isOverflowing`.
+      const rawBayIndex = Math.floor(absoluteStart / BAY_INCHES);
+      const bayIndex = bayCount != null ? Math.min(rawBayIndex, bayCount - 1) : rawBayIndex;
+      if (!map.has(bayIndex)) map.set(bayIndex, new Map());
+      const rowMap = map.get(bayIndex);
+      if (!rowMap.has(shelf.position)) rowMap.set(shelf.position, []);
+      // columnIndex: this SKU's left-to-right slot within its row (Andrew,
+      // 2026-07-18) -- lets a drag-drop swap target the exact position
+      // another SKU occupied, not just "somewhere in this row."
+      rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
+      cumulative += w;
+    });
+    sectionContentInches = Math.max(sectionContentInches, cumulative);
+  });
+  return sectionContentInches;
+}
+
 // Returns { map, spans } -- `spans` is Map<sectionKey, {startFt, endFt}> in
-// the same COMPACTED coordinate space as `map`, so the debug table and any
-// other consumer of a section's rendered position stay consistent with what
+// the same coordinate space as `map`, so the debug table and any other
+// consumer of a section's rendered position stay consistent with what
 // actually gets drawn, instead of recomputing (and drifting from) the
 // compaction math separately.
+//
+// Andrew, 2026-07-20: small-format sections (187s, 375s, 4-packs, 500mls --
+// see `pinnedBayIndex` in placementSolver.js) are pinned to the store's
+// shelf-densest bay instead of flowing with normal left-to-right
+// compaction, since shorter bottles physically belong on a bay built with
+// more/shorter shelves. Every OTHER section still compacts left-to-right
+// by real content width (2026-07-19), but now skips over whatever bay
+// range the pinned content actually consumes instead of overlapping it.
 function buildBayRowMap(sections, bayCount) {
   const map = new Map();
   const spans = new Map();
-  let runningStartInches = 0;
-  sections.forEach((section) => {
-    const sectionStartInches = runningStartInches;
-    let sectionContentInches = 0;
-    section.shelves.forEach((shelf) => {
-      let cumulative = 0;
-      shelf.skus.forEach((sku, columnIndex) => {
-        const w = sku.allocatedInches ?? sku.facings * (sku.widthInches ?? 3);
-        const absoluteStart = sectionStartInches + cumulative;
-        // Clamp rather than drop: a section can land a hair past the store's
-        // real bay count on a rounding-level overshoot (content width sums
-        // fractionally past the nominal allocation) -- render it in the last
-        // real bay instead of silently vanishing with no warning. Genuine
-        // over-allocation is still surfaced separately via `plan.isOverflowing`.
-        const rawBayIndex = Math.floor(absoluteStart / BAY_INCHES);
-        const bayIndex = bayCount != null ? Math.min(rawBayIndex, bayCount - 1) : rawBayIndex;
-        if (!map.has(bayIndex)) map.set(bayIndex, new Map());
-        const rowMap = map.get(bayIndex);
-        if (!rowMap.has(shelf.position)) rowMap.set(shelf.position, []);
-        // columnIndex: this SKU's left-to-right slot within its row (Andrew,
-        // 2026-07-18) -- lets a drag-drop swap target the exact position
-        // another SKU occupied, not just "somewhere in this row."
-        rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
-        cumulative += w;
-      });
-      sectionContentInches = Math.max(sectionContentInches, cumulative);
-    });
-    spans.set(section.key, { startFt: sectionStartInches / 12, endFt: (sectionStartInches + sectionContentInches) / 12 });
-    runningStartInches += sectionContentInches;
+
+  const pinned = sections.filter((s) => s.pinnedBayIndex != null);
+  const normal = sections.filter((s) => s.pinnedBayIndex == null);
+
+  const reservedBayIndices = new Set();
+  pinned.forEach((section) => {
+    const startInches = section.pinnedBayIndex * BAY_INCHES;
+    const contentInches = placeSectionBoxes(map, section, (localOffset) => startInches + localOffset, bayCount);
+    spans.set(section.key, { startFt: startInches / 12, endFt: (startInches + contentInches) / 12 });
+    const bayspan = Math.max(1, Math.ceil(contentInches / BAY_INCHES));
+    const upperBound = bayCount != null ? bayCount : section.pinnedBayIndex + bayspan;
+    for (let i = section.pinnedBayIndex; i < Math.min(section.pinnedBayIndex + bayspan, upperBound); i++) reservedBayIndices.add(i);
   });
+
+  const availableBayIndices = [];
+  if (bayCount != null) {
+    for (let i = 0; i < bayCount; i++) if (!reservedBayIndices.has(i)) availableBayIndices.push(i);
+  }
+
+  // Maps a "compacted" cumulative-inches offset (as if all available bays
+  // were laid end to end with no gaps) to its real absolute-inch position,
+  // skipping any reserved bay. Falls back to plain sequential bays if the
+  // store's bay count is unknown or nothing is reserved.
+  function toRealInches(compactedInches) {
+    if (!availableBayIndices.length) return compactedInches;
+    const bayOffset = Math.floor(compactedInches / BAY_INCHES);
+    const withinBay = compactedInches % BAY_INCHES;
+    const realBayIndex = availableBayIndices[Math.min(bayOffset, availableBayIndices.length - 1)];
+    return realBayIndex * BAY_INCHES + withinBay;
+  }
+
+  let runningCompactedInches = 0;
+  normal.forEach((section) => {
+    const compactedStart = runningCompactedInches;
+    const contentInches = placeSectionBoxes(map, section, (localOffset) => toRealInches(compactedStart + localOffset), bayCount);
+    const realStartInches = toRealInches(compactedStart);
+    const realEndInches = toRealInches(compactedStart + contentInches);
+    spans.set(section.key, { startFt: realStartInches / 12, endFt: realEndInches / 12 });
+    runningCompactedInches += contentInches;
+  });
+
   return { map, spans };
 }
 

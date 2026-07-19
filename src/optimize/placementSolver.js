@@ -480,6 +480,20 @@ export function generatePlan(
   const scoreMap = computeScoreMap(allSkus, metricsConfig, context);
   const physicalWidthFt = getPhysicalWidthFt(store.shelfLayout);
 
+  // Andrew, 2026-07-20: small-format product (187s, 375s, 4-packs, 500mls)
+  // is physically shorter, so a bay built with more/shorter shelves in the
+  // same vertical height fits it better -- but a section's bay was always
+  // chosen purely by horizontal position (getShelvesForSpan), which only
+  // lands small-format content in the shelf-dense bay by accident of Set
+  // Layout's cumulative width math. Instead, ALL small-format content is
+  // now pinned directly to whichever bay has the most shelves, regardless
+  // of Set Layout order -- Set Layout width still controls how much total
+  // space it gets, just not which physical bay it renders in.
+  const denseBayIndex = store.shelfLayout.bays.length
+    ? store.shelfLayout.bays.reduce((bestIdx, bay, i, arr) => (bay.shelfCount > arr[bestIdx].shelfCount ? i : bestIdx), 0)
+    : null;
+  const denseBayShelves = denseBayIndex != null ? store.shelfLayout.bays[denseBayIndex].shelves : null;
+
   // Each section now pulls from its OWN full category pool (dedup'd,
   // eligibility-filtered) rather than a slice of one global top-N list --
   // `targetSkuCount` no longer caps the assortment, it's kept only as a
@@ -631,9 +645,11 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     const linearFeet = allocation.widthFt;
     const startFt = allocation.startFt;
 
-    const storeShelves = getShelvesForSpan(store.shelfLayout, startFt, linearFeet);
+    const isSmallFormat = isSmallFormatSection(section);
+    const storeShelves = (isSmallFormat && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, linearFeet);
     const shelfCount = storeShelves.length;
     const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
+    const pinnedBayIndex = (isSmallFormat && denseBayIndex != null) ? denseBayIndex : null;
 
     const usesPriceBandRules = appliesPriceBandRules(section);
     const floorFacings = (usesPriceBandRules && caseOnlyMode) ? CASE_ONLY_FLOOR_FACINGS : STANDARD_FLOOR_FACINGS;
@@ -808,6 +824,7 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
       usesPriceBandRules,
       skuDepthExhausted,
       depthExhaustedNote,
+      pinnedBayIndex,
     };
   }
 
@@ -831,15 +848,15 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     const startFt = memberAllocations[0].startFt;
     const combinedLockedSkuIds = new Set(withSkus.flatMap((d) => [...d.lockedSkuIds]));
 
-    const storeShelves = getShelvesForSpan(store.shelfLayout, startFt, combinedWidth);
-    const shelfCount = storeShelves.length;
-    const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
-
     // The merge-eligibility guard above (currentRunIsSmallFormat) guarantees
     // every member of a merged run is either all small-format or all
     // regular-format -- never mixed -- so checking the first member decides
     // layout mode for the whole group.
     const isSmallFormatRun = isSmallFormatSection(withSkus[0].section);
+    const storeShelves = (isSmallFormatRun && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, combinedWidth);
+    const shelfCount = storeShelves.length;
+    const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
+    const pinnedBayIndex = (isSmallFormatRun && denseBayIndex != null) ? denseBayIndex : null;
     let rowGroups, blockFacingsBySkuId;
     if (isSmallFormatRun) {
       // Each exact size code (187s, 4-packs, 375s, 500mls) keeps its own
@@ -948,6 +965,7 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
       usesPriceBandRules: false,
       skuDepthExhausted,
       depthExhaustedNote,
+      pinnedBayIndex,
     };
   }
 
