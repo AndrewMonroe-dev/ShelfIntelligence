@@ -4,7 +4,12 @@ import { groupBySection, isSmallFormatSection } from './blocking.js';
 import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
 import { getPhysicalWidthFt } from './shelfPosition.js';
 
-const MIN_SECTION_WIDTH_FT = 2;
+// Andrew, 2026-07-17: lowered from 2ft -- some categories genuinely only
+// need a couple bottles' worth of space, and 2ft (several bottles per
+// shelf row, times every row the section spans) was too coarse a floor to
+// ever let a section seed down that small. ~0.3ft is roughly one bottle
+// width at floor facings.
+const MIN_SECTION_WIDTH_FT = 0.3;
 
 // One-time seed for a store's Category Allocation Model, run when a store
 // has no persisted allocation yet. Scores sections by opportunity (same

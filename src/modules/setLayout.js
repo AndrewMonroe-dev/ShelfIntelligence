@@ -4,14 +4,21 @@ import { getPhysicalWidthFt, getLinearShelfFeet } from '../optimize/shelfPositio
 
 const PX_PER_FT = 20;
 const MIN_BAY_BLOCK_PX = 92; // wide enough for the shelf-count stepper to never overflow a 4ft-scaled block
-const MIN_SECTION_WIDTH_FT = 1;
-// Andrew, 2026-07-16: with 50+ small MI-derived categories (many under 1ft,
-// e.g. Regional, New Zealand, Flavored/Sweet), a strictly-proportional card
-// width made most cards ~16px -- unreadable, no room for the category name.
-// This is a purely VISUAL floor on the rendered card width; the underlying
-// widthFt data and resize/reorder behavior are untouched -- a card can still
-// scroll off to the right, per Andrew's "fine if I have to scroll" call.
-const MIN_CARD_PX = 168;
+// Andrew, 2026-07-17: lowered from 1ft -- some categories genuinely only
+// need a couple bottles' worth of space, and a section's width applies to
+// EVERY shelf row it spans, so even 1ft (several bottles per row) was too
+// coarse a floor. ~0.3ft is roughly one bottle width at floor facings.
+// Card rendering still floors at MIN_CARD_PX below regardless of widthFt.
+const MIN_SECTION_WIDTH_FT = 0.3;
+// Andrew, 2026-07-19: lowered from 168px -- that floor made every section
+// under 8.4ft (168/20) visually static during resize (the ft number
+// updated but the box never appeared to shrink/grow), which read as a
+// bug. Andrew chose true proportional sizing over label readability for
+// tiny cards: the box now tracks widthFt for real, all the way down to
+// this floor, which only exists so the drag handle (top-left) and delete
+// button (top-right, each ~18px) don't overlap each other. Below ~2.4ft
+// the label will visually clip -- accepted tradeoff, not a bug.
+const MIN_CARD_PX = 48;
 function cardWidthPx(widthFt) {
   return Math.max(MIN_CARD_PX, widthFt * PX_PER_FT);
 }
