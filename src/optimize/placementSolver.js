@@ -42,8 +42,15 @@ function chunkEvenlyAcrossRows(sortedSkus, shelfCount, pinnedToTopFn = null) {
   // least one representative (repeating a SKU across shelves is normal
   // real-world blocking for a small assortment). Fixed 2026-07-15 after
   // Andrew caught mismatched row widths on Bay B1.
+  // Andrew, 2026-07-19: no repeats anywhere, full stop -- a brand with
+  // fewer real SKUs than its block has rows just leaves the extra rows of
+  // its own column empty rather than repeating a SKU into a second
+  // position. Where you place a SKU is the only spot it goes unless it's
+  // getting more facings in that same spot (see skuDepthExhausted below
+  // for surfacing the resulting shortfall instead of silently padding it).
   if (n > 0 && n < shelfCount) {
-    const chunks = Array.from({ length: shelfCount }, (_, i) => [rest[i % n]]);
+    const chunks = Array.from({ length: shelfCount }, () => []);
+    rest.forEach((sku, i) => { chunks[i] = [sku]; });
     if (pinned.length) chunks[0] = [...pinned, ...chunks[0]];
     return chunks;
   }
@@ -284,9 +291,6 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
     });
     return [...bySize.entries()].map(([size, skus]) => {
       const families = collapseToRootBrand(skus, scoreMap);
-      // Bota gets its one guaranteed best-slot appearance and is never
-      // reused again as repeat-fill, per Andrew, 2026-07-18.
-      families.forEach((f) => { f.noRepeat = /^BOTA/i.test(f.label); });
       const totalScore = skus.reduce((s, sk) => s + (scoreMap.get(sk.skuId)?.score ?? 0), 0);
       return { size, families, totalScore, familyCursor: 0 };
     }).filter((g) => g.families.length > 0);
@@ -295,18 +299,16 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
   // Bin-packs a fixed, already-ORDERED list of size-groups into a given set
   // of rows -- same cycling/wraparound mechanism as the previous pass, just
   // scoped to whichever rows its tier is allowed to use.
-  // Andrew, 2026-07-18 (ninth pass): Bota doesn't just deserve fair
-  // treatment on wraparound -- it should never repeat at all. It shows up
-  // exactly once, in its guaranteed best slot, full stop; lower-priority
-  // brands absorb ALL cycling/repeat-fill duty from then on, even if that
-  // means a row ends up short of full width. `noRepeat` items are excluded
-  // entirely once they've had their one appearance, never reused as filler.
+  // Andrew, 2026-07-19: nothing repeats as filler, full stop -- every
+  // family/group gets its one appearance in its best available slot and is
+  // then excluded entirely, even if that leaves a row short of full width.
+  // (Previously only Bota was exempted from repeat-fill; now nothing is
+  // reused to pad a row.) The resulting shortfall is surfaced via
+  // skuDepthExhausted in buildSectionOutput/buildMergedSectionOutput rather
+  // than silently papered over with a duplicate.
   function pickIndex(items, currentIdx) {
     if (items[currentIdx] && !items[currentIdx].hasAppeared) return currentIdx;
-    const unshown = items.findIndex((it) => !it.hasAppeared);
-    if (unshown !== -1) return unshown;
-    const repeatable = items.findIndex((it) => !it.noRepeat);
-    return repeatable !== -1 ? repeatable : -1; // -1: nothing left that's allowed to appear again
+    return items.findIndex((it) => !it.hasAppeared); // -1: nothing left that hasn't already appeared
   }
 
   function packGroupsIntoRows(orderedGroups, rows) {
@@ -557,7 +559,35 @@ export function generatePlan(
     });
   }
 
-  // Builds one allocation's category pool, ranking, and locked-SKU split --
+  // Andrew, 2026-07-19: since nothing repeats as filler anymore (see
+// pickIndex/chunkEvenlyAcrossRows above), a section can legitimately come
+// up short of its physical width when there just isn't enough distinct
+// product to cover it without repeating. Flag that -- but measure it
+// deterministically against real inventory width, not against the
+// post-bin-packing leftover in each row: normal fitSkusToWidth/facings
+// rounding always leaves a fractional gap (the next SKU's full width
+// doesn't divide evenly into what's left), and that's not exhaustion, it's
+// ordinary rectangle-packing slack. Compare total distinct-SKU width
+// actually available (each SKU counted once, at floor facings, since none
+// can repeat) against total width needed to fill every row -- exhausted
+// only when the pool itself is too shallow to cover that, with a
+// tolerance of one average bottle width so the last unavoidable partial
+// slot doesn't false-positive.
+function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimensions, floorFacings) {
+  const neededInches = shelfCount * linearFeet * 12;
+  const availableInches = naturalPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
+  const avgBottleWidth = naturalPool.length
+    ? naturalPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions), 0) / naturalPool.length
+    : 0;
+  const shortfallInches = neededInches - availableInches;
+  const skuDepthExhausted = shortfallInches > Math.max(avgBottleWidth, 1);
+  const depthExhaustedNote = skuDepthExhausted
+    ? `Only ${naturalPool.length} distinct SKU${naturalPool.length === 1 ? '' : 's'} available -- ${(availableInches / 12).toFixed(1)}ft of real inventory width vs ${(neededInches / 12).toFixed(1)}ft needed to fill every row without repeating.`
+    : null;
+  return { skuDepthExhausted, depthExhaustedNote };
+}
+
+// Builds one allocation's category pool, ranking, and locked-SKU split --
   // identical regardless of whether the section ends up thin/merged or not.
   // Thin-ness only changes what happens to this data AFTER it's built.
   function buildCategoryData(allocation) {
@@ -763,6 +793,8 @@ export function generatePlan(
       };
     });
 
+    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimensions, floorFacings);
+
     return {
       key,
       type,
@@ -774,6 +806,8 @@ export function generatePlan(
       shelves,
       usesMarketShareSizing: isMarketShareSection(section),
       usesPriceBandRules,
+      skuDepthExhausted,
+      depthExhaustedNote,
     };
   }
 
@@ -898,6 +932,9 @@ export function generatePlan(
       };
     });
 
+    const combinedPool = withSkus.flatMap((d) => d.naturalPool);
+    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(combinedPool, shelfCount, combinedWidth, bottleDimensions, STANDARD_FLOOR_FACINGS);
+
     return {
       key: `merged:${memberAllocations.map((a) => a.key).join('+')}`,
       type: 'merged',
@@ -909,6 +946,8 @@ export function generatePlan(
       shelves,
       usesMarketShareSizing: false,
       usesPriceBandRules: false,
+      skuDepthExhausted,
+      depthExhaustedNote,
     };
   }
 

@@ -411,6 +411,7 @@ export function mount(el) {
           ${plan.sections.map((s) => `<span class="badge" style="font-family:var(--font-mono);">${s.label}: ${actualSectionFeet(s).toFixed(1)}ft</span>`).join('')}
         </div>
         ${plan.isOverflowing ? `<div class="badge badge-warning" style="margin-top:10px;">Allocated sections exceed the fixture by ${plan.overflowFt.toFixed(1)}ft -- sections past the physical bay count are computed but NOT SHOWN below (silently dropped, not merged or trimmed). Reduce section widths in Set Layout or add bays in Store Builder.</div>` : ''}
+        ${plan.sections.filter((s) => s.skuDepthExhausted).map((s) => `<div class="badge badge-warning" style="margin-top:6px;">${s.label}: SKU depth exhausted -- ${s.depthExhaustedNote}</div>`).join('')}
       </div>
       <div class="card" style="margin-bottom:14px;">
         <div class="card-label">Debug: Section &rarr; Bay Mapping</div>
