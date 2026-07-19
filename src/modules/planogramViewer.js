@@ -24,14 +24,31 @@ function rowInches(shelf) {
 // Maps every section's shelf content onto the store's REAL physical bays --
 // section boundaries are independent of bay boundaries (Set Layout design),
 // so a section's content can be cut mid-bay, and a single bay can contain
-// pieces of more than one category. Walks each section's shelf rows tracking
-// an ABSOLUTE inch position (section.startFt*12 + running position within
-// the section), bucketing each box into the real bay its absolute position
-// falls in. Returns Map<bayIndex, Map<shelfPosition, [{sku, sectionKey, sectionLabel}]>>.
+// pieces of more than one category. Andrew, 2026-07-19: sections render
+// COMPACTED, not at their nominal Set Layout startFt -- the "breadth not
+// depth" 1-facing-max rule (2026-07-18) and the no-repeat/depth-exhaustion
+// rule (2026-07-19) both mean a section's REAL placed content routinely
+// comes in under its allocated width, and previously the next section still
+// started at the old fixed boundary regardless, leaving a dead gap. Each
+// section now starts right where the PREVIOUS section's actual content
+// (its widest row) ended, so sections pack left-to-right with no gaps
+// between them; whatever's left over lands as genuine unused space at the
+// tail of the fixture instead of scattered gaps throughout. Set Layout's
+// widthFt allocations are untouched by this -- they're still exactly what
+// feeds the Optimization Engine as each section's target/cap; only the
+// VISUAL bay-bucket position changes here.
+// Returns { map, spans } -- `spans` is Map<sectionKey, {startFt, endFt}> in
+// the same COMPACTED coordinate space as `map`, so the debug table and any
+// other consumer of a section's rendered position stay consistent with what
+// actually gets drawn, instead of recomputing (and drifting from) the
+// compaction math separately.
 function buildBayRowMap(sections, bayCount) {
   const map = new Map();
+  const spans = new Map();
+  let runningStartInches = 0;
   sections.forEach((section) => {
-    const sectionStartInches = section.startFt * 12;
+    const sectionStartInches = runningStartInches;
+    let sectionContentInches = 0;
     section.shelves.forEach((shelf) => {
       let cumulative = 0;
       shelf.skus.forEach((sku, columnIndex) => {
@@ -53,9 +70,12 @@ function buildBayRowMap(sections, bayCount) {
         rowMap.get(shelf.position).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
         cumulative += w;
       });
+      sectionContentInches = Math.max(sectionContentInches, cumulative);
     });
+    spans.set(section.key, { startFt: sectionStartInches / 12, endFt: (sectionStartInches + sectionContentInches) / 12 });
+    runningStartInches += sectionContentInches;
   });
-  return map;
+  return { map, spans };
 }
 
 // One box PER FACING (2026-07-15): a SKU with 3 facings renders as 3
@@ -393,10 +413,14 @@ export function mount(el) {
       return;
     }
 
-    const actualSectionFeet = (s) => Math.max(s.linearFeet, Math.max(...s.shelves.map(rowInches), 0) / 12);
+    // Andrew, 2026-07-19: dropped the Math.max(linearFeet, ...) floor -- with
+    // sections now rendering compacted to their real content width (see
+    // buildBayRowMap), this summary should match what's actually drawn, not
+    // pretend a depth-exhausted section still occupies its full allocation.
+    const actualSectionFeet = (s) => Math.max(...s.shelves.map(rowInches), 0) / 12;
     const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     const physicalWidthFt = getPhysicalWidthFt(targetStore.shelfLayout);
-    const rowMap = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
+    const { map: rowMap, spans: bayCompactedSpans } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
 
     output.innerHTML = `
       ${renderOverridesList()}
@@ -424,19 +448,25 @@ export function mount(el) {
           </tr></thead>
           <tbody>
             ${plan.sections.map((s) => {
-              const feet = actualSectionFeet(s);
-              const endFt = s.startFt + feet;
-              const startBay = Math.floor((s.startFt * 12) / BAY_INCHES);
-              const endBay = Math.floor(((endFt * 12) - 0.01) / BAY_INCHES);
+              // Andrew, 2026-07-19: startFt/endFt now come from the same
+              // COMPACTED spans buildBayRowMap used to actually place boxes
+              // (real content position, not the nominal Set Layout
+              // allocation) -- this table used to show the old fixed
+              // boundary while the render below already compacted, which
+              // made the two disagree.
+              const span = bayCompactedSpans.get(s.key) ?? { startFt: s.startFt, endFt: s.startFt + actualSectionFeet(s) };
+              const feet = span.endFt - span.startFt;
+              const startBay = Math.floor((span.startFt * 12) / BAY_INCHES);
+              const endBay = Math.floor(((span.endFt * 12) - 0.01) / BAY_INCHES);
               const bayCount = targetStore.shelfLayout.bays.length;
               const outOfBounds = endBay > bayCount - 1;
               const skuCount = s.shelves.reduce((sum, sh) => sum + sh.skus.length, 0);
               return `<tr style="${outOfBounds ? 'color:var(--warning,#e0a030);' : ''}">
                 <td style="padding:3px 8px 3px 0;">${s.type}</td>
                 <td style="padding:3px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.key}">${s.key.slice(0, 40)}${s.key.length > 40 ? '…' : ''}</td>
-                <td style="padding:3px 8px;">${s.startFt.toFixed(2)}</td>
+                <td style="padding:3px 8px;">${span.startFt.toFixed(2)}</td>
                 <td style="padding:3px 8px;">${feet.toFixed(2)}</td>
-                <td style="padding:3px 8px;">${endFt.toFixed(2)}</td>
+                <td style="padding:3px 8px;">${span.endFt.toFixed(2)}</td>
                 <td style="padding:3px 8px;">${startBay}-${endBay}${outOfBounds ? ' (OUT OF BOUNDS, store has ' + bayCount + ' bays)' : ''}</td>
                 <td style="padding:3px 8px;">${s.shelfCount}</td>
                 <td style="padding:3px 8px;">${skuCount}</td>
@@ -465,7 +495,7 @@ export function mount(el) {
   // Warn explicitly rather than let it silently overflow the row.
   function warnIfRowOverflows(plan, targetStore, skuIds) {
     if (!plan || !targetStore) return;
-    const rowMap = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
+    const { map: rowMap } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays.length);
     const warned = new Set();
     for (const [bayIndex, rows] of rowMap.entries()) {
       for (const [position, entries] of rows.entries()) {

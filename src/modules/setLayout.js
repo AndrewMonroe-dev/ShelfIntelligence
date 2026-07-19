@@ -10,17 +10,35 @@ const MIN_BAY_BLOCK_PX = 92; // wide enough for the shelf-count stepper to never
 // coarse a floor. ~0.3ft is roughly one bottle width at floor facings.
 // Card rendering still floors at MIN_CARD_PX below regardless of widthFt.
 const MIN_SECTION_WIDTH_FT = 0.3;
-// Andrew, 2026-07-19: lowered from 168px -- that floor made every section
-// under 8.4ft (168/20) visually static during resize (the ft number
-// updated but the box never appeared to shrink/grow), which read as a
-// bug. Andrew chose true proportional sizing over label readability for
-// tiny cards: the box now tracks widthFt for real, all the way down to
-// this floor, which only exists so the drag handle (top-left) and delete
-// button (top-right, each ~18px) don't overlap each other. Below ~2.4ft
-// the label will visually clip -- accepted tradeoff, not a bug.
+
+// Andrew, 2026-07-19: Category Allocation cards get their own px/ft scale,
+// independent of the bay-fixture strip's PX_PER_FT above -- a 2ft-wide
+// section is the reference size and should render as a perfect square
+// (equal width and height). Height is FIXED at this reference regardless
+// of widthFt, so only width varies: narrower sections read as portrait
+// rectangles, wider ones as landscape, square exactly at 2ft.
+const SQUARE_REFERENCE_FT = 2;
+const CATEGORY_PX_PER_FT = 44; // chosen so the 2ft reference square (88px) matches the card's prior comfortable min-height
+const CATEGORY_CARD_HEIGHT_PX = SQUARE_REFERENCE_FT * CATEGORY_PX_PER_FT;
+// Floor exists only so the drag handle (top-left) and delete button
+// (top-right, each ~18px) don't overlap each other at extreme widths.
 const MIN_CARD_PX = 48;
 function cardWidthPx(widthFt) {
-  return Math.max(MIN_CARD_PX, widthFt * PX_PER_FT);
+  return Math.max(MIN_CARD_PX, widthFt * CATEGORY_PX_PER_FT);
+}
+
+// Andrew, 2026-07-19: below a certain card width the label needs to shrink
+// and turn sideways (vertical writing) to stay legible instead of wrapping
+// into an unreadable single-letter-per-line stack. Font scales down
+// continuously with width down to a 9px floor; the vertical-writing switch
+// kicks in once horizontal space is too tight for even short words.
+const LABEL_VERTICAL_THRESHOLD_PX = 70;
+function labelStyleFor(widthPx) {
+  const fontSize = Math.max(9, Math.min(13.5, widthPx / 5));
+  if (widthPx < LABEL_VERTICAL_THRESHOLD_PX) {
+    return `font-size:${fontSize}px;writing-mode:vertical-rl;text-orientation:mixed;white-space:nowrap;overflow:hidden;max-height:${CATEGORY_CARD_HEIGHT_PX - 36}px;`;
+  }
+  return `font-size:${fontSize}px;`;
 }
 
 export function mount(el) {
@@ -89,10 +107,10 @@ export function mount(el) {
         ${Math.abs(diff) > 0.05 ? `<div class="badge badge-warning" style="margin-top:8px;">Allocated sections ${diff > 0 ? 'exceed' : 'fall short of'} the fixture by ${Math.abs(diff).toFixed(1)}ft -- ${diff > 0 ? 'shrink sections or add bays' : 'grow sections or remove bays'}</div>` : ''}
         <div class="layout-strip category-strip" style="margin-top:10px;">
           ${sorted.map((a) => `
-            <div class="section-block${a.key === highlightedKey ? ' highlighted' : ''}" style="width:${cardWidthPx(a.widthFt)}px;" data-section-key="${a.key}">
+            <div class="section-block${a.key === highlightedKey ? ' highlighted' : ''}" style="width:${cardWidthPx(a.widthFt)}px;height:${CATEGORY_CARD_HEIGHT_PX}px;" data-section-key="${a.key}">
               <div class="section-drag-handle" data-section-key="${a.key}" title="Drag to reorder">::</div>
               <button class="section-delete-btn" draggable="false" data-section-key="${a.key}" title="Delete section">&times;</button>
-              <div class="section-block-label">${a.label}</div>
+              <div class="section-block-label" style="${labelStyleFor(cardWidthPx(a.widthFt))}">${a.label}</div>
               <div class="section-block-width">${a.widthFt.toFixed(1)}ft</div>
               <div class="resize-handle" data-section-key="${a.key}"></div>
             </div>
@@ -355,11 +373,13 @@ export function mount(el) {
         let pendingWidth = startWidth;
 
         function onMove(moveEvent) {
-          const deltaFt = (moveEvent.clientX - startX) / PX_PER_FT;
+          const deltaFt = (moveEvent.clientX - startX) / CATEGORY_PX_PER_FT;
           pendingWidth = Math.max(MIN_SECTION_WIDTH_FT, startWidth + deltaFt);
           if (block) {
-            block.style.width = `${cardWidthPx(pendingWidth)}px`;
+            const px = cardWidthPx(pendingWidth);
+            block.style.width = `${px}px`;
             block.querySelector('.section-block-width').textContent = `${pendingWidth.toFixed(1)}ft`;
+            block.querySelector('.section-block-label').setAttribute('style', labelStyleFor(px));
           }
         }
 
