@@ -1436,45 +1436,59 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const bays = store.shelfLayout.bays;
     const sectionRealInches = (s) => Math.max(...s.shelves.map((sh) => sh.skus.reduce((sum, x) => sum + (x.allocatedInches ?? x.facings * (x.widthInches ?? 3)), 0)), 0);
 
-    const pinnedSecs = sections.filter((s) => s.pinnedBayIndex != null);
-    const normalSecs = sections.filter((s) => s.pinnedBayIndex == null);
-    const destBayBySectionKey = new Map();
-    const reservedBays = new Set();
-    if (pinnedSecs.length) {
-      let cursor = pinnedSecs[0].pinnedBayIndex * BAY_W_IN;
-      const anchor = cursor;
-      pinnedSecs.forEach((s) => {
-        destBayBySectionKey.set(s.key, Math.min(Math.floor(cursor / BAY_W_IN), bays.length - 1));
-        cursor += sectionRealInches(s);
+    // Andrew, 2026-07-20 (second round -- "Bay 7 still happening"): a
+    // single pass isn't enough. Rebuilding a section changes its real
+    // content width, which shifts the compaction walk for everything
+    // after it -- so a section rebuilt for one bay's profile can drift
+    // into a DIFFERENT bay on the next render, re-creating the mismatch
+    // at the tail (sparse upper shelves in the last bay, folded rows
+    // spilling past a 4-shelf bay's right edge). Iterate until no
+    // section's destination-bay shelf profile disagrees with what it was
+    // built with, capped at 5 passes (each pass strictly reduces
+    // disagreement in practice; the cap guards a pathological ping-pong).
+    for (let pass = 0; pass < 5; pass++) {
+      const pinnedSecs = sections.filter((s) => s.pinnedBayIndex != null);
+      const normalSecs = sections.filter((s) => s.pinnedBayIndex == null);
+      const destBayBySectionKey = new Map();
+      const reservedBays = new Set();
+      if (pinnedSecs.length) {
+        let cursor = pinnedSecs[0].pinnedBayIndex * BAY_W_IN;
+        const anchor = cursor;
+        pinnedSecs.forEach((s) => {
+          destBayBySectionKey.set(s.key, Math.min(Math.floor(cursor / BAY_W_IN), bays.length - 1));
+          cursor += sectionRealInches(s);
+        });
+        const bayspan = Math.max(1, Math.ceil((cursor - anchor) / BAY_W_IN));
+        const startBay = pinnedSecs[0].pinnedBayIndex;
+        for (let i = startBay; i < Math.min(startBay + bayspan, bays.length); i++) reservedBays.add(i);
+      }
+      const availableBays = [];
+      for (let i = 0; i < bays.length; i++) if (!reservedBays.has(i)) availableBays.push(i);
+      let compacted = 0;
+      normalSecs.forEach((s) => {
+        const bayOffset = Math.floor(compacted / BAY_W_IN);
+        const destBay = availableBays.length
+          ? availableBays[Math.min(bayOffset, availableBays.length - 1)]
+          : Math.min(bayOffset, bays.length - 1);
+        destBayBySectionKey.set(s.key, destBay);
+        compacted += sectionRealInches(s);
       });
-      const bayspan = Math.max(1, Math.ceil((cursor - anchor) / BAY_W_IN));
-      const startBay = pinnedSecs[0].pinnedBayIndex;
-      for (let i = startBay; i < Math.min(startBay + bayspan, bays.length); i++) reservedBays.add(i);
-    }
-    const availableBays = [];
-    for (let i = 0; i < bays.length; i++) if (!reservedBays.has(i)) availableBays.push(i);
-    let compacted = 0;
-    normalSecs.forEach((s) => {
-      const bayOffset = Math.floor(compacted / BAY_W_IN);
-      const destBay = availableBays.length
-        ? availableBays[Math.min(bayOffset, availableBays.length - 1)]
-        : Math.min(bayOffset, bays.length - 1);
-      destBayBySectionKey.set(s.key, destBay);
-      compacted += sectionRealInches(s);
-    });
 
-    sections.forEach((s, i) => {
-      const destBay = destBayBySectionKey.get(s.key);
-      if (destBay == null) return;
-      const destShelves = bays[destBay].shelves;
-      if (destShelves.length === s.shelfCount) return;
-      const ctx = rebuildContextBySectionKey.get(s.key);
-      if (!ctx) return;
-      const rebuilt = ctx.kind === 'standalone'
-        ? buildSectionOutput(ctx.widenedData, destShelves)
-        : buildMergedSectionOutput(ctx.groupAllocations, ctx.dataList, destShelves);
-      if (rebuilt) sections[i] = rebuilt;
-    });
+      let rebuiltAny = false;
+      sections.forEach((s, i) => {
+        const destBay = destBayBySectionKey.get(s.key);
+        if (destBay == null) return;
+        const destShelves = bays[destBay].shelves;
+        if (destShelves.length === s.shelfCount) return;
+        const ctx = rebuildContextBySectionKey.get(s.key);
+        if (!ctx) return;
+        const rebuilt = ctx.kind === 'standalone'
+          ? buildSectionOutput(ctx.widenedData, destShelves)
+          : buildMergedSectionOutput(ctx.groupAllocations, ctx.dataList, destShelves);
+        if (rebuilt) { sections[i] = rebuilt; rebuiltAny = true; }
+      });
+      if (!rebuiltAny) break; // converged -- every section matches its destination bay
+    }
   }
 
   const totalAllocatedWidth = sections.reduce((sum, s) => sum + s.linearFeet, 0);
