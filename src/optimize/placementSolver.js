@@ -738,7 +738,11 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
   // product (fixed 2026-07-15, see THIN_SECTION_WIDTH_FT comment). Locked/
   // override SKUs still honor their exact requested shelfPosition
   // regardless, since manual placement always wins.
-  function buildSectionOutput(data) {
+  // `overrideShelves` (Andrew, 2026-07-20): the reconciliation pass below
+  // rebuilds a section with the shelf profile of the bay it ACTUALLY
+  // renders into after compaction, instead of the bay its nominal Set
+  // Layout position happened to sit over.
+  function buildSectionOutput(data, overrideShelves = null) {
     const { allocation, key, type, section, categorySkus, ranked, naturalPool, lockedForSection, lockedSkuIds } = data;
     if (!categorySkus.length) return null;
 
@@ -746,7 +750,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const startFt = allocation.startFt;
 
     const isSmallFormat = isSmallFormatSection(section);
-    const storeShelves = (isSmallFormat && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, linearFeet);
+    const storeShelves = overrideShelves ?? ((isSmallFormat && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, linearFeet));
     const shelfCount = storeShelves.length;
     const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
     const pinnedBayIndex = (isSmallFormat && denseBayIndex != null) ? denseBayIndex : null;
@@ -940,7 +944,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
   // its category's block), but its exact requested shelfPosition isn't
   // preserved once shelves are shared across categories -- precise
   // position-locking inside a merged block is out of scope.
-  function buildMergedSectionOutput(memberAllocations, memberDataList) {
+  function buildMergedSectionOutput(memberAllocations, memberDataList, overrideShelves = null) {
     const withSkus = memberDataList.filter((d) => d.categorySkus.length);
     if (!withSkus.length) return null;
 
@@ -953,7 +957,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     // regular-format -- never mixed -- so checking the first member decides
     // layout mode for the whole group.
     const isSmallFormatRun = isSmallFormatSection(withSkus[0].section);
-    const storeShelves = (isSmallFormatRun && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, combinedWidth);
+    const storeShelves = overrideShelves ?? ((isSmallFormatRun && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, combinedWidth));
     const shelfCount = storeShelves.length;
     const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
     const pinnedBayIndex = (isSmallFormatRun && denseBayIndex != null) ? denseBayIndex : null;
@@ -1385,6 +1389,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
   }
 
   const sections = [];
+  const rebuildContextBySectionKey = new Map(); // sectionKey -> how to rebuild it with a different shelf profile
   groups.forEach((group) => {
     const rawAllocations = group.map((g) => g.allocation);
     const dataList = group.map((g) => g.data);
@@ -1396,13 +1401,81 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // fallback already handles genuinely low-SKU-count cases).
       const widenedData = groupAllocations[0] === rawAllocations[0] ? dataList[0] : { ...dataList[0], allocation: groupAllocations[0] };
       const sectionOut = buildSectionOutput(widenedData);
-      if (sectionOut) sections.push(sectionOut);
+      if (sectionOut) {
+        sections.push(sectionOut);
+        rebuildContextBySectionKey.set(sectionOut.key, { kind: 'standalone', widenedData });
+      }
       return;
     }
 
     const sectionOut = buildMergedSectionOutput(groupAllocations, dataList);
-    if (sectionOut) sections.push(sectionOut);
+    if (sectionOut) {
+      sections.push(sectionOut);
+      rebuildContextBySectionKey.set(sectionOut.key, { kind: 'merged', groupAllocations, dataList });
+    }
   });
+
+  // Andrew, 2026-07-20: reconcile each section's shelf profile with the
+  // bay it ACTUALLY renders into. Every section's rows were computed from
+  // its NOMINAL Set Layout position (getShelvesForSpan), but the viewer
+  // compacts sections left-to-right by real content width (and pins
+  // small-format to the dense bay), so a section routinely lands in a bay
+  // with a different shelf count than the one it was built for -- a
+  // 4-row section arriving in a 7-shelf bay leaves shelves 5-7 empty
+  // ("Bay 8 shelves 2/3/4 sparse"), and a 5-row section arriving in a
+  // 4-shelf bay overfills. Replicate the viewer's compaction walk here
+  // (same math as buildBayRowMap: pinned sections at the dense-bay
+  // anchor, everyone else sequential by real content width, skipping the
+  // reserved bay range), find each section's destination bay, and rebuild
+  // any section whose destination bay's shelf profile differs from what
+  // it was built with. One pass, not iterated to convergence -- rebuilding
+  // changes content width slightly, but bay assignment by content START
+  // is stable enough that a second pass almost never changes anything.
+  {
+    const BAY_W_IN = 48;
+    const bays = store.shelfLayout.bays;
+    const sectionRealInches = (s) => Math.max(...s.shelves.map((sh) => sh.skus.reduce((sum, x) => sum + (x.allocatedInches ?? x.facings * (x.widthInches ?? 3)), 0)), 0);
+
+    const pinnedSecs = sections.filter((s) => s.pinnedBayIndex != null);
+    const normalSecs = sections.filter((s) => s.pinnedBayIndex == null);
+    const destBayBySectionKey = new Map();
+    const reservedBays = new Set();
+    if (pinnedSecs.length) {
+      let cursor = pinnedSecs[0].pinnedBayIndex * BAY_W_IN;
+      const anchor = cursor;
+      pinnedSecs.forEach((s) => {
+        destBayBySectionKey.set(s.key, Math.min(Math.floor(cursor / BAY_W_IN), bays.length - 1));
+        cursor += sectionRealInches(s);
+      });
+      const bayspan = Math.max(1, Math.ceil((cursor - anchor) / BAY_W_IN));
+      const startBay = pinnedSecs[0].pinnedBayIndex;
+      for (let i = startBay; i < Math.min(startBay + bayspan, bays.length); i++) reservedBays.add(i);
+    }
+    const availableBays = [];
+    for (let i = 0; i < bays.length; i++) if (!reservedBays.has(i)) availableBays.push(i);
+    let compacted = 0;
+    normalSecs.forEach((s) => {
+      const bayOffset = Math.floor(compacted / BAY_W_IN);
+      const destBay = availableBays.length
+        ? availableBays[Math.min(bayOffset, availableBays.length - 1)]
+        : Math.min(bayOffset, bays.length - 1);
+      destBayBySectionKey.set(s.key, destBay);
+      compacted += sectionRealInches(s);
+    });
+
+    sections.forEach((s, i) => {
+      const destBay = destBayBySectionKey.get(s.key);
+      if (destBay == null) return;
+      const destShelves = bays[destBay].shelves;
+      if (destShelves.length === s.shelfCount) return;
+      const ctx = rebuildContextBySectionKey.get(s.key);
+      if (!ctx) return;
+      const rebuilt = ctx.kind === 'standalone'
+        ? buildSectionOutput(ctx.widenedData, destShelves)
+        : buildMergedSectionOutput(ctx.groupAllocations, ctx.dataList, destShelves);
+      if (rebuilt) sections[i] = rebuilt;
+    });
+  }
 
   const totalAllocatedWidth = sections.reduce((sum, s) => sum + s.linearFeet, 0);
   const overflowFt = totalAllocatedWidth - physicalWidthFt;
