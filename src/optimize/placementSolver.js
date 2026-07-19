@@ -1075,17 +1075,34 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
   if (currentThinRun.length) groups.push(currentThinRun);
 
   // Andrew, 2026-07-20: leftover space from a section that can't fill its
-  // allocation (not enough real distinct SKUs, same yardstick as
-  // skuDepthExhausted) used to just shrink the whole set at render time --
-  // recovered space piled up as dead space at the tail of the fixture
-  // instead of ever being used. Redistribute it BEFORE building sections
-  // instead: shrink each under-capacity group's allocation down to what it
-  // can actually use, pool the freed width, then hand that pool to
-  // over-capacity groups (real inventory deeper than their current
-  // allocation) in descending order of total opportunity score --
-  // best-selling first -- each capped at how much more it can genuinely
-  // use. The fixture stays full edge-to-edge; savings from thin categories
-  // go to top performers instead of evaporating.
+  // allocation used to just shrink the whole set at render time -- recovered
+  // space piled up as dead space at the tail of the fixture instead of ever
+  // being used. Redistribute it BEFORE the final build instead: shrink each
+  // under-capacity group's allocation down to what it can actually use,
+  // pool the freed width, then hand that pool to over-capacity groups (real
+  // inventory deeper than their current allocation) in descending order of
+  // total opportunity score -- best-selling first -- each capped at how
+  // much more it can genuinely use. The fixture stays full edge-to-edge;
+  // savings from thin categories go to top performers instead of
+  // evaporating.
+  //
+  // Andrew, 2026-07-20 (widened scope): a section can under-fill its width
+  // for two different reasons -- genuinely too few distinct SKUs (what
+  // skuDepthExhausted flags), or simply not having enough eligible
+  // candidates for a specific price-band-restricted shelf position even
+  // with plenty of inventory overall, or ordinary floor-facings bin-packing
+  // slack (a bottle's width rarely divides evenly into a row -- no bonus
+  // facings are spent to close that fraction, per the 2026-07-18 "breadth
+  // not depth" rule). Both are real, intentional rules, not bugs, but their
+  // cumulative slack across dozens of rows still adds up to a visible gap
+  // even when total allocated width exactly matches the fixture. Andrew
+  // asked for the set to fill edge-to-edge regardless of cause, so shortfall
+  // is now measured from an actual trial BUILD at each group's original
+  // width (real achieved fill), not just its theoretical inventory count.
+  function rowInches(shelf) {
+    return shelf.skus.reduce((sum, s) => sum + (s.allocatedInches ?? s.facings * (s.widthInches ?? 3)), 0);
+  }
+
   function groupFloorFacings(dataList) {
     if (dataList.length > 1) return STANDARD_FLOOR_FACINGS; // merged groups never use price-band/case-only rules
     const usesPriceBandRules = appliesPriceBandRules(dataList[0].section);
@@ -1106,6 +1123,12 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     return storeShelves.length;
   }
 
+  function buildGroupOutput(groupAllocations, dataList) {
+    return groupAllocations.length === 1
+      ? buildSectionOutput(groupAllocations[0] === dataList[0].allocation ? dataList[0] : { ...dataList[0], allocation: groupAllocations[0] })
+      : buildMergedSectionOutput(groupAllocations, dataList);
+  }
+
   const groupInfo = groups.map((group) => {
     const dataList = group.map((g) => g.data);
     const groupAllocations = group.map((g) => g.allocation);
@@ -1115,24 +1138,33 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
     const maxInventoryInches = combinedPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
     const neededInches = shelfCount * groupAllocations.reduce((s, a) => s + a.widthFt, 0) * 12;
     const totalScore = combinedPool.reduce((s, sku) => s + (scoreMap.get(sku.skuId)?.score ?? 0), 0);
-    return { group, shelfCount, maxInventoryInches, neededInches, totalScore };
+    // Trial build at the ORIGINAL (pre-redistribution) width to measure what
+    // this group actually achieves, across every row -- the real yardstick
+    // for shortfall, not just theoretical inventory count.
+    const trialOut = buildGroupOutput(groupAllocations, dataList);
+    const achievedInches = trialOut ? shelfCount * Math.max(...trialOut.shelves.map(rowInches), 0) : 0;
+    return { group, shelfCount, maxInventoryInches, neededInches, achievedInches, totalScore };
   });
 
   // Shrink/grow amounts are expressed per-ROW (divided by shelfCount) since
   // widthFt is a per-row budget applied uniformly across every shelf --
   // shrinking/growing the group's widthFt by X automatically changes its
-  // total capacity by X * shelfCount.
+  // total capacity by X * shelfCount. Shrink target uses REAL achieved
+  // fill (catches price-band/bin-packing slack too); grow capacity still
+  // uses theoretical max inventory as the upper bound, since that's the
+  // only thing knowable without an extra trial build at a hypothetical
+  // wider width.
   const shrinkToWidthFtByGroup = new Map();
   groupInfo.forEach((g) => {
-    if (g.neededInches > g.maxInventoryInches) {
-      shrinkToWidthFtByGroup.set(g.group, g.maxInventoryInches / g.shelfCount / 12);
+    if (g.neededInches > g.achievedInches) {
+      shrinkToWidthFtByGroup.set(g.group, g.achievedInches / g.shelfCount / 12);
     }
   });
 
   // `remaining`/`capacity` stay in TOTAL inches (summed across every row of
   // the contributing/absorbing sections) throughout -- only converted to a
   // per-row widthFt (divide by shelfCount) at the moment it's recorded.
-  const totalShortfallInches = groupInfo.reduce((s, g) => s + Math.max(0, g.neededInches - g.maxInventoryInches), 0);
+  const totalShortfallInches = groupInfo.reduce((s, g) => s + Math.max(0, g.neededInches - g.achievedInches), 0);
   const extraWidthFtByGroup = new Map();
   if (totalShortfallInches > 0) {
     const growable = groupInfo.filter((g) => g.maxInventoryInches > g.neededInches).sort((a, b) => b.totalScore - a.totalScore);
