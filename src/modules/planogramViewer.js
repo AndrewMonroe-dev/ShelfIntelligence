@@ -288,6 +288,7 @@ export function mount(el) {
   let openSkuId = null; // skuId whose override panel is currently expanded
   let addSectionKey = ''; // "+ Add SKU" form state
   let addShelfPosition = null; // pre-set when opened by clicking an empty slot
+  let addColumnIndex = null; // pre-set when opened by clicking an empty slot -- where in the row to insert
   let addSearchTerm = '';
 
   function currentStore() {
@@ -618,6 +619,7 @@ export function mount(el) {
         openSkuId = openSkuId === skuId ? null : skuId;
         addSectionKey = '';
         addShelfPosition = null;
+        addColumnIndex = null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
       });
@@ -709,6 +711,16 @@ export function mount(el) {
         openSkuId = null;
         addSectionKey = slot.dataset.sectionKey || '';
         addShelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
+        // Andrew, 2026-07-20: the empty slot's own columnIndex was never
+        // captured here -- only the drag-and-drop path passed it through --
+        // so adding a SKU via the search form always fell back to
+        // columnIndex null, which insertLockedIntoRow treats as "append
+        // to whatever the row's natural content computes to," not the
+        // actual gap that was clicked. Since a locked override can itself
+        // change what naturally fills that row, "the end" doesn't
+        // reliably land back in the same visual spot -- existing product
+        // could shift left while the clicked gap stayed empty.
+        addColumnIndex = slot.dataset.columnIndex != null ? parseInt(slot.dataset.columnIndex, 10) : null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
         requestAnimationFrame(() => {
@@ -778,6 +790,7 @@ export function mount(el) {
     output.querySelector('.add-sku-section')?.addEventListener('change', (e) => {
       addSectionKey = e.target.value;
       addShelfPosition = null; // shelf options change with the section -- let it default to the first
+      addColumnIndex = null; // a different section's row has an unrelated column layout
       renderOutput(store.getSnapshot().currentPlan);
     });
 
@@ -808,10 +821,11 @@ export function mount(el) {
       const sectionKey = output.querySelector('.add-sku-section').value;
       const shelfPosition = parseInt(output.querySelector('.add-sku-shelf').value, 10);
       const facings = parseInt(output.querySelector('.add-sku-facings').value, 10);
-      placeSku(skuId, sectionKey, shelfPosition, facings);
+      placeSku(skuId, sectionKey, shelfPosition, facings, addColumnIndex);
       addSearchTerm = '';
       addSectionKey = '';
       addShelfPosition = null;
+      addColumnIndex = null;
       commitAndRender(skuId);
     }
 
