@@ -118,21 +118,29 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
   // were dropped entirely while every shelf row sat 45%+ empty. Dropped
   // blocks are now kept aside and backfilled below once real leftover
   // space (after scaling) is known, instead of being discarded for good.
+  // Andrew, 2026-07-20: the cull decision (which blocks survive) still
+  // ranks by score, but the SURVIVING blocks must render in their
+  // ORIGINAL order (groups' incoming order, e.g. brandGroups' pinned
+  // Bota Breeze -> Bota Box -> Bota Nighthawk -> everyone else by score) --
+  // building `kept` by pushing in score order silently reshuffled render
+  // order to pure score whenever any drop happened, which broke that
+  // pinning (Black Box, higher raw score than Bota Nighthawk/Breeze, was
+  // rendering BETWEEN them instead of after the whole Bota family).
   const droppedBlocks = [];
   const totalFloorAll = blockInfo.reduce((s, b) => s + b.maxRowFloorWidth, 0);
   if (totalFloorAll > totalWidthInches) {
     const byScoreDesc = [...blockInfo].sort((a, b) => b.totalScore - a.totalScore);
-    const kept = [];
+    const keptSet = new Set();
     let usedFloor = 0;
     for (const b of byScoreDesc) {
       if (usedFloor === 0 || usedFloor + b.maxRowFloorWidth <= totalWidthInches) {
-        kept.push(b);
+        keptSet.add(b);
         usedFloor += b.maxRowFloorWidth;
       } else {
         droppedBlocks.push(b);
       }
     }
-    blockInfo = kept;
+    blockInfo = blockInfo.filter((b) => keptSet.has(b));
   }
 
   const floorTotal = blockInfo.reduce((s, b) => s + b.maxRowFloorWidth, 0);
