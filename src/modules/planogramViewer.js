@@ -113,12 +113,29 @@ function buildBayRowMap(sections, bayCount) {
   // were laid end to end with no gaps) to its real absolute-inch position,
   // skipping any reserved bay. Falls back to plain sequential bays if the
   // store's bay count is unknown or nothing is reserved.
+  //
+  // Andrew, 2026-07-20 (bug fix): once total normal-section content exceeds
+  // the available (non-reserved) capacity, clamping bayOffset to the last
+  // available bay collapsed ALL further content onto that single bay --
+  // `withinBay` (compactedInches % BAY_INCHES) kept cycling 0..48in over
+  // and over, so many unrelated sections all landed in the exact same
+  // bay-card, one after another, while the bays "freed up" by that
+  // collapse rendered starved. Overflow now continues LINEARLY past the
+  // last available bay's end instead of wrapping back into it -- still
+  // genuinely past the fixture at that point (same as any other
+  // over-allocation, see `placeSectionBoxes`'s own final clamp / the
+  // separate plan.isOverflowing check), but coherent and sequential rather
+  // than piled on top of itself.
   function toRealInches(compactedInches) {
     if (!availableBayIndices.length) return compactedInches;
     const bayOffset = Math.floor(compactedInches / BAY_INCHES);
     const withinBay = compactedInches % BAY_INCHES;
-    const realBayIndex = availableBayIndices[Math.min(bayOffset, availableBayIndices.length - 1)];
-    return realBayIndex * BAY_INCHES + withinBay;
+    if (bayOffset < availableBayIndices.length) {
+      return availableBayIndices[bayOffset] * BAY_INCHES + withinBay;
+    }
+    const lastAvailable = availableBayIndices[availableBayIndices.length - 1];
+    const overflowInches = compactedInches - availableBayIndices.length * BAY_INCHES;
+    return (lastAvailable + 1) * BAY_INCHES + overflowInches;
   }
 
   let runningCompactedInches = 0;
