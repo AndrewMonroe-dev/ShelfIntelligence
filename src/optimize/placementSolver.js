@@ -1129,33 +1129,83 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
       : buildMergedSectionOutput(groupAllocations, dataList);
   }
 
+  // Andrew, 2026-07-20 (bug found via "24.6ft of 24ft" investigation):
+  // layoutSmallFormatSection's row-packer always force-places the FIRST
+  // brand family into a row even if that family alone is wider than the
+  // row's budget (same "never leave a row artificially empty" philosophy
+  // used elsewhere) -- fine when the row is a reasonable size, but
+  // shrinking a small-format group down to its measured achievedInches can
+  // land it BELOW what its own widest single family needs, forcing that
+  // exact overflow into existence. The trial build that measured
+  // achievedInches ran at the ORIGINAL (wider) allocation, where the
+  // family fit -- shrinking changes the row-packing outcome itself, so the
+  // measurement doesn't predict the overflow it causes. Shrink target is
+  // now floored at the widest real family's width so redistribution can
+  // never shrink a small-format group past what one family alone requires.
+  function widestSmallFormatFamilyInches(pool, floorFacings) {
+    const bySize = new Map();
+    pool.forEach((sku) => {
+      const key = sku.bottleSizeRaw || 'UNSPECIFIED';
+      if (!bySize.has(key)) bySize.set(key, []);
+      bySize.get(key).push(sku);
+    });
+    let widest = 0;
+    bySize.forEach((skusForSize) => {
+      collapseToRootBrand(skusForSize, scoreMap).forEach((fam) => {
+        const w = fam.sorted.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
+        widest = Math.max(widest, w);
+      });
+    });
+    return widest;
+  }
+
   const groupInfo = groups.map((group) => {
     const dataList = group.map((g) => g.data);
     const groupAllocations = group.map((g) => g.allocation);
     const combinedPool = dataList.flatMap((d) => d.naturalPool);
     const floorFacings = groupFloorFacings(dataList);
     const shelfCount = groupShelfCount(dataList, groupAllocations);
+    const isSmallFormat = isSmallFormatSection(dataList[0].section);
     const maxInventoryInches = combinedPool.reduce((s, sku) => s + bottleWidthInches(sku, bottleDimensions) * floorFacings, 0);
     const neededInches = shelfCount * groupAllocations.reduce((s, a) => s + a.widthFt, 0) * 12;
+    const currentWidthFt = groupAllocations.reduce((s, a) => s + a.widthFt, 0);
+    const widestFamilyInches = isSmallFormat ? widestSmallFormatFamilyInches(combinedPool, floorFacings) : 0;
     const totalScore = combinedPool.reduce((s, sku) => s + (scoreMap.get(sku.skuId)?.score ?? 0), 0);
     // Trial build at the ORIGINAL (pre-redistribution) width to measure what
     // this group actually achieves, across every row -- the real yardstick
     // for shortfall, not just theoretical inventory count.
     const trialOut = buildGroupOutput(groupAllocations, dataList);
     const achievedInches = trialOut ? shelfCount * Math.max(...trialOut.shelves.map(rowInches), 0) : 0;
-    return { group, shelfCount, maxInventoryInches, neededInches, achievedInches, totalScore };
+    return { group, shelfCount, maxInventoryInches, neededInches, achievedInches, currentWidthFt, widestFamilyInches, totalScore };
   });
 
   // Shrink/grow amounts are expressed per-ROW (divided by shelfCount) since
   // widthFt is a per-row budget applied uniformly across every shelf --
   // shrinking/growing the group's widthFt by X automatically changes its
   // total capacity by X * shelfCount. Shrink target uses REAL achieved
-  // fill (catches price-band/bin-packing slack too); grow capacity still
+  // fill (catches price-band/bin-packing slack too). Grow capacity still
   // uses theoretical max inventory as the upper bound, since that's the
   // only thing knowable without an extra trial build at a hypothetical
   // wider width.
+  //
+  // Andrew, 2026-07-20: a small-format group whose ORIGINAL allocation is
+  // narrower than its own widest single family is a MANDATORY claim on the
+  // shortfall pool, funded FIRST, ahead of the normal score-ranked growth
+  // below -- not optional/best-effort like ordinary growth, since under-
+  // funding it means an actual overflow bug (the family gets force-placed
+  // past the row's real budget), not just a missed opportunity. A group
+  // with a mandatory need is excluded from ordinary shrink/grow -- it gets
+  // exactly its family-floor width, funded from the pool, full stop.
+  const mandatoryExtraInchesByGroup = new Map();
+  groupInfo.forEach((g) => {
+    const deficit = g.shelfCount * g.widestFamilyInches - g.neededInches;
+    if (deficit > 0) mandatoryExtraInchesByGroup.set(g.group, deficit);
+  });
+  const totalMandatoryInches = [...mandatoryExtraInchesByGroup.values()].reduce((a, b) => a + b, 0);
+
   const shrinkToWidthFtByGroup = new Map();
   groupInfo.forEach((g) => {
+    if (mandatoryExtraInchesByGroup.has(g.group)) return; // mandatory groups don't shrink, they draw from the pool instead
     if (g.neededInches > g.achievedInches) {
       shrinkToWidthFtByGroup.set(g.group, g.achievedInches / g.shelfCount / 12);
     }
@@ -1164,11 +1214,29 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
   // `remaining`/`capacity` stay in TOTAL inches (summed across every row of
   // the contributing/absorbing sections) throughout -- only converted to a
   // per-row widthFt (divide by shelfCount) at the moment it's recorded.
-  const totalShortfallInches = groupInfo.reduce((s, g) => s + Math.max(0, g.neededInches - g.achievedInches), 0);
+  const totalShortfallInches = groupInfo.reduce((s, g) => {
+    if (mandatoryExtraInchesByGroup.has(g.group)) return s;
+    return s + Math.max(0, g.neededInches - g.achievedInches);
+  }, 0);
   const extraWidthFtByGroup = new Map();
-  if (totalShortfallInches > 0) {
-    const growable = groupInfo.filter((g) => g.maxInventoryInches > g.neededInches).sort((a, b) => b.totalScore - a.totalScore);
-    let remaining = totalShortfallInches;
+  let remaining = totalShortfallInches;
+
+  // Pay mandatory family-floor claims first, even if that leaves less (or
+  // nothing) for ordinary score-ranked growth below. If the pool can't
+  // cover every mandatory claim, each is funded proportionally rather than
+  // first-come-first-served, so a store that's genuinely too tight for a
+  // wide family spreads that shortfall instead of picking an arbitrary
+  // winner.
+  if (totalMandatoryInches > 0) {
+    const fundRatio = remaining >= totalMandatoryInches ? 1 : remaining / totalMandatoryInches;
+    mandatoryExtraInchesByGroup.forEach((deficit, group) => {
+      extraWidthFtByGroup.set(group, deficit * fundRatio / (groupInfo.find((g) => g.group === group)?.shelfCount ?? 1) / 12);
+    });
+    remaining = Math.max(0, remaining - totalMandatoryInches);
+  }
+
+  if (remaining > 0) {
+    const growable = groupInfo.filter((g) => !mandatoryExtraInchesByGroup.has(g.group) && g.maxInventoryInches > g.neededInches).sort((a, b) => b.totalScore - a.totalScore);
     for (const g of growable) {
       if (remaining <= 0) break;
       const capacity = g.maxInventoryInches - g.neededInches; // total inches this group can still absorb
@@ -1179,13 +1247,17 @@ function computeDepthExhaustion(naturalPool, shelfCount, linearFeet, bottleDimen
 
   // Applies a group's redistribution result to its member allocations,
   // scaling every member's widthFt so the group's TOTAL hits the target --
-  // preserves each member's relative share within a merged group.
+  // preserves each member's relative share within a merged group. A
+  // mandatory group's family-floor grant already lives in
+  // extraWidthFtByGroup (funded above, ahead of ordinary growth) and it
+  // never has a shrinkTo, so this stays a plain shrink-or-grow apply.
   function applyRedistribution(group, groupAllocations) {
     const shrinkTo = shrinkToWidthFtByGroup.get(group);
     const extra = extraWidthFtByGroup.get(group) ?? 0;
     if (shrinkTo == null && extra === 0) return groupAllocations;
     const currentTotal = groupAllocations.reduce((s, a) => s + a.widthFt, 0);
     const targetTotal = (shrinkTo ?? currentTotal) + extra;
+    if (targetTotal === currentTotal) return groupAllocations;
     const scale = currentTotal > 0 ? targetTotal / currentTotal : 0;
     return groupAllocations.map((a) => ({ ...a, widthFt: a.widthFt * scale }));
   }
