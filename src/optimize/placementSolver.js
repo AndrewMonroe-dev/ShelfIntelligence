@@ -772,6 +772,15 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       return lockedInRow.reduce((sum, sku) => sum + bottleWidthInches(sku, bottleDimensions) * placementsBySkuId.get(sku.skuId).facings, 0);
     }
 
+    // Worst-case locked width across this section's rows -- used by the
+    // small-format and block-layout branches below, which (unlike the
+    // price-band branch) apply ONE width budget uniformly across every row
+    // rather than computing per-row, so there's no single row index to ask
+    // lockedInchesForRow about ahead of time.
+    const maxLockedInches = shelfCount
+      ? Math.max(0, ...Array.from({ length: shelfCount }, (_, i) => lockedInchesForRow(i)))
+      : 0;
+
     // Row assignment + space-driven fill: a section's actual SKU roster is
     // decided PER ROW by how many distinct SKUs fit at floor facings
     // (fitSkusToWidth), not by a fixed pre-sliced group -- so a section
@@ -807,8 +816,11 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // a standalone section is already one size code, so this just brand-
       // blocks that size across its own rows (best brand on the best row)
       // when it has more than one row to work with. Andrew, 2026-07-17.
+      // Andrew, 2026-07-20: reserve the worst-case locked-row width (see
+      // maxLockedInches below) from the budget -- same reasoning as the
+      // block-layout branch just below.
       const blockResult = layoutSmallFormatSection(
-        naturalPool, shelfDefs, linearFeet * 12, scoreMap, bottleDimensions, floorFacings
+        naturalPool, shelfDefs, Math.max(0, linearFeet * 12 - maxLockedInches), scoreMap, bottleDimensions, floorFacings
       );
       rowGroups = blockResult.rowGroups;
       blockFacingsBySkuId = blockResult.facingsBySkuId;
@@ -819,12 +831,20 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // the whole row), so a brand appears on every shelf as a consistent
       // column instead of spilling onto the next row or getting starved by
       // a bigger scorer elsewhere in the row. Andrew's rule 2026-07-15:
-      // "everything should be in block based categories." Known
-      // limitation: locked-SKU width (lockedInchesForRow) isn't subtracted
-      // from the block width budget here -- a heavily-overridden row may
-      // run slightly over.
+      // "everything should be in block based categories."
+      // Andrew, 2026-07-20 (fixed the "known limitation" noted here since
+      // 07-18): layoutGroupsAsBlocks applies ONE budget uniformly to every
+      // row of a block, so a per-row lockedInchesForRow can't be threaded
+      // through directly -- reserve the WORST-CASE row's locked width
+      // (maxLockedInches, computed below) across the board instead. A row
+      // with less locked content than the max ends up very slightly
+      // under-filled rather than over -- a heavily-overridden row running
+      // past its physical 48in was the actual bug (facing +/- clicks
+      // silently overflowing into the next bay and rippling every
+      // downstream section's position); a row a hair under budget on an
+      // UNDER-overridden row is the safe direction to be wrong in.
       const blockResult = layoutGroupsAsBlocks(
-        brandGroups(naturalPool, scoreMap), shelfCount, linearFeet * 12,
+        brandGroups(naturalPool, scoreMap), shelfCount, Math.max(0, linearFeet * 12 - maxLockedInches),
         scoreMap, bottleDimensions, floorFacings,
         isBota3LSection(section) ? isBotaBrand : null,
         key === 'size:5LT' ? isFranzia3LRedirect : null

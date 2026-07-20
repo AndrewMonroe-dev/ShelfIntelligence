@@ -23,7 +23,14 @@ import { computeScoreMap } from '../calc/scoreEngine.js';
 export function dedupeByBrandVarietalSize(skus, scoreMap) {
   const bestByKey = new Map();
   skus.forEach((sku) => {
-    const key = `${sku.brand}|${sku.varietal || ''}|${sku.bottleSizeRaw || ''}`;
+    // REGIONAL is a catch-all bucket, not a real varietal -- it carries no
+    // distinguishing information, so brand+varietal+size alone collapses
+    // genuinely different wines (e.g. every ST JULIAN fruit-wine flavor)
+    // into one. Fall back to UPC there so only true duplicate-vintage
+    // records (matching UPC) still merge.
+    const key = sku.varietal === 'REGIONAL'
+      ? `${sku.brand}|${sku.varietal}|${sku.bottleSizeRaw || ''}|${sku.upc || sku.skuId}`
+      : `${sku.brand}|${sku.varietal || ''}|${sku.bottleSizeRaw || ''}`;
     const score = scoreMap.get(sku.skuId)?.score ?? 0;
     const existing = bestByKey.get(key);
     if (!existing || score > existing.score) bestByKey.set(key, sku);
