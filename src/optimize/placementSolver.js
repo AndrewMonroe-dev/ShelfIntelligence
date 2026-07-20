@@ -772,14 +772,30 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       return lockedInRow.reduce((sum, sku) => sum + bottleWidthInches(sku, bottleDimensions) * placementsBySkuId.get(sku.skuId).facings, 0);
     }
 
-    // Worst-case locked width across this section's rows -- used by the
+    // Average locked width per row across this section -- used by the
     // small-format and block-layout branches below, which (unlike the
     // price-band branch) apply ONE width budget uniformly across every row
     // rather than computing per-row, so there's no single row index to ask
     // lockedInchesForRow about ahead of time.
-    const maxLockedInches = shelfCount
-      ? Math.max(0, ...Array.from({ length: shelfCount }, (_, i) => lockedInchesForRow(i)))
+    // Andrew, 2026-07-20 (same day, found via live Franzia 5LT Box testing):
+    // this was originally the MAX across rows, not the average -- correct
+    // in spirit (reserve the worst case so no row overflows) but wrong for
+    // this shared-uniform-budget architecture: a lock concentrated on ONE
+    // row (e.g. 2 facings on row 6 alone) reserved that row's FULL width
+    // requirement from the budget applied to EVERY row, not just row 6.
+    // For a narrow section (5LT Box, 1.7ft/row) a single heavy row's lock
+    // was enough to zero out the shared per-row budget entirely, wiping
+    // every OTHER row's content -- confirmed live: locking Franzia
+    // Refreshing White to 2 facings on row 6 collapsed rows 1-5 from 2
+    // SKUs each to nothing. The average still reserves the section's real
+    // aggregate locked width (so a heavily-overridden row still can't
+    // overflow past its per-block budget by much), just spread fairly
+    // across every row instead of punishing all of them by one row's
+    // total.
+    const totalLockedInches = shelfCount
+      ? Array.from({ length: shelfCount }, (_, i) => lockedInchesForRow(i)).reduce((a, b) => a + b, 0)
       : 0;
+    const avgLockedInchesPerRow = shelfCount ? totalLockedInches / shelfCount : 0;
 
     // Row assignment + space-driven fill: a section's actual SKU roster is
     // decided PER ROW by how many distinct SKUs fit at floor facings
@@ -817,10 +833,10 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // blocks that size across its own rows (best brand on the best row)
       // when it has more than one row to work with. Andrew, 2026-07-17.
       // Andrew, 2026-07-20: reserve the worst-case locked-row width (see
-      // maxLockedInches below) from the budget -- same reasoning as the
+      // avgLockedInchesPerRow below) from the budget -- same reasoning as the
       // block-layout branch just below.
       const blockResult = layoutSmallFormatSection(
-        naturalPool, shelfDefs, Math.max(0, linearFeet * 12 - maxLockedInches), scoreMap, bottleDimensions, floorFacings
+        naturalPool, shelfDefs, Math.max(0, linearFeet * 12 - avgLockedInchesPerRow), scoreMap, bottleDimensions, floorFacings
       );
       rowGroups = blockResult.rowGroups;
       blockFacingsBySkuId = blockResult.facingsBySkuId;
@@ -836,7 +852,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // 07-18): layoutGroupsAsBlocks applies ONE budget uniformly to every
       // row of a block, so a per-row lockedInchesForRow can't be threaded
       // through directly -- reserve the WORST-CASE row's locked width
-      // (maxLockedInches, computed below) across the board instead. A row
+      // (avgLockedInchesPerRow, computed below) across the board instead. A row
       // with less locked content than the max ends up very slightly
       // under-filled rather than over -- a heavily-overridden row running
       // past its physical 48in was the actual bug (facing +/- clicks
@@ -844,7 +860,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // downstream section's position); a row a hair under budget on an
       // UNDER-overridden row is the safe direction to be wrong in.
       const blockResult = layoutGroupsAsBlocks(
-        brandGroups(naturalPool, scoreMap), shelfCount, Math.max(0, linearFeet * 12 - maxLockedInches),
+        brandGroups(naturalPool, scoreMap), shelfCount, Math.max(0, linearFeet * 12 - avgLockedInchesPerRow),
         scoreMap, bottleDimensions, floorFacings,
         isBota3LSection(section) ? isBotaBrand : null,
         key === 'size:5LT' ? isFranzia3LRedirect : null
