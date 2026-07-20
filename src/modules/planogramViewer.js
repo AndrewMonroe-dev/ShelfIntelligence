@@ -2,6 +2,8 @@ import { store } from '../core/store.js';
 import { generatePlan } from '../optimize/placementSolver.js';
 import { getPhysicalWidthFt, BAY_WIDTH_FT, getShelvesForSpan } from '../optimize/shelfPosition.js';
 import { sectionForSku } from '../optimize/blocking.js';
+import { bottleWidthInches } from '../optimize/facings.js';
+import { computeScoreMap } from '../calc/scoreEngine.js';
 
 // A rendered section's own key is only a valid override target when it's a
 // real sectionAllocations entry -- merged (small-format cluster) sections
@@ -367,6 +369,104 @@ export function mount(el) {
     return plan;
   }
 
+  // Andrew, 2026-07-20 (Editing Mode): a rendered box's own section key is
+  // either a real allocation's key or a "merged:a+b+c" wrapper's -- either
+  // way, if the box is ALREADY sitting in some plan.sections entry, that
+  // entry's key is exactly what's on the box, so no resolution is needed to
+  // find it again. This only has to additionally handle the case of a
+  // BRAND-NEW placement (Add SKU search) targeting a real section key that
+  // itself got absorbed into a merged wrapper.
+  function findContainingSection(plan, sectionKey) {
+    const exact = plan.sections.find((s) => s.key === sectionKey);
+    if (exact) return exact;
+    return plan.sections.find((s) => s.key.startsWith('merged:') && s.key.slice('merged:'.length).split('+').includes(sectionKey)) || null;
+  }
+
+  function removeSkuFromPlan(plan, skuId) {
+    for (const section of plan.sections) {
+      for (const shelf of section.shelves) {
+        const idx = shelf.skus.findIndex((sk) => sk.skuId === skuId);
+        if (idx !== -1) { shelf.skus.splice(idx, 1); return true; }
+      }
+    }
+    return false;
+  }
+
+  function buildPatchedSkuEntry(sku, facings, bottleDimensions, scoreMap) {
+    const widthInches = bottleWidthInches(sku, bottleDimensions);
+    return {
+      skuId: sku.skuId,
+      brand: sku.brand,
+      varietal: sku.varietal,
+      priceUsd: sku.priceUsd,
+      bottleSizeRaw: sku.bottleSizeRaw,
+      score: scoreMap.get(sku.skuId)?.score ?? 0,
+      facings,
+      widthInches,
+      allocatedInches: widthInches * facings,
+      isLocked: true,
+      reasons: [{ factor: 'Manual override', value: 'Locked by user (Editing Mode)' }],
+    };
+  }
+
+  // Applies one edit directly to an already-cloned plan -- no call into
+  // generatePlan, so nothing outside the exact SKU/row touched can move.
+  // Returns false if the target section can't be located in the CURRENT
+  // rendered plan (only possible for a brand-new placement into a section
+  // that isn't showing at all yet) -- caller falls back to a full
+  // regeneration for that one edit rather than silently dropping it.
+  function applyPatchToPlan(plan, action, context) {
+    removeSkuFromPlan(plan, action.skuId);
+    if (action.remove) return true;
+
+    const section = findContainingSection(plan, action.sectionKey);
+    const shelf = section?.shelves[action.shelfPosition - 1];
+    if (!shelf) return false;
+
+    const sku = context.skus.find((s) => s.skuId === action.skuId);
+    if (!sku) return false;
+    const entry = buildPatchedSkuEntry(sku, action.facings || 1, context.bottleDimensions, context.scoreMap);
+    const insertAt = action.columnIndex == null ? shelf.skus.length : Math.max(0, Math.min(action.columnIndex, shelf.skus.length));
+    shelf.skus.splice(insertAt, 0, entry);
+    return true;
+  }
+
+  // Single entry point for every manual edit (facing +/-, drag move/swap,
+  // Add SKU, remove) -- persists the override exactly as before, then
+  // either patches the frozen rendered plan in place (Editing Mode ON) or
+  // fully regenerates (Editing Mode OFF, today's behavior). `actions` is a
+  // list so a two-SKU swap commits both sides in one pass instead of
+  // patching one then re-deriving state for the second.
+  function commitEdits(actions) {
+    actions.forEach((a) => {
+      if (a.remove) store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'remove' });
+      else store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'place', sectionKey: a.sectionKey, shelfPosition: a.shelfPosition, facings: a.facings || 1, columnIndex: a.columnIndex ?? null });
+    });
+
+    let plan;
+    if (store.getEditingMode() && store.getSnapshot().currentPlan) {
+      const patched = structuredClone(store.getSnapshot().currentPlan);
+      const { skus, metricsConfig, bottleDimensions } = store.getSnapshot();
+      const targetStore = currentStore();
+      const context = {
+        skus, bottleDimensions,
+        scoreMap: computeScoreMap(skus, metricsConfig, targetStore?.qualityScore != null ? { qualityScore: targetStore.qualityScore } : null),
+      };
+      const allOk = actions.every((a) => applyPatchToPlan(patched, a, context));
+      plan = allOk ? patched : regenerateAndSetPlan();
+      if (allOk) store.setPlan(patched);
+    } else {
+      plan = regenerateAndSetPlan();
+    }
+    warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
+    renderOutput(plan);
+    return plan;
+  }
+
+  function commitEdit(action) {
+    return commitEdits([action]);
+  }
+
   function renderOverridesList() {
     const overrides = store.getOverrides(selectedStoreId);
     if (!overrides.length) return '';
@@ -510,12 +610,21 @@ export function mount(el) {
         <h1>Planogram Viewer</h1>
         <p>Rendered in real 4ft bays, matching the store's physical fixture from Set Layout. Click a SKU to move, lock, or remove it -- manual placements always win over the AI recommendation. Boxes marked &#128274; are locked.</p>
       </div>
-      <div class="card" style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
+      <div class="card" style="display:flex;align-items:center;gap:24px;margin-bottom:14px;">
         <div>
           <div class="card-label" style="margin-bottom:6px;">Store</div>
           <select class="store-select">
             ${stores.map((s) => `<option value="${s.storeId}" ${s.storeId === selectedStoreId ? 'selected' : ''}>${s.name}</option>`).join('')}
           </select>
+        </div>
+        <div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" class="editing-mode-toggle" ${store.getEditingMode() ? 'checked' : ''} />
+            <span>
+              <div class="card-label" style="margin-bottom:2px;">Editing Mode</div>
+              <div style="font-size:11px;color:var(--text2);max-width:340px;">Off: every edit fully regenerates the plan (default). On: edits change only the exact SKU you touch -- nothing else on the shelf moves.</div>
+            </span>
+          </label>
         </div>
       </div>
       <div class="viewer-output"></div>
@@ -526,6 +635,10 @@ export function mount(el) {
       store.setActiveStoreId(selectedStoreId);
       openSkuId = null;
       render();
+    });
+
+    el.querySelector('.editing-mode-toggle').addEventListener('change', (e) => {
+      store.setEditingMode(e.target.checked);
     });
 
     renderOutput(plan);
@@ -622,12 +735,6 @@ export function mount(el) {
     bindListeners(output);
   }
 
-  // Shared by the Add SKU search results, empty-slot drops, and box-swap
-  // drops -- always routes through the same override mechanism.
-  function placeSku(skuId, sectionKey, shelfPosition, facings, columnIndex = null) {
-    store.addOverride(selectedStoreId, { skuId, action: 'place', sectionKey, shelfPosition, facings: facings || 1, columnIndex });
-  }
-
   // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
   // from the row's normal fill budget (known limitation, documented at the
   // block-layout call site in placementSolver.js) -- so a forced facings
@@ -655,12 +762,6 @@ export function mount(el) {
     }
   }
 
-  function commitAndRender(skuIdsToCheck) {
-    const plan = regenerateAndSetPlan();
-    warnIfRowOverflows(plan, currentStore(), Array.isArray(skuIdsToCheck) ? skuIdsToCheck : [skuIdsToCheck]);
-    renderOutput(plan);
-  }
-
   function bindListeners(output) {
     output.querySelectorAll('.planogram-box').forEach((box) => {
       box.addEventListener('click', () => {
@@ -682,7 +783,7 @@ export function mount(el) {
       const shelfPosition = parseInt(box.dataset.shelfPosition, 10);
 
       // Andrew, 2026-07-20: pass the box's own columnIndex through --
-      // placeSku's override defaults columnIndex to null when omitted, and
+      // commitEdit's override defaults columnIndex to null when omitted, and
       // insertLockedIntoRow (placementSolver.js) treats a null columnIndex
       // as "insert at the end of the row," which is why a facing change
       // was jumping the SKU (and its new facing) to the far right instead
@@ -692,19 +793,17 @@ export function mount(el) {
 
       box.querySelector('.planogram-facing-plus')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings + 1, currentColumnIndex);
-        commitAndRender(box.dataset.skuId);
+        commitEdit({ skuId: box.dataset.skuId, sectionKey, shelfPosition, facings: currentFacings + 1, columnIndex: currentColumnIndex });
       });
 
       box.querySelector('.planogram-facing-minus')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (currentFacings <= 1) {
-          store.addOverride(selectedStoreId, { skuId: box.dataset.skuId, action: 'remove' });
-        } else {
-          placeSku(box.dataset.skuId, sectionKey, shelfPosition, currentFacings - 1, currentColumnIndex);
-        }
         if (openSkuId === box.dataset.skuId) openSkuId = null;
-        renderOutput(regenerateAndSetPlan());
+        if (currentFacings <= 1) {
+          commitEdit({ skuId: box.dataset.skuId, remove: true });
+        } else {
+          commitEdit({ skuId: box.dataset.skuId, sectionKey, shelfPosition, facings: currentFacings - 1, columnIndex: currentColumnIndex });
+        }
       });
 
       // Andrew, 2026-07-18: drag a box onto another box to SWAP their
@@ -748,10 +847,11 @@ export function mount(el) {
         // The swap: dragged takes target's exact row+column, target takes
         // dragged's -- this is what actually reorders two SKUs already on
         // the same row, not just assigning them both "this row" and hoping.
-        placeSku(dragged.skuId, targetSectionKey, targetShelfPosition, dragged.facings, targetColumnIndex);
-        placeSku(targetSkuId, originSectionKey, originShelfPosition, targetFacings, originColumnIndex);
         openSkuId = null;
-        commitAndRender([dragged.skuId, targetSkuId]);
+        commitEdits([
+          { skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: dragged.facings, columnIndex: targetColumnIndex },
+          { skuId: targetSkuId, sectionKey: originSectionKey, shelfPosition: originShelfPosition, facings: targetFacings, columnIndex: originColumnIndex },
+        ]);
       });
     });
 
@@ -790,8 +890,7 @@ export function mount(el) {
         const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
         const columnIndex = slot.dataset.columnIndex ? parseInt(slot.dataset.columnIndex, 10) : null;
         if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
-        placeSku(dragged.skuId, sectionKey, shelfPosition, dragged.facings, columnIndex);
-        commitAndRender(dragged.skuId);
+        commitEdit({ skuId: dragged.skuId, sectionKey, shelfPosition, facings: dragged.facings, columnIndex });
       });
     });
 
@@ -804,16 +903,15 @@ export function mount(el) {
       const sectionKey = output.querySelector('.override-section').value;
       const shelfPosition = parseInt(output.querySelector('.override-shelf').value, 10);
       const facings = parseInt(output.querySelector('.override-facings').value, 10);
-      placeSku(openSkuId, sectionKey, shelfPosition, facings);
       const placedSkuId = openSkuId;
       openSkuId = null;
-      commitAndRender(placedSkuId);
+      commitEdit({ skuId: placedSkuId, sectionKey, shelfPosition, facings });
     });
 
     output.querySelector('.override-remove-btn')?.addEventListener('click', () => {
-      store.addOverride(selectedStoreId, { skuId: openSkuId, action: 'remove' });
+      const removedSkuId = openSkuId;
       openSkuId = null;
-      renderOutput(regenerateAndSetPlan());
+      commitEdit({ skuId: removedSkuId, remove: true });
     });
 
     output.querySelector('.override-reset-btn')?.addEventListener('click', () => {
@@ -870,12 +968,12 @@ export function mount(el) {
       const sectionKey = output.querySelector('.add-sku-section').value;
       const shelfPosition = parseInt(output.querySelector('.add-sku-shelf').value, 10);
       const facings = parseInt(output.querySelector('.add-sku-facings').value, 10);
-      placeSku(skuId, sectionKey, shelfPosition, facings, addColumnIndex);
+      const columnIndex = addColumnIndex;
       addSearchTerm = '';
       addSectionKey = '';
       addShelfPosition = null;
       addColumnIndex = null;
-      commitAndRender(skuId);
+      commitEdit({ skuId, sectionKey, shelfPosition, facings, columnIndex });
     }
 
     output.querySelectorAll('.add-sku-result').forEach((row) => {

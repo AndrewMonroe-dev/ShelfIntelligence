@@ -22,6 +22,14 @@ const state = {
   shelfLayoutOverrides: {}, // storeId -> shelfLayout snapshot (fixture edits, incl. built-in stores)
   overrides: {}, // storeId -> [{ id, skuId, action: 'place'|'remove', sectionKey, shelfPosition, facings }]
   caseOnlyMode: false, // global toggle: 750ml facing floor 1 -> 2
+  // Andrew, 2026-07-20: OFF by default -- every manual edit (facing +/-,
+  // drag, Add SKU, remove) fully regenerates the plan, same as always. When
+  // ON, edits patch the currently-rendered plan directly instead (see
+  // applyEditingModePatch in planogramViewer.js) -- ONLY the SKU actually
+  // touched changes; nothing else on the shelf moves, because the
+  // placement algorithm doesn't run again at all. Meant to be switched on
+  // once a set is generated and Andrew starts hand-editing it.
+  editingMode: false,
   customStores: [], // stores added via Store Builder's "+ Add Store" flow
   activeStoreId: null, // last store picked in ANY store-scoped page (Set Layout, Optimization Engine, Planogram Viewer, Set Overview, Digital Twin) -- shared so switching pages keeps you on the same set instead of resetting to the first store
 };
@@ -121,6 +129,16 @@ export function getCaseOnlyMode() {
 export function setCaseOnlyMode(value) {
   state.caseOnlyMode = value;
   bus.emit('caseOnly:changed', value);
+  persist();
+}
+
+export function getEditingMode() {
+  return state.editingMode;
+}
+
+export function setEditingMode(value) {
+  state.editingMode = value;
+  bus.emit('editingMode:changed', value);
   persist();
 }
 
@@ -255,6 +273,7 @@ function applyPersistedOverrides() {
   if (persisted.activeScenarioId) state.activeScenarioId = persisted.activeScenarioId;
   if (persisted.activeStoreId) state.activeStoreId = persisted.activeStoreId;
   if (typeof persisted.caseOnlyMode === 'boolean') state.caseOnlyMode = persisted.caseOnlyMode;
+  if (typeof persisted.editingMode === 'boolean') state.editingMode = persisted.editingMode;
 
   if (persisted.metricOverrides) {
     persisted.metricOverrides.forEach((override) => {
@@ -359,6 +378,8 @@ export const store = {
   clearOverrides,
   getCaseOnlyMode,
   setCaseOnlyMode,
+  getEditingMode,
+  setEditingMode,
   getActiveStoreId,
   setActiveStoreId,
   addStore,
