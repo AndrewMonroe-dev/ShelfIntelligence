@@ -259,9 +259,17 @@ function renderBayRow(rowEntries, position, bay) {
     const lastGroup = groups[groups.length - 1];
     const lastEntry = lastGroup.entries[lastGroup.entries.length - 1];
     const targetSectionKey = realSectionKeyFor(lastGroup.sectionKey, lastEntry.sku);
-    // Trailing slot -- its implied column position is after everything
-    // already in this row.
-    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" data-column-index="${rowEntries.length}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
+    // Trailing slot -- its implied column position is right AFTER the last
+    // visible SKU, in the SECTION row's own coordinate space
+    // (lastEntry.columnIndex is section-relative, assigned in
+    // buildBayRowMap). Andrew, 2026-07-20: this used to be
+    // rowEntries.length -- the count of boxes in THIS BAY's row -- but a
+    // section's row can span multiple bays, so a bay-level count pointed
+    // at the MIDDLE of the section row whenever the section started in an
+    // earlier bay. insertLockedIntoRow then spliced the added SKU mid-row:
+    // it appeared to replace the box to its left and shove everything
+    // over, instead of landing in the empty space that was clicked.
+    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" data-column-index="${lastEntry.columnIndex + 1}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
   }
 
   return `
