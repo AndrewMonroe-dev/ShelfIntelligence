@@ -832,11 +832,24 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // a standalone section is already one size code, so this just brand-
       // blocks that size across its own rows (best brand on the best row)
       // when it has more than one row to work with. Andrew, 2026-07-17.
-      // Andrew, 2026-07-20: reserve the worst-case locked-row width (see
-      // avgLockedInchesPerRow below) from the budget -- same reasoning as the
-      // block-layout branch just below.
+      // Andrew, 2026-07-20: deliberately NOT applying the avgLockedInchesPerRow
+      // reservation here (unlike the block-layout branch just below). Tried
+      // it first, but packGroupsIntoRows (layoutSmallFormatSection) is a
+      // single continuous walk across every row with shared mutable cursor
+      // state, not independent per-block budgets -- ANY width change shifts
+      // exactly where that walk stops on an earlier row, cascading a
+      // completely different family-to-row assignment through every row
+      // after it. Confirmed live: locking one more Korbel facing (0.748LT
+      // X4 section) silently dropped Cooks Regular and pulled in Fre and
+      // Cavit -- brands Andrew never touched. The original overflow bug
+      // this reservation exists for was only ever observed in the OTHER
+      // (block-layout) branch; small-format sections never needed it, so
+      // leave this one at full width and accept the same bounded "may run
+      // slightly over, see warnIfRowOverflows" limitation the block-layout
+      // branch had before today's fix, rather than trade it for unrelated
+      // content churn.
       const blockResult = layoutSmallFormatSection(
-        naturalPool, shelfDefs, Math.max(0, linearFeet * 12 - avgLockedInchesPerRow), scoreMap, bottleDimensions, floorFacings
+        naturalPool, shelfDefs, linearFeet * 12, scoreMap, bottleDimensions, floorFacings
       );
       rowGroups = blockResult.rowGroups;
       blockFacingsBySkuId = blockResult.facingsBySkuId;
