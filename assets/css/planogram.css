@@ -51,6 +51,39 @@
   padding-bottom:2px;
 }
 
+/* Andrew, 2026-07-20: wraps every contiguous run of one category's boxes
+   within a shelf row in that category's own color (see categoryColor() in
+   planogramViewer.js) -- border-color is set inline per-instance since the
+   color is data-driven, not a fixed class. */
+.planogram-category-group{
+  display:flex;
+  align-items:stretch;
+  border:2px solid;
+  border-radius:6px;
+  padding:2px;
+  margin-right:2px;
+}
+
+.planogram-category-legend{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px 10px;
+  margin-top:10px;
+}
+.planogram-category-legend-item{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  color:var(--text2);
+}
+.planogram-category-legend-swatch{
+  width:11px;
+  height:11px;
+  border-radius:3px;
+  flex-shrink:0;
+}
+
 .planogram-section-divider{
   display:flex;
   align-items:center;

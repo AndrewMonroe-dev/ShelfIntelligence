@@ -227,6 +227,22 @@ function shortenDividerLabel(label, maxParts = 3, maxChars = 60) {
   return shown;
 }
 
+// Andrew, 2026-07-20: every category gets a stable color, hashed from its
+// own section key -- deterministic (same category always draws the same
+// color across reloads/regenerations) and needs no manual list to keep in
+// sync as categories get added, merged, or renamed. Golden-angle hue step
+// keeps adjacent categories visually distinct even as the count grows.
+const categoryColorCache = new Map();
+function categoryColor(sectionKey) {
+  if (categoryColorCache.has(sectionKey)) return categoryColorCache.get(sectionKey);
+  let hash = 0;
+  for (let i = 0; i < sectionKey.length; i++) hash = (hash * 31 + sectionKey.charCodeAt(i)) >>> 0;
+  const hue = (hash * 137.508) % 360; // golden angle
+  const color = `hsl(${hue.toFixed(1)}, 70%, 58%)`;
+  categoryColorCache.set(sectionKey, color);
+  return color;
+}
+
 // Renders one bay's row: groups the row's entries by contiguous section so
 // a bay shared by two categories (a section boundary fell inside it) shows
 // a small divider badge at the handoff point, keeping them distinguishable.
@@ -278,7 +294,9 @@ function renderBayRow(rowEntries, position, bay) {
       <div class="planogram-shelf-frame" style="width:${BAY_INCHES * PX_PER_INCH}px;">
         ${groups.map((g) => `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
-          ${g.entries.map(renderSkuBox).join('')}
+          <div class="planogram-category-group" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
+            ${g.entries.map(renderSkuBox).join('')}
+          </div>
         `).join('')}
         ${emptySlotHtml}
       </div>
@@ -548,6 +566,17 @@ export function mount(el) {
         </div>
         ${plan.isOverflowing ? `<div class="badge badge-warning" style="margin-top:10px;">Allocated sections exceed the fixture by ${plan.overflowFt.toFixed(1)}ft -- sections past the physical bay count are computed but NOT SHOWN below (silently dropped, not merged or trimmed). Reduce section widths in Set Layout or add bays in Store Builder.</div>` : ''}
         ${plan.sections.filter((s) => s.skuDepthExhausted).map((s) => `<div class="badge badge-warning" style="margin-top:6px;">${s.label}: SKU depth exhausted -- ${s.depthExhaustedNote}</div>`).join('')}
+      </div>
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-label">Category Colors</div>
+        <div class="planogram-category-legend">
+          ${plan.sections.map((s) => `
+            <div class="planogram-category-legend-item">
+              <span class="planogram-category-legend-swatch" style="background:${categoryColor(s.key)};"></span>
+              <span>${s.label}</span>
+            </div>
+          `).join('')}
+        </div>
       </div>
       <div class="card" style="margin-bottom:14px;">
         <div class="card-label">Debug: Section &rarr; Bay Mapping</div>
