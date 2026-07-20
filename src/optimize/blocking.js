@@ -91,9 +91,14 @@ export function isSmallFormatSection(section) {
 // and Worlds End -- flagged during the 750ml null-varietal review as not
 // belonging in sets. Excluded by UPC, same as the seasonal-pack exclusions
 // above.
+// Andrew, 2026-07-20: G Joy Junmai Ginjo Genshu and Momokawa Diamond Junmai
+// Ginjo are sake, and Apimed Medovina is mead -- neither is wine, found
+// during the 750ml null-varietal Group 3 review (larger follow-up to the
+// 07-18 exercise).
 const EXCLUDED_UPCS = new Set([
   '0196383007961', '0087872635091',
-  '0810196750451', '0810196750241', '4061462873131', '0852743002811', '0670087475591'
+  '0810196750451', '0810196750241', '4061462873131', '0852743002811', '0670087475591',
+  '747846567501', '747846237501', '8588005683161'
 ]);
 // Andrew, 2026-07-16, per "Suggested Measurements of wine sizes.xlsx":
 // 0.187LT X5 ("These do not belong in sets. Period.") and 0.187LT X24, the

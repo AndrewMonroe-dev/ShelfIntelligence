@@ -47705,7 +47705,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.6662643720205865,
-    "priceSegmentShare9L": 0.0005450988269770433
+    "priceSegmentShare9L": 0.0005450988269770433,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001919",
@@ -48298,7 +48299,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.008553634562972156,
-    "priceSegmentShare9L": 0.00014426645350361852
+    "priceSegmentShare9L": 0.00014426645350361852,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001941",
@@ -48540,7 +48542,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.037721623496165896,
-    "priceSegmentShare9L": 0.00011885878757060135
+    "priceSegmentShare9L": 0.00011885878757060135,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001950",
@@ -48728,7 +48731,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.7739722286411425,
-    "priceSegmentShare9L": 0.00011802793520035101
+    "priceSegmentShare9L": 0.00011802793520035101,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001957",
@@ -48835,7 +48839,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 18.264100110145844,
-    "priceSegmentShare9L": 0.00011742349957683834
+    "priceSegmentShare9L": 0.00011742349957683834,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001961",
@@ -48922,7 +48927,7 @@
     "skuId": "001964",
     "image": "/assets/images/skus/001964.png",
     "brand": "THUNDER BAY WINERY RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "852672578361",
@@ -48996,7 +49001,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": true,
     "growthPct9L": -0.400118221416324,
-    "priceSegmentShare9L": 0.00014025427944343858
+    "priceSegmentShare9L": 0.00014025427944343858,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001967",
@@ -49049,7 +49055,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.7947022693436457,
-    "priceSegmentShare9L": 0.00011683254596061138
+    "priceSegmentShare9L": 0.00011683254596061138,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001969",
@@ -49372,7 +49379,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.15752637639056027,
-    "priceSegmentShare9L": 0.00013797029682329233
+    "priceSegmentShare9L": 0.00013797029682329233,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001981",
@@ -49398,13 +49406,14 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.03718732607102189,
-    "priceSegmentShare9L": 0.00011493215384712211
+    "priceSegmentShare9L": 0.00011493215384712211,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001982",
     "image": "/assets/images/skus/001982.png",
     "brand": "CELANI FAMILY VINEYARDS ROBUSTO PROPRIETARY RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "860000046921",
@@ -49586,7 +49595,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.6222770807116575,
-    "priceSegmentShare9L": 0.00013667705832205455
+    "priceSegmentShare9L": 0.00013667705832205455,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001989",
@@ -49639,7 +49649,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.21348075681693984,
-    "priceSegmentShare9L": 0.00011366433375343152
+    "priceSegmentShare9L": 0.00011366433375343152,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "001991",
@@ -49942,7 +49953,7 @@
     "skuId": "002002",
     "image": "/assets/images/skus/002002.png",
     "brand": "FREY NATURAL RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "21512000694",
@@ -50529,7 +50540,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.17030176283908716,
-    "priceSegmentShare9L": 0.00010665744538860675
+    "priceSegmentShare9L": 0.00010665744538860675,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002024",
@@ -50582,7 +50594,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3963039461130514,
-    "priceSegmentShare9L": 0.00019487446363289113
+    "priceSegmentShare9L": 0.00019487446363289113,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002026",
@@ -50824,7 +50837,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": true,
     "growthPct9L": -0.2832105677510913,
-    "priceSegmentShare9L": 0.00019212711044176378
+    "priceSegmentShare9L": 0.00019212711044176378,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002035",
@@ -50958,7 +50972,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.1294895440416485,
-    "priceSegmentShare9L": 0.00010436884774893178
+    "priceSegmentShare9L": 0.00010436884774893178,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002040",
@@ -51173,7 +51188,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.15578235024020545,
-    "priceSegmentShare9L": 0.00010331279136093456
+    "priceSegmentShare9L": 0.00010331279136093456,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002048",
@@ -51368,7 +51384,7 @@
     "skuId": "002055",
     "image": "/assets/images/skus/002055.png",
     "brand": "BOONES FARM",
-    "varietal": null,
+    "varietal": "FLAVORED/SWEET",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "85000012161",
@@ -51469,7 +51485,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.20061227617870553,
-    "priceSegmentShare9L": 0.00010106157442975464
+    "priceSegmentShare9L": 0.00010106157442975464,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002059",
@@ -52204,7 +52221,7 @@
     "skuId": "002086",
     "image": "/assets/images/skus/002086.png",
     "brand": "19 CRIMES",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "12354014951",
@@ -52953,7 +52970,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.23270022579625393,
-    "priceSegmentShare9L": 0.00009381231962951674
+    "priceSegmentShare9L": 0.00009381231962951674,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002114",
@@ -53411,7 +53429,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.20992281213834843,
-    "priceSegmentShare9L": 0.0001099174558423701
+    "priceSegmentShare9L": 0.0001099174558423701,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002131",
@@ -53761,7 +53780,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.4282019009148402,
-    "priceSegmentShare9L": 0.00009007820841274769
+    "priceSegmentShare9L": 0.00009007820841274769,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002144",
@@ -54138,7 +54158,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.3311365125565739,
-    "priceSegmentShare9L": 0.00008785204802166279
+    "priceSegmentShare9L": 0.00008785204802166279,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002158",
@@ -54650,7 +54671,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.420682822660012,
-    "priceSegmentShare9L": 0.00015775067899882422
+    "priceSegmentShare9L": 0.00015775067899882422,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002177",
@@ -55324,7 +55346,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5276362271589707,
-    "priceSegmentShare9L": 0.00008129975532782802
+    "priceSegmentShare9L": 0.00008129975532782802,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002202",
@@ -55458,7 +55481,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.41931406101410834,
-    "priceSegmentShare9L": 0.00014674599961612056
+    "priceSegmentShare9L": 0.00014674599961612056,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002207",
@@ -55619,7 +55643,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 9.955309710498332,
-    "priceSegmentShare9L": 0.00007898307338843446
+    "priceSegmentShare9L": 0.00007898307338843446,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002213",
@@ -55868,7 +55893,7 @@
     "skuId": "002222",
     "image": "/assets/images/skus/002222.png",
     "brand": "BENMAR INTO THE FOG PINT NR",
-    "varietal": null,
+    "varietal": "PINOT NOIR",
     "region": "OREGON",
     "bottleSizeRaw": "0.75LT",
     "upc": "198715913751",
@@ -56273,7 +56298,7 @@
     "skuId": "002237",
     "image": "/assets/images/skus/002237.png",
     "brand": "WASHINGTON HILLS REISLING WASHINGTON",
-    "varietal": null,
+    "varietal": "RIESLING",
     "region": "WASHINGTON",
     "bottleSizeRaw": "0.75LT",
     "upc": "848375005151",
@@ -56914,7 +56939,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.538003163764831,
-    "priceSegmentShare9L": 0.0003214175422257979
+    "priceSegmentShare9L": 0.0003214175422257979,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002261",
@@ -57615,7 +57641,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.09812504570860416,
-    "priceSegmentShare9L": 0.00008473940749782475
+    "priceSegmentShare9L": 0.00008473940749782475,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002287",
@@ -58161,7 +58188,7 @@
     "skuId": "002307",
     "image": "/assets/images/skus/002307.png",
     "brand": "ROBERT MONDAVI PRIVATE SELECTION",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "86003904061",
@@ -58485,7 +58512,7 @@
     "skuId": "002319",
     "image": "/assets/images/skus/002319.png",
     "brand": "ANGELS & COWBOYS",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "40232096721",
@@ -58640,7 +58667,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.10558840326369238,
-    "priceSegmentShare9L": 0.00012370175853209522
+    "priceSegmentShare9L": 0.00012370175853209522,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002325",
@@ -58990,7 +59018,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.08876126584413775,
-    "priceSegmentShare9L": 0.0001218658710541149
+    "priceSegmentShare9L": 0.0001218658710541149,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002338",
@@ -59151,7 +59180,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.10933506614143736,
-    "priceSegmentShare9L": 0.00006590777590366619
+    "priceSegmentShare9L": 0.00006590777590366619,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002344",
@@ -59393,7 +59423,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.7939803641710774,
-    "priceSegmentShare9L": 0.00006498283518532618
+    "priceSegmentShare9L": 0.00006498283518532618,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002353",
@@ -59473,7 +59504,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.7550774596356163,
-    "priceSegmentShare9L": 0.00007769438183818621
+    "priceSegmentShare9L": 0.00007769438183818621,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002356",
@@ -59607,7 +59639,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.08057330520390966,
-    "priceSegmentShare9L": 0.0000639584062525317
+    "priceSegmentShare9L": 0.0000639584062525317,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002361",
@@ -60389,7 +60422,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": true,
     "growthPct9L": 1.7949915513442762,
-    "priceSegmentShare9L": 0.00006140431625959868
+    "priceSegmentShare9L": 0.00006140431625959868,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002390",
@@ -60638,7 +60672,7 @@
     "skuId": "002399",
     "image": "/assets/images/skus/002399.png",
     "brand": "SCOUT WILD RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "AMERICAN",
     "bottleSizeRaw": "0.75LT",
     "upc": "818013014431",
@@ -60712,7 +60746,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3182894828448412,
-    "priceSegmentShare9L": 0.00006015805207210282
+    "priceSegmentShare9L": 0.00006015805207210282,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002402",
@@ -61987,7 +62022,7 @@
     "skuId": "002449",
     "image": "/assets/images/skus/002449.png",
     "brand": "FREAKSHOW",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "52935100431",
@@ -62142,7 +62177,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.3259286679279429,
-    "priceSegmentShare9L": 0.00005591685613776288
+    "priceSegmentShare9L": 0.00005591685613776288,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002455",
@@ -62654,7 +62690,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5004946636677795,
-    "priceSegmentShare9L": 0.00005445037706203657
+    "priceSegmentShare9L": 0.00005445037706203657,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002474",
@@ -62849,7 +62886,7 @@
     "skuId": "002481",
     "image": "/assets/images/skus/002481.png",
     "brand": "BAR DOG",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "88232000641",
@@ -63281,7 +63318,7 @@
     "skuId": "002497",
     "image": "/assets/images/skus/002497.png",
     "brand": "VINA ROBLES RED 4",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "34024001841",
@@ -63355,7 +63392,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.8849243392454356,
-    "priceSegmentShare9L": 0.0000625035691089271
+    "priceSegmentShare9L": 0.0000625035691089271,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002500",
@@ -63651,7 +63689,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.23877259389190653,
-    "priceSegmentShare9L": 0.00006165777321610137
+    "priceSegmentShare9L": 0.00006165777321610137,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002511",
@@ -63812,7 +63851,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.08111978016365198,
-    "priceSegmentShare9L": 0.00005096497085116697
+    "priceSegmentShare9L": 0.00005096497085116697,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002517",
@@ -63953,7 +63993,7 @@
     "skuId": "002522",
     "image": "/assets/images/skus/002522.png",
     "brand": "CRAFTWORK BUTTRY PMPKN CHRDNNY",
-    "varietal": null,
+    "varietal": "CHARDONNAY",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "675829767011",
@@ -64216,7 +64256,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.10282764911573779,
-    "priceSegmentShare9L": 0.00005021234781841304
+    "priceSegmentShare9L": 0.00005021234781841304,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002532",
@@ -64296,7 +64337,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.06319048936058017,
-    "priceSegmentShare9L": 0.000059964700123488146
+    "priceSegmentShare9L": 0.000059964700123488146,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002535",
@@ -65031,7 +65073,7 @@
     "skuId": "002562",
     "image": "/assets/images/skus/002562.png",
     "brand": "JAYSON RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "857407002081",
@@ -65429,7 +65471,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.30149849823825814,
-    "priceSegmentShare9L": 0.00005709223957862265
+    "priceSegmentShare9L": 0.00005709223957862265,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002577",
@@ -66184,7 +66227,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 11.902252914292617,
-    "priceSegmentShare9L": 0.00020187366005404084
+    "priceSegmentShare9L": 0.00020187366005404084,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002605",
@@ -66237,7 +66281,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.05153240100527322,
-    "priceSegmentShare9L": 0.00008503963966373539
+    "priceSegmentShare9L": 0.00008503963966373539,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002607",
@@ -66290,7 +66335,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.3860140474751628,
-    "priceSegmentShare9L": 0.000046225639386268654
+    "priceSegmentShare9L": 0.000046225639386268654,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002609",
@@ -66559,7 +66605,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000045455990180668156
+    "priceSegmentShare9L": 0.000045455990180668156,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002619",
@@ -66693,7 +66740,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.21740054775296636,
-    "priceSegmentShare9L": 0.00004508035719988997
+    "priceSegmentShare9L": 0.00004508035719988997,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002624",
@@ -67043,7 +67091,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.6083230838937669,
-    "priceSegmentShare9L": 0.00004417613332131177
+    "priceSegmentShare9L": 0.00004417613332131177,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002637",
@@ -67339,7 +67388,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.7392605048565042,
-    "priceSegmentShare9L": 0.00004359021043645113
+    "priceSegmentShare9L": 0.00004359021043645113,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002648",
@@ -67446,7 +67496,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.6464817771169887,
-    "priceSegmentShare9L": 0.00005195213405506664
+    "priceSegmentShare9L": 0.00005195213405506664,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002652",
@@ -68876,7 +68927,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000040207784119494564
+    "priceSegmentShare9L": 0.000040207784119494564,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002705",
@@ -69496,7 +69548,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.4209323919863343,
-    "priceSegmentShare9L": 0.00003864880837344343
+    "priceSegmentShare9L": 0.00003864880837344343,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002728",
@@ -69873,7 +69926,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3388403864699705,
-    "priceSegmentShare9L": 0.0000379530276882199
+    "priceSegmentShare9L": 0.0000379530276882199,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002742",
@@ -70088,7 +70142,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.9024699521648875,
-    "priceSegmentShare9L": 0.00003750462532346816
+    "priceSegmentShare9L": 0.00003750462532346816,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002750",
@@ -70283,7 +70338,7 @@
     "skuId": "002757",
     "image": "/assets/images/skus/002757.png",
     "brand": "EARL STEVENS TROPISCATO",
-    "varietal": null,
+    "varietal": "FLAVORED/SWEET",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "860387000411",
@@ -70519,7 +70574,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.8334066164669004,
-    "priceSegmentShare9L": 0.0000367609823533248
+    "priceSegmentShare9L": 0.0000367609823533248,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002766",
@@ -70923,7 +70979,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5636006160009399,
-    "priceSegmentShare9L": 0.0000663157494272806
+    "priceSegmentShare9L": 0.0000663157494272806,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002781",
@@ -71739,7 +71796,7 @@
     "skuId": "002811",
     "image": "/assets/images/skus/002811.png",
     "brand": "COLUMBIA WINERY COMPOSITION RED BLND",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "WASHINGTON",
     "bottleSizeRaw": "0.75LT",
     "upc": "85000021801",
@@ -71894,7 +71951,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 2.910423353175441,
-    "priceSegmentShare9L": 0.00003453580672579311
+    "priceSegmentShare9L": 0.00003453580672579311,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002817",
@@ -72217,7 +72275,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.1233184381619462,
-    "priceSegmentShare9L": 0.00004107454488435342
+    "priceSegmentShare9L": 0.00004107454488435342,
+    "varietal": "SYRAH/SHIRAZ"
   },
   {
     "skuId": "002829",
@@ -72594,7 +72653,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.00004014029559918949
+    "priceSegmentShare9L": 0.00004014029559918949,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002843",
@@ -72701,7 +72761,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.16555792243551637,
-    "priceSegmentShare9L": 0.00003325815639573249
+    "priceSegmentShare9L": 0.00003325815639573249,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002847",
@@ -73004,7 +73065,7 @@
     "skuId": "002858",
     "image": "/assets/images/skus/002858.png",
     "brand": "BURGESS PROMISCU CBRNT SVGNN",
-    "varietal": null,
+    "varietal": "CABERNET SAUVIGNON",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "850032579341",
@@ -73591,7 +73652,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 2.1529950605664014,
-    "priceSegmentShare9L": 0.00003206849965520254
+    "priceSegmentShare9L": 0.00003206849965520254,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002880",
@@ -74130,7 +74192,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.33663617296998005,
-    "priceSegmentShare9L": 0.000036902071868301295
+    "priceSegmentShare9L": 0.000036902071868301295,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002900",
@@ -74298,7 +74361,7 @@
     "skuId": "002906",
     "image": "/assets/images/skus/002906.png",
     "brand": "LEVIATHAN RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "853098005001",
@@ -74426,7 +74489,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3825136113820756,
-    "priceSegmentShare9L": 0.00003028799333505004
+    "priceSegmentShare9L": 0.00003028799333505004,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002911",
@@ -74486,7 +74550,7 @@
     "skuId": "002913",
     "image": "/assets/images/skus/002913.png",
     "brand": "CARICATURE RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "891540001401",
@@ -74830,7 +74894,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3961425839414543,
-    "priceSegmentShare9L": 0.00002981520567766864
+    "priceSegmentShare9L": 0.00002981520567766864,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002926",
@@ -74937,7 +75002,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.25505694368536186,
-    "priceSegmentShare9L": 0.00003563393929158571
+    "priceSegmentShare9L": 0.00003563393929158571,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002930",
@@ -75368,7 +75434,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.126766685627782,
-    "priceSegmentShare9L": 0.000029349052050372245
+    "priceSegmentShare9L": 0.000029349052050372245,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002946",
@@ -75401,7 +75468,7 @@
     "skuId": "002947",
     "image": "/assets/images/skus/002947.png",
     "brand": "QUADY VINEYARDS ELECTRA RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "13022000261",
@@ -76022,7 +76089,7 @@
     "skuId": "002970",
     "image": "/assets/images/skus/002970.png",
     "brand": "BONNY DOON VINEYARD LE CIGARE BLANC",
-    "varietal": null,
+    "varietal": "WHITE BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "769434128281",
@@ -76717,7 +76784,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.09104484933680468,
-    "priceSegmentShare9L": 0.000027749936949474144
+    "priceSegmentShare9L": 0.000027749936949474144,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "002996",
@@ -77094,7 +77162,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3841486482702177,
-    "priceSegmentShare9L": 0.000027146149634925904
+    "priceSegmentShare9L": 0.000027146149634925904,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003010",
@@ -77613,7 +77682,7 @@
     "skuId": "003029",
     "image": "/assets/images/skus/003029.png",
     "brand": "HOUSE WINE",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "WASHINGTON",
     "bottleSizeRaw": "0.75LT",
     "upc": "84745000011",
@@ -77687,7 +77756,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.2533102233937452,
-    "priceSegmentShare9L": 0.00003179775739596412
+    "priceSegmentShare9L": 0.00003179775739596412,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003032",
@@ -77821,7 +77891,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.24388233237839155,
-    "priceSegmentShare9L": 0.000026390876833300035
+    "priceSegmentShare9L": 0.000026390876833300035,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003037",
@@ -77847,7 +77918,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.52989054345999,
-    "priceSegmentShare9L": 0.000026345111103463716
+    "priceSegmentShare9L": 0.000026345111103463716,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003038",
@@ -77907,7 +77979,7 @@
     "skuId": "003040",
     "image": "/assets/images/skus/003040.png",
     "brand": "FREQUENCY WINES GSM",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "860008235531",
@@ -78170,7 +78242,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.3949554820729724,
-    "priceSegmentShare9L": 0.0000312988059864844
+    "priceSegmentShare9L": 0.0000312988059864844,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003050",
@@ -78385,7 +78458,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 2.5288578747683794,
-    "priceSegmentShare9L": 0.000031002407129836916
+    "priceSegmentShare9L": 0.000031002407129836916,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003058",
@@ -78411,7 +78485,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3932155322209829,
-    "priceSegmentShare9L": 0.000025820089290450874
+    "priceSegmentShare9L": 0.000025820089290450874,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003059",
@@ -78977,7 +79052,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.1009255284461266,
-    "priceSegmentShare9L": 0.00004626023925645814
+    "priceSegmentShare9L": 0.00004626023925645814,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003080",
@@ -79300,7 +79376,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.30586624314019223,
-    "priceSegmentShare9L": 0.00002982319668197305
+    "priceSegmentShare9L": 0.00002982319668197305,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003092",
@@ -80244,7 +80321,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.01904565896013706,
-    "priceSegmentShare9L": 0.000023968192003276503
+    "priceSegmentShare9L": 0.000023968192003276503,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003127",
@@ -80810,7 +80888,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 42.86003895707311,
-    "priceSegmentShare9L": 0.00002346271091874891
+    "priceSegmentShare9L": 0.00002346271091874891,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003148",
@@ -81079,7 +81158,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.641592460293012,
-    "priceSegmentShare9L": 0.000027714084672139196
+    "priceSegmentShare9L": 0.000027714084672139196,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003158",
@@ -81213,7 +81293,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.7658806465325739,
-    "priceSegmentShare9L": 0.00004213334759234275
+    "priceSegmentShare9L": 0.00004213334759234275,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003163",
@@ -81563,7 +81644,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5245655135591419,
-    "priceSegmentShare9L": 0.000022695432156310156
+    "priceSegmentShare9L": 0.000022695432156310156,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003176",
@@ -81994,7 +82076,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.9749757067741157,
-    "priceSegmentShare9L": 0.00009680165234589247
+    "priceSegmentShare9L": 0.00009680165234589247,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003192",
@@ -82182,7 +82265,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.6749278471797747,
-    "priceSegmentShare9L": 0.00002189723410014852
+    "priceSegmentShare9L": 0.00002189723410014852,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003199",
@@ -82424,7 +82508,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.08508580595044947,
-    "priceSegmentShare9L": 0.00002609888218920842
+    "priceSegmentShare9L": 0.00002609888218920842,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003208",
@@ -82666,7 +82751,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.9855710681467289,
-    "priceSegmentShare9L": 0.000021417406713797035
+    "priceSegmentShare9L": 0.000021417406713797035,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003217",
@@ -82827,7 +82913,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.00002119035225735511
+    "priceSegmentShare9L": 0.00002119035225735511,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003223",
@@ -82934,7 +83021,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 10.753452244334978,
-    "priceSegmentShare9L": 0.00002107919825237199
+    "priceSegmentShare9L": 0.00002107919825237199,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003227",
@@ -84256,7 +84344,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.12259187083318834,
-    "priceSegmentShare9L": 0.00002399487636178964
+    "priceSegmentShare9L": 0.00002399487636178964,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003276",
@@ -84478,7 +84567,7 @@
     "skuId": "003284",
     "image": "/assets/images/skus/003284.png",
     "brand": "LOVE RED RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "700686046201",
@@ -84586,7 +84675,7 @@
     "skuId": "003288",
     "image": "/assets/images/skus/003288.png",
     "brand": "CA MOMI ROSSO",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "810013041621",
@@ -84849,7 +84938,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.7578050838357917,
-    "priceSegmentShare9L": 0.000019404783323679967
+    "priceSegmentShare9L": 0.000019404783323679967,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003298",
@@ -85523,7 +85613,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.3693317313505184,
-    "priceSegmentShare9L": 0.00001897394987976222
+    "priceSegmentShare9L": 0.00001897394987976222,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003323",
@@ -85610,7 +85701,7 @@
     "skuId": "003326",
     "image": "/assets/images/skus/003326.png",
     "brand": "MARIETTA CELLARS OLD VINE RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "46751687132",
@@ -85954,7 +86045,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.03163065458457348,
-    "priceSegmentShare9L": 0.000022462878418799846
+    "priceSegmentShare9L": 0.000022462878418799846,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003339",
@@ -86304,7 +86396,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.10801593720421745,
-    "priceSegmentShare9L": 0.000018437299284989322
+    "priceSegmentShare9L": 0.000018437299284989322,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003352",
@@ -86384,7 +86477,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000018412506332101415
+    "priceSegmentShare9L": 0.000018412506332101415,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003355",
@@ -86518,7 +86612,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.42266042034041845,
-    "priceSegmentShare9L": 0.00001819081348771458
+    "priceSegmentShare9L": 0.00001819081348771458,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003360",
@@ -86598,7 +86693,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.37885815476172113,
-    "priceSegmentShare9L": 0.000018138746867841273
+    "priceSegmentShare9L": 0.000018138746867841273,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003363",
@@ -87866,13 +87962,14 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000017262460070244774
+    "priceSegmentShare9L": 0.000017262460070244774,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003410",
     "image": "/assets/images/skus/003410.png",
     "brand": "SKINNYGIRL",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "80686110071",
@@ -88243,7 +88340,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.9133330317508369,
-    "priceSegmentShare9L": 0.00001702017945844829
+    "priceSegmentShare9L": 0.00001702017945844829,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003424",
@@ -88404,7 +88502,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000016961380119983784
+    "priceSegmentShare9L": 0.000016961380119983784,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003430",
@@ -88484,7 +88583,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.9347266549645018,
-    "priceSegmentShare9L": 0.000016919754689441838
+    "priceSegmentShare9L": 0.000016919754689441838,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003433",
@@ -88807,7 +88907,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.6344862339882307,
-    "priceSegmentShare9L": 0.000016740376206877664
+    "priceSegmentShare9L": 0.000016740376206877664,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003445",
@@ -88941,7 +89042,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000016690472549754607
+    "priceSegmentShare9L": 0.000016690472549754607,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003450",
@@ -89453,13 +89555,14 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.9667785513717566,
-    "priceSegmentShare9L": 0.000016309710659646808
+    "priceSegmentShare9L": 0.000016309710659646808,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003469",
     "image": "/assets/images/skus/003469.png",
     "brand": "FARMHOUSE RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "98652840011",
@@ -89756,7 +89859,7 @@
     "skuId": "003480",
     "image": "/assets/images/skus/003480.png",
     "brand": "MENAGE A TROIS",
-    "varietal": null,
+    "varietal": "CABERNET SAUVIGNON",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "2700713724632",
@@ -89965,7 +90068,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.475562939236028,
-    "priceSegmentShare9L": 0.000015873716885450862
+    "priceSegmentShare9L": 0.000015873716885450862,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003488",
@@ -92367,7 +92471,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.2945581322561823,
-    "priceSegmentShare9L": 0.00001722534394908175
+    "priceSegmentShare9L": 0.00001722534394908175,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003577",
@@ -92771,7 +92876,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.08292519891542201,
-    "priceSegmentShare9L": 0.00001421310835495284
+    "priceSegmentShare9L": 0.00001421310835495284,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003592",
@@ -92878,7 +92984,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.025688495449675833,
-    "priceSegmentShare9L": 0.000014161236249867463
+    "priceSegmentShare9L": 0.000014161236249867463,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003596",
@@ -93336,7 +93443,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.16889063872315935,
-    "priceSegmentShare9L": 0.000016750657926206165
+    "priceSegmentShare9L": 0.000016750657926206165,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003613",
@@ -93794,7 +93902,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.33291137729934356,
-    "priceSegmentShare9L": 0.000013729700391243316
+    "priceSegmentShare9L": 0.000013729700391243316,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003630",
@@ -94009,7 +94118,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.6597655241233784,
-    "priceSegmentShare9L": 0.00001359141199015198
+    "priceSegmentShare9L": 0.00001359141199015198,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003638",
@@ -94710,7 +94820,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5182564036080051,
-    "priceSegmentShare9L": 0.000015911845115543668
+    "priceSegmentShare9L": 0.000015911845115543668,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003664",
@@ -94844,7 +94955,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3931433066036029,
-    "priceSegmentShare9L": 0.000015841500523261133
+    "priceSegmentShare9L": 0.000015841500523261133,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003669",
@@ -94870,7 +94982,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.40862545454432603,
-    "priceSegmentShare9L": 0.00001583242139894174
+    "priceSegmentShare9L": 0.00001583242139894174,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003670",
@@ -95112,7 +95225,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.13426056855952723,
-    "priceSegmentShare9L": 0.00001305498738091683
+    "priceSegmentShare9L": 0.00001305498738091683,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003679",
@@ -95435,7 +95549,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.5274381281317,
-    "priceSegmentShare9L": 0.00001538566617862009
+    "priceSegmentShare9L": 0.00001538566617862009,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003691",
@@ -95704,7 +95819,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.1087236704153378,
-    "priceSegmentShare9L": 0.000015218994968324321
+    "priceSegmentShare9L": 0.000015218994968324321,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003701",
@@ -95892,7 +96008,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.882483705940123,
-    "priceSegmentShare9L": 0.000012596561599064134
+    "priceSegmentShare9L": 0.000012596561599064134,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003708",
@@ -95952,7 +96069,7 @@
     "skuId": "003710",
     "image": "/assets/images/skus/003710.png",
     "brand": "MD 20 20 BANANA RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "NEW YORK",
     "bottleSizeRaw": "0.75LT",
     "upc": "85904514401",
@@ -96782,7 +96899,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.24570264930134864,
-    "priceSegmentShare9L": 0.000012136922557041949
+    "priceSegmentShare9L": 0.000012136922557041949,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003741",
@@ -97004,7 +97122,7 @@
     "skuId": "003749",
     "image": "/assets/images/skus/003749.png",
     "brand": "ONCE UPON A VINE THE BIG BAD RED BLND",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "81054995161",
@@ -97105,7 +97223,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.12966127512493864,
-    "priceSegmentShare9L": 0.00001201134805724941
+    "priceSegmentShare9L": 0.00001201134805724941,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003753",
@@ -97219,7 +97338,7 @@
     "skuId": "003757",
     "image": "/assets/images/skus/003757.png",
     "brand": "OLD SOUL PURE RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "82544990831",
@@ -97509,7 +97628,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.9415173185026111,
-    "priceSegmentShare9L": 0.000011833121985898967
+    "priceSegmentShare9L": 0.000011833121985898967,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003768",
@@ -99027,7 +99147,7 @@
     "skuId": "003824",
     "image": "/assets/images/skus/003824.png",
     "brand": "CHOCOVINE WHIPPED CREAM HOLLAND",
-    "varietal": null,
+    "varietal": "FLAVORED/SWEET",
     "region": "UNKNOWN",
     "bottleSizeRaw": "0.75LT",
     "upc": "859775001301",
@@ -99074,7 +99194,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.11930496947128524,
-    "priceSegmentShare9L": 0.000011153797720215356
+    "priceSegmentShare9L": 0.000011153797720215356,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003826",
@@ -99613,7 +99734,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 2.629155175279008,
-    "priceSegmentShare9L": 0.00001315204397899418
+    "priceSegmentShare9L": 0.00001315204397899418,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003846",
@@ -99700,7 +99822,7 @@
     "skuId": "003849",
     "image": "/assets/images/skus/003849.png",
     "brand": "GHOSTRIDER UNGRAFTED RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "183491000271",
@@ -100179,7 +100301,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 2.129512377169626,
-    "priceSegmentShare9L": 0.000010743011037334099
+    "priceSegmentShare9L": 0.000010743011037334099,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003867",
@@ -100259,7 +100382,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.6920795778963313,
-    "priceSegmentShare9L": 0.000010701855988205125
+    "priceSegmentShare9L": 0.000010701855988205125,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003870",
@@ -100609,7 +100733,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.9255313038865177,
-    "priceSegmentShare9L": 0.000019460859419305324
+    "priceSegmentShare9L": 0.000019460859419305324,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003883",
@@ -100797,7 +100922,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.256311517599251,
-    "priceSegmentShare9L": 0.000010523984454131559
+    "priceSegmentShare9L": 0.000010523984454131559,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003890",
@@ -101012,7 +101138,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.14818355026014993,
-    "priceSegmentShare9L": 0.000010453995927921441
+    "priceSegmentShare9L": 0.000010453995927921441,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003898",
@@ -101065,7 +101192,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.45984879726120614,
-    "priceSegmentShare9L": 0.000010431610060706292
+    "priceSegmentShare9L": 0.000010431610060706292,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003900",
@@ -101118,7 +101246,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.2510845765031815,
-    "priceSegmentShare9L": 0.0000103970421683851
+    "priceSegmentShare9L": 0.0000103970421683851,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003902",
@@ -101441,7 +101570,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.7759721704559573,
-    "priceSegmentShare9L": 0.0000103427004569035
+    "priceSegmentShare9L": 0.0000103427004569035,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003914",
@@ -101872,7 +102002,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.48219049775995587,
-    "priceSegmentShare9L": 0.000010168183068230019
+    "priceSegmentShare9L": 0.000010168183068230019,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003930",
@@ -102303,7 +102434,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.45320788016241964,
-    "priceSegmentShare9L": 0.000012110008156904527
+    "priceSegmentShare9L": 0.000012110008156904527,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003946",
@@ -103166,13 +103298,14 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.38181756702983305,
-    "priceSegmentShare9L": 0.000011740549555651885
+    "priceSegmentShare9L": 0.000011740549555651885,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003978",
     "image": "/assets/images/skus/003978.png",
     "brand": "SEA MONSTER TIDAL WAVE WHITE WHITE",
-    "varietal": null,
+    "varietal": "WHITE BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "757725000061",
@@ -103570,7 +103703,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.00000964049943614994
+    "priceSegmentShare9L": 0.00000964049943614994,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "003993",
@@ -103839,7 +103973,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.01744722447510023,
-    "priceSegmentShare9L": 0.000009554019802784333
+    "priceSegmentShare9L": 0.000009554019802784333,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004003",
@@ -103919,7 +104054,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.49638628000928525,
-    "priceSegmentShare9L": 0.000011426516742247974
+    "priceSegmentShare9L": 0.000011426516742247974,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004006",
@@ -104296,7 +104432,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.648646061988374,
-    "priceSegmentShare9L": 0.000009409337649367444
+    "priceSegmentShare9L": 0.000009409337649367444,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004020",
@@ -104349,7 +104486,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.07984582969100533,
-    "priceSegmentShare9L": 0.000009403299354379784
+    "priceSegmentShare9L": 0.000009403299354379784,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004022",
@@ -104402,7 +104540,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3104322152203286,
-    "priceSegmentShare9L": 0.00000938827519152164
+    "priceSegmentShare9L": 0.00000938827519152164,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004024",
@@ -104860,7 +104999,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.711009096101907,
-    "priceSegmentShare9L": 0.000009275934193746684
+    "priceSegmentShare9L": 0.000009275934193746684,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004041",
@@ -105129,13 +105269,14 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.9437750097423208,
-    "priceSegmentShare9L": 0.000011008596465727477
+    "priceSegmentShare9L": 0.000011008596465727477,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004051",
     "image": "/assets/images/skus/004051.png",
     "brand": "CAPPELLETTI",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "AMERICAN",
     "bottleSizeRaw": "0.75LT",
     "upc": "8018571001021",
@@ -105209,7 +105350,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.4536823529259456,
-    "priceSegmentShare9L": 0.000009127788416197289
+    "priceSegmentShare9L": 0.000009127788416197289,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004054",
@@ -105424,7 +105566,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.00000910134197872197
+    "priceSegmentShare9L": 0.00000910134197872197,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004062",
@@ -106368,7 +106511,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.7183625980818694,
-    "priceSegmentShare9L": 0.000008816122184665954
+    "priceSegmentShare9L": 0.000008816122184665954,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004097",
@@ -106556,7 +106700,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.8733804056955488,
-    "priceSegmentShare9L": 0.00000873608692956879
+    "priceSegmentShare9L": 0.00000873608692956879,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004104",
@@ -106636,7 +106781,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.1238454644434199,
-    "priceSegmentShare9L": 0.000010441394606379347
+    "priceSegmentShare9L": 0.000010441394606379347,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004107",
@@ -107175,7 +107321,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.7492210177720985,
-    "priceSegmentShare9L": 0.000010260267744098546
+    "priceSegmentShare9L": 0.000010260267744098546,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004127",
@@ -107282,7 +107429,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.24041336835199537,
-    "priceSegmentShare9L": 0.000008493718752879225
+    "priceSegmentShare9L": 0.000008493718752879225,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004131",
@@ -107578,7 +107726,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.14757210248235586,
-    "priceSegmentShare9L": 0.000008415437882869838
+    "priceSegmentShare9L": 0.000008415437882869838,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004142",
@@ -107631,7 +107780,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.17196196003642233,
-    "priceSegmentShare9L": 0.000008386697953671499
+    "priceSegmentShare9L": 0.000008386697953671499,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004144",
@@ -107738,7 +107888,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.004953382489923526,
-    "priceSegmentShare9L": 0.000010020292214663017
+    "priceSegmentShare9L": 0.000010020292214663017,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004148",
@@ -107953,7 +108104,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 0.33065396677895226,
-    "priceSegmentShare9L": 0.000009943560247253435
+    "priceSegmentShare9L": 0.000009943560247253435,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004156",
@@ -108060,7 +108212,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.4310916739739964,
-    "priceSegmentShare9L": 0.000009894773136599765
+    "priceSegmentShare9L": 0.000009894773136599765,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004160",
@@ -108599,7 +108752,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.3958807193635973,
-    "priceSegmentShare9L": 0.000014876510785296688
+    "priceSegmentShare9L": 0.000014876510785296688,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004180",
@@ -108875,7 +109029,7 @@
     "skuId": "004190",
     "image": "/assets/images/skus/004190.png",
     "brand": "ONE OF ONE WHITE",
-    "varietal": null,
+    "varietal": "WHITE BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "684586246121",
@@ -109435,7 +109589,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 6.841787358702288,
-    "priceSegmentShare9L": 0.000009394004400271126
+    "priceSegmentShare9L": 0.000009394004400271126,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004211",
@@ -109576,7 +109731,7 @@
     "skuId": "004216",
     "image": "/assets/images/skus/004216.png",
     "brand": "PURPLE COWBOY TRAL BSS CBRNT SVGNN",
-    "varietal": null,
+    "varietal": "CABERNET SAUVIGNON",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "857151003151",
@@ -109603,7 +109758,7 @@
     "skuId": "004217",
     "image": "/assets/images/skus/004217.png",
     "brand": "STOLPMAN PROPRIETARY RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "890095000881",
@@ -110116,7 +110271,7 @@
     "skuId": "004236",
     "image": "/assets/images/skus/004236.png",
     "brand": "EBERLE WINERY FULL BOAR RED",
-    "varietal": null,
+    "varietal": "RED BLEND",
     "region": "CALIFORNIA",
     "bottleSizeRaw": "0.75LT",
     "upc": "97703352181",
@@ -110352,7 +110507,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": "-",
-    "priceSegmentShare9L": 0.000007469657656347478
+    "priceSegmentShare9L": 0.000007469657656347478,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004245",
@@ -110621,7 +110777,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": -0.30308594698432556,
-    "priceSegmentShare9L": 0.000007385419023359153
+    "priceSegmentShare9L": 0.000007385419023359153,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004255",
@@ -110863,7 +111020,8 @@
     "assortmentTier": "extended",
     "strategicSupplierPriority": false,
     "growthPct9L": 1.9722792643847082,
-    "priceSegmentShare9L": 0.0000073087452914830376
+    "priceSegmentShare9L": 0.0000073087452914830376,
+    "varietal": "PINOT NOIR"
   },
   {
     "skuId": "004264",
