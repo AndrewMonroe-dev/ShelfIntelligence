@@ -626,6 +626,9 @@ export function mount(el) {
             </span>
           </label>
         </div>
+        <div>
+          <a href="#set-layout" class="btn">Reorder Sections &rarr;</a>
+        </div>
       </div>
       <div class="viewer-output"></div>
     `;
