@@ -330,6 +330,7 @@ export function mount(el) {
   let addShelfPosition = null; // pre-set when opened by clicking an empty slot
   let addColumnIndex = null; // pre-set when opened by clicking an empty slot -- where in the row to insert
   let addSearchTerm = '';
+  let nextInLineSectionKey = ''; // which section's "next in line" rail list is showing, Editing Mode only
 
   function currentStore() {
     return store.getSnapshot().stores.find((s) => s.storeId === selectedStoreId);
@@ -454,7 +455,26 @@ export function mount(el) {
       };
       const allOk = actions.every((a) => applyPatchToPlan(patched, a, context));
       plan = allOk ? patched : regenerateAndSetPlan();
-      if (allOk) store.setPlan(patched);
+      if (allOk) {
+        // Andrew, 2026-07-21: applyPatchToPlan only touches the exact
+        // shelf/SKU it's told to (that's the whole point of Editing Mode),
+        // so each section's nextInLine array is left over from the last
+        // full regeneration -- a SKU just placed from the "next in line"
+        // rail would otherwise keep showing as still available. Strip any
+        // newly-placed skuId out of every section's list (cheap, and a
+        // manual placement can target any section regardless of its
+        // natural one, so don't assume it's only in its own). A 'remove'
+        // action's SKU isn't added back here -- it won't reappear in the
+        // rail until the next full regeneration, an accepted minor
+        // staleness rather than reconstructing its rank position by hand.
+        const placedSkuIds = actions.filter((a) => !a.remove).map((a) => a.skuId);
+        if (placedSkuIds.length) {
+          patched.sections.forEach((s) => {
+            s.nextInLine = s.nextInLine.filter((n) => !placedSkuIds.includes(n.skuId));
+          });
+        }
+        store.setPlan(patched);
+      }
     } else {
       plan = regenerateAndSetPlan();
     }
@@ -630,7 +650,10 @@ export function mount(el) {
           <a href="#set-layout" class="btn">Reorder Sections &rarr;</a>
         </div>
       </div>
-      <div class="viewer-output"></div>
+      <div style="display:flex;align-items:flex-start;gap:14px;">
+        <div class="viewer-output" style="flex:1;min-width:0;"></div>
+        <div class="next-in-line-column"></div>
+      </div>
     `;
 
     el.querySelector('.store-select').addEventListener('change', (e) => {
@@ -642,12 +665,77 @@ export function mount(el) {
 
     el.querySelector('.editing-mode-toggle').addEventListener('change', (e) => {
       store.setEditingMode(e.target.checked);
+      renderNextInLineRail(store.getSnapshot().currentPlan);
     });
 
     renderOutput(plan);
   }
 
+  // Andrew, 2026-07-21: browsable per-section "next in line" list -- the
+  // ranked-but-not-yet-placed pool for whichever section is selected in the
+  // rail's own dropdown, draggable onto any shelf slot. Editing Mode only:
+  // it's a manual-placement tool, and outside Editing Mode every edit fully
+  // regenerates the plan anyway, so a dropped SKU wouldn't durably land
+  // where you dropped it. Scoped per-section (not one global list) since
+  // sections are real, distinct category pools -- a flat cross-section list
+  // would make "which 100 SKUs" ambiguous and mostly irrelevant to whichever
+  // shelf you're actually looking at.
+  function renderNextInLineRail(plan) {
+    const column = el.querySelector('.next-in-line-column');
+    if (!column) return;
+    if (!store.getEditingMode() || !plan || !plan.sections.length) {
+      column.innerHTML = '';
+      return;
+    }
+
+    const sectionsWithPool = plan.sections.filter((s) => s.nextInLine.length);
+    if (!nextInLineSectionKey || !sectionsWithPool.some((s) => s.key === nextInLineSectionKey)) {
+      nextInLineSectionKey = sectionsWithPool[0]?.key || '';
+    }
+    const activeSection = plan.sections.find((s) => s.key === nextInLineSectionKey);
+
+    column.innerHTML = `
+      <div class="card next-in-line-rail" style="width:300px;position:sticky;top:14px;max-height:calc(100vh - 28px);display:flex;flex-direction:column;">
+        <div class="card-label" style="margin-bottom:8px;">Next In Line</div>
+        <select class="next-in-line-section-select" style="width:100%;margin-bottom:8px;">
+          ${sectionsWithPool.length
+            ? sectionsWithPool.map((s) => `<option value="${s.key}" ${s.key === nextInLineSectionKey ? 'selected' : ''}>${s.label} (${s.nextInLine.length})</option>`).join('')
+            : '<option>No section has a deeper pool right now</option>'}
+        </select>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Drag a SKU onto any shelf slot in this section to add it. Doesn't change any other SKU's position.</div>
+        <div class="next-in-line-list" style="overflow-y:auto;flex:1;">
+          ${activeSection ? activeSection.nextInLine.map((sku) => `
+            <div class="next-in-line-item" draggable="true" data-sku-id="${sku.skuId}" title="Drag onto a shelf slot to add">
+              <div style="font-weight:600;font-size:12.5px;">${sku.brand}${sku.varietal ? ' &ndash; ' + sku.varietal : (sku.bottleSizeRaw ? ' &ndash; ' + sku.bottleSizeRaw : '')}</div>
+              <div style="font-size:11px;color:var(--text2);display:flex;justify-content:space-between;">
+                <span>${sku.priceUsd != null ? '$' + sku.priceUsd.toFixed(2) : '--'}</span>
+                <span>score ${sku.score.toFixed(1)}</span>
+              </div>
+            </div>
+          `).join('') : ''}
+        </div>
+      </div>
+    `;
+
+    column.querySelector('.next-in-line-section-select')?.addEventListener('change', (e) => {
+      nextInLineSectionKey = e.target.value;
+      renderNextInLineRail(store.getSnapshot().currentPlan);
+    });
+
+    column.querySelectorAll('.next-in-line-item').forEach((item) => {
+      item.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.setData('text/plain', JSON.stringify({
+          skuId: item.dataset.skuId,
+          facings: 1,
+          fromNextInLineList: true,
+        }));
+      });
+    });
+  }
+
   function renderOutput(plan) {
+    renderNextInLineRail(plan);
     const output = el.querySelector('.viewer-output');
     if (!plan) {
       output.innerHTML = '<div class="card empty-state">No plan could be generated for this store.</div>';
@@ -838,6 +926,20 @@ export function mount(el) {
         const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
         const targetSku = skus.find((s) => s.skuId === targetSkuId);
         if (!draggedSku || !targetSku) return;
+
+        // Andrew, 2026-07-21: a "next in line" rail drag has no real origin
+        // slot to swap back into (it isn't placed anywhere yet) -- insert it
+        // at the target box's exact position instead of swapping, same as
+        // dropping it on an empty slot (see insertLockedIntoRow/columnIndex).
+        // The box already there isn't removed, just pushed over.
+        if (dragged.fromNextInLineList) {
+          const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
+          const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
+          const targetColumnIndex = parseInt(box.dataset.columnIndex, 10);
+          openSkuId = null;
+          commitEdit({ skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: 1, columnIndex: targetColumnIndex });
+          return;
+        }
 
         const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
         const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);

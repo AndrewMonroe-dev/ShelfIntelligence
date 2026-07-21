@@ -994,6 +994,26 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
 
     const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(shelves, shelfCount, linearFeet, naturalPool.length);
 
+    // Andrew, 2026-07-21 (Planogram Viewer "next in line" rail): the ranked
+    // pool for this section already exists (naturalPool) -- this just
+    // subtracts whatever actually made it onto a shelf, in the same rank
+    // order, capped at 100. Editing Mode's manual placement already ignores
+    // category boundaries (same as the Add SKU form), so this is offered
+    // per-section purely for browsing convenience, not as an enforced
+    // restriction on where a dragged SKU can land.
+    const placedSkuIds = new Set(shelves.flatMap((sh) => sh.skus.map((s) => s.skuId)));
+    const nextInLine = naturalPool
+      .filter((sku) => !placedSkuIds.has(sku.skuId))
+      .slice(0, 100)
+      .map((sku) => ({
+        skuId: sku.skuId,
+        brand: sku.brand,
+        varietal: sku.varietal,
+        bottleSizeRaw: sku.bottleSizeRaw,
+        priceUsd: sku.priceUsd,
+        score: scoreMap.get(sku.skuId)?.score ?? 0,
+      }));
+
     return {
       key,
       type,
@@ -1003,6 +1023,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       linearFeet,
       shelfCount,
       shelves,
+      nextInLine,
       usesMarketShareSizing: isMarketShareSection(section),
       usesPriceBandRules,
       skuDepthExhausted,
@@ -1144,6 +1165,11 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       linearFeet: combinedWidth,
       shelfCount,
       shelves,
+      // Andrew, 2026-07-21: the "next in line" rail is scoped to a single
+      // real allocation's own ranked pool -- a merged section combines
+      // several categories' pools together, so there's no one coherent
+      // "next" list to offer here. Left empty rather than guessing.
+      nextInLine: [],
       usesMarketShareSizing: false,
       usesPriceBandRules: false,
       skuDepthExhausted,
