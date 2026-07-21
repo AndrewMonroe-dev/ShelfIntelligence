@@ -9,6 +9,7 @@ import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan } from './sh
 import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js';
 import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
 import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js';
+import { applyAnchorTiebreak, applyHorizontalAnchorBias } from './anchorPlacement.js';
 
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;
@@ -715,11 +716,25 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const type = key.startsWith('varietal:') ? 'varietal' : 'size';
     const section = { key, type, label: allocation.label, skus: categorySkus };
 
-    let ranked = isSparklingSection(section)
-      ? subBlockBySubtype(categorySkus, scoreMap)
-      : type === 'size'
-        ? rankByBrandBlocks(categorySkus, scoreMap)
-        : [...categorySkus].sort((a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0));
+    // Andrew, 2026-07-21: anchor/priority tiebreak applies ONLY to 750ml
+    // varietal sections (including Sparkling's own subtype sub-blocks) --
+    // brand/size block sections stay exactly as they were ("the block sets
+    // are to remain as is"), so the size/rankByBrandBlocks branch below is
+    // untouched and produces no anchor info.
+    let ranked;
+    let anchorInfoBySkuId = new Map();
+    if (isSparklingSection(section)) {
+      const result = subBlockBySubtype(categorySkus, scoreMap);
+      ranked = result.ranked;
+      anchorInfoBySkuId = result.anchorInfoBySkuId;
+    } else if (type === 'size') {
+      ranked = rankByBrandBlocks(categorySkus, scoreMap);
+    } else {
+      const scoreSorted = [...categorySkus].sort((a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0));
+      const result = applyAnchorTiebreak(scoreSorted, scoreMap);
+      ranked = result.ranked;
+      anchorInfoBySkuId = result.anchorInfoBySkuId;
+    }
     ranked = applyBlackBoxTiebreak(ranked, scoreMap);
 
     const lockedSkuIds = new Set(
@@ -728,7 +743,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const naturalPool = ranked.filter((sku) => !lockedSkuIds.has(sku.skuId));
     const lockedForSection = ranked.filter((sku) => lockedSkuIds.has(sku.skuId));
 
-    return { allocation, key, type, section, categorySkus, ranked, naturalPool, lockedForSection, lockedSkuIds };
+    return { allocation, key, type, section, categorySkus, ranked, naturalPool, lockedForSection, lockedSkuIds, anchorInfoBySkuId };
   }
 
   // Builds one section's final output shelves. Every standalone section
@@ -743,7 +758,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
   // renders into after compaction, instead of the bay its nominal Set
   // Layout position happened to sit over.
   function buildSectionOutput(data, overrideShelves = null) {
-    const { allocation, key, type, section, categorySkus, ranked, naturalPool, lockedForSection, lockedSkuIds } = data;
+    const { allocation, key, type, section, categorySkus, ranked, naturalPool, lockedForSection, lockedSkuIds, anchorInfoBySkuId } = data;
     if (!categorySkus.length) return null;
 
     const linearFeet = allocation.widthFt;
@@ -823,9 +838,16 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
         result = partitionIntoShelvesSparse(naturalPool, shelfDefs);
       }
       constraintNotes = result.constraintNotes;
+      // Andrew, 2026-07-21: horizontal anchor bias applied AFTER
+      // fitSkusToWidth decides which SKUs are actually included -- moving
+      // the anchor earlier could push it past the width cutoff and silently
+      // drop it. Only ever reorders an already-included row, never changes
+      // row membership or facings.
       rowGroups = result.groups.map((rowSkus, i) => {
         const widthInches = Math.max(0, linearFeet * 12 - lockedInchesForRow(i));
-        return fitSkusToWidth(rowSkus, widthInches, bottleDimensions, floorFacings);
+        const fitted = fitSkusToWidth(rowSkus, widthInches, bottleDimensions, floorFacings);
+        const anchorInRow = fitted.find((sku) => anchorInfoBySkuId.has(sku.skuId));
+        return anchorInRow ? applyHorizontalAnchorBias(fitted, anchorInRow.skuId) : fitted;
       });
     } else if (isSmallFormatSection(section)) {
       // Small-format sizes (187s, 4-packs, mini multi-packs, 375s, 500mls):
@@ -939,6 +961,14 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
             reasons.push({ factor: 'Price band', value: PRICE_BAND_LABELS[priceBand(sku.priceUsd)] });
           }
           if (sku.strategicSupplierPriority) reasons.push({ factor: 'Strategic Supplier Priority', enabled: true });
+          if (anchorInfoBySkuId.has(sku.skuId)) {
+            reasons.push({
+              factor: 'Anchor placement',
+              value: anchorInfoBySkuId.get(sku.skuId) === 'priority-override'
+                ? 'Strategic Supplier Priority anchor (near-tie override of the raw top scorer)'
+                : 'Top scorer anchored to best available position',
+            });
+          }
           if (isBota3LSection(section) && isBotaBrand(sku)) reasons.push({ factor: 'Bota 3L guaranteed majority space', enabled: true });
           if (tradeUpNote) reasons.push({ factor: 'Trade-up', value: tradeUpNote });
           const constraintNote = constraintNotes.get(sku.skuId);

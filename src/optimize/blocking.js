@@ -1,6 +1,8 @@
 // Set structure / blocking rules from docs/BUSINESS_RULES.md "Set structure (world sets)"
 // and "Strategic Supplier Priority".
 
+import { applyAnchorTiebreak } from './anchorPlacement.js';
+
 const SEVEN_FIFTY_ML = '0.75LT';
 
 // Sparkling wine (Brut, Prosecco, Rose, Spumante, All Other -- the 5 real
@@ -201,7 +203,12 @@ export function isSparklingSection(section) {
 // Sub-blocks the Sparkling Wine section by original specific varietal
 // (Prosecco together, Brut together, etc.) -- subtype groups ordered by
 // their combined score, SKUs within each subtype ordered by their own score.
-export function subBlockBySubtype(skus, scoreMap) {
+// Andrew, 2026-07-21: each subtype's own front SKU also gets the anchor
+// priority tiebreak (see anchorPlacement.js) -- a strategicSupplierPriority
+// SKU that's a close #2 WITHIN ITS OWN SUBTYPE still wins that subtype's
+// anchor slot, same reasoning as the plain-varietal case, just scoped one
+// level down since Sparkling is pre-grouped by subtype.
+export function subBlockBySubtype(skus, scoreMap, options = {}) {
   const groups = new Map();
   skus.forEach((sku) => {
     const subtype = sku.varietal || 'UNSPECIFIED';
@@ -209,16 +216,19 @@ export function subBlockBySubtype(skus, scoreMap) {
     groups.get(subtype).push(sku);
   });
 
+  const anchorInfoBySkuId = new Map();
   const orderedGroups = [...groups.entries()].map(([subtype, groupSkus]) => {
-    const sorted = [...groupSkus].sort(
+    const scoreSorted = [...groupSkus].sort(
       (a, b) => (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0)
     );
+    const { ranked: sorted, anchorInfoBySkuId: subtypeAnchorInfo } = applyAnchorTiebreak(scoreSorted, scoreMap, options);
+    subtypeAnchorInfo.forEach((reason, skuId) => anchorInfoBySkuId.set(skuId, reason));
     const totalScore = sorted.reduce((sum, s) => sum + (scoreMap.get(s.skuId)?.score ?? 0), 0);
     return { subtype, sorted, totalScore };
   });
 
   orderedGroups.sort((a, b) => b.totalScore - a.totalScore);
-  return orderedGroups.flatMap((g) => g.sorted);
+  return { ranked: orderedGroups.flatMap((g) => g.sorted), anchorInfoBySkuId };
 }
 
 // Named sub-lines (2026-07-15): some brands' sub-line names carry a

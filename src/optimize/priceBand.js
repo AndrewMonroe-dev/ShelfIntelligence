@@ -41,6 +41,17 @@ export function allowedPositions(band, shelfCount) {
       // the very bottom position.
       return all.filter((p) => p !== shelfCount);
     case '20plus':
+      // Andrew, 2026-07-21: mirrors under10's exclusion from the top --
+      // $20+ wine never lands on the very bottom shelf. Without this, a
+      // $20+ SKU that loses the competition for the top/eye-level slot had
+      // no floor at all and could fall next to the cheapest product in the
+      // section, undercutting the whole point of a deliberate price
+      // pyramid (top-shelf = premium, bottom-shelf = value, both hard
+      // constraints now, not just a soft eye-level nudge on the top end).
+      // Degrades to "all" on a 1-shelf section -- same as every other band,
+      // excluding the section's only shelf would leave zero allowed
+      // positions.
+      return shelfCount <= 1 ? all : all.filter((p) => p !== shelfCount);
     default:
       return all;
   }
