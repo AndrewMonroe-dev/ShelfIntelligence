@@ -331,6 +331,7 @@ export function mount(el) {
   let addColumnIndex = null; // pre-set when opened by clicking an empty slot -- where in the row to insert
   let addSearchTerm = '';
   let nextInLineSectionKey = ''; // which section's "next in line" rail list is showing, Editing Mode only
+  let nextInLineSearchTerm = ''; // filters the rail's own list by brand/varietal/size/skuId
 
   function currentStore() {
     return store.getSnapshot().stores.find((s) => s.storeId === selectedStoreId);
@@ -693,6 +694,11 @@ export function mount(el) {
       nextInLineSectionKey = sectionsWithPool[0]?.key || '';
     }
     const activeSection = plan.sections.find((s) => s.key === nextInLineSectionKey);
+    const term = nextInLineSearchTerm.trim().toLowerCase();
+    const visibleSkus = activeSection
+      ? activeSection.nextInLine.filter((sku) => !term
+        || `${sku.brand} ${sku.varietal || ''} ${sku.bottleSizeRaw || ''} ${sku.skuId}`.toLowerCase().includes(term))
+      : [];
 
     column.innerHTML = `
       <div class="card next-in-line-rail" style="width:300px;position:sticky;top:14px;max-height:calc(100vh - 28px);display:flex;flex-direction:column;">
@@ -702,9 +708,10 @@ export function mount(el) {
             ? sectionsWithPool.map((s) => `<option value="${s.key}" ${s.key === nextInLineSectionKey ? 'selected' : ''}>${s.label} (${s.nextInLine.length})</option>`).join('')
             : '<option>No section has a deeper pool right now</option>'}
         </select>
+        <input type="text" class="next-in-line-search" value="${nextInLineSearchTerm}" placeholder="Search brand, varietal, size, or ID..." style="width:100%;margin-bottom:8px;" />
         <div style="font-size:11px;color:var(--text2);margin-bottom:8px;">Drag a SKU onto any shelf slot in this section to add it. Doesn't change any other SKU's position.</div>
         <div class="next-in-line-list" style="overflow-y:auto;flex:1;">
-          ${activeSection ? activeSection.nextInLine.map((sku) => `
+          ${visibleSkus.length ? visibleSkus.map((sku) => `
             <div class="next-in-line-item" draggable="true" data-sku-id="${sku.skuId}" title="Drag onto a shelf slot to add">
               <div style="font-weight:600;font-size:12.5px;">${sku.brand}${sku.varietal ? ' &ndash; ' + sku.varietal : (sku.bottleSizeRaw ? ' &ndash; ' + sku.bottleSizeRaw : '')}</div>
               <div style="font-size:11px;color:var(--text2);display:flex;justify-content:space-between;">
@@ -712,13 +719,29 @@ export function mount(el) {
                 <span>score ${sku.score.toFixed(1)}</span>
               </div>
             </div>
-          `).join('') : ''}
+          `).join('') : `<div style="font-size:12px;color:var(--text2);padding:8px 0;">${term ? 'No matches in this section\'s list.' : 'No section has a deeper pool right now'}</div>`}
         </div>
       </div>
     `;
 
+    // Andrew, 2026-07-21: re-render replaces the whole subtree on every
+    // keystroke (same reason the Add SKU search does this below), which
+    // would otherwise drop focus/cursor after one character -- restore both.
+    const searchInput = column.querySelector('.next-in-line-search');
+    searchInput?.addEventListener('input', (e) => {
+      nextInLineSearchTerm = e.target.value;
+      const cursorPos = e.target.selectionStart;
+      renderNextInLineRail(store.getSnapshot().currentPlan);
+      const freshInput = column.querySelector('.next-in-line-search');
+      if (freshInput) {
+        freshInput.focus();
+        freshInput.setSelectionRange(cursorPos, cursorPos);
+      }
+    });
+
     column.querySelector('.next-in-line-section-select')?.addEventListener('change', (e) => {
       nextInLineSectionKey = e.target.value;
+      nextInLineSearchTerm = '';
       renderNextInLineRail(store.getSnapshot().currentPlan);
     });
 
