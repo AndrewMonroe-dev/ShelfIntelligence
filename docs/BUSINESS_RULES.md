@@ -70,12 +70,16 @@ rarely more than one prime eye-level shelf):
 
 | Shelves in section | Zone assignment (top to bottom) |
 |---|---|
-| 4 | Above (0.9), Eye level (1.5), Just below (1.2), Bottom (0.6) |
+| 4 | Eye level (1.5), Just below (1.2), Below waist (0.8), Bottom (0.6) |
 | 5 | Above (0.9), Eye level (1.5), Just below (1.2), Bottom (0.6), Bottom (0.6) |
 | 6 | Above (0.9), Eye level (1.5), Just below (1.2), Bottom (0.6), Bottom (0.6), Bottom (0.6) |
 
+A 4-shelf bay has no shelf above eye level -- the top shelf itself IS the
+best-selling/eye-level position, so "Above" only applies once a 5th shelf
+exists above it.
+
 Index values: **Eye level = 1.5**, **Just below eye level = 1.2**, **Above eye level = 0.9**,
-**Bottom shelf = 0.6**.
+**Below waist = 0.8**, **Bottom shelf = 0.6**.
 
 This is additional to (not a replacement for) the existing per-shelf `traffic`
 (high/medium/low) factor already in `data/stores.json`. The two combine
