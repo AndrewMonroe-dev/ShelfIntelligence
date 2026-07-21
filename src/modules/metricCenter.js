@@ -3,8 +3,17 @@ import { bus } from '../core/bus.js';
 import { getActiveMetrics } from '../calc/scoreEngine.js';
 
 export function mount(el) {
+  // Explains what MOVING the slider does, not just what the metric measures
+  // -- the description column already covers the latter but was the only
+  // hover text available, leaving "what happens if I drag this" unanswered.
+  function weightEffectTooltip(cfg, weightSharePct) {
+    const shareText = weightSharePct != null ? `${weightSharePct.toFixed(1)}%` : 'excluded until enabled with data';
+    return `Raising this weight increases ${cfg.label}'s share of the blended SKU score, which shifts assortment selection, facing counts, and shelf position toward SKUs that score well on ${cfg.label} -- and grows the linear-foot size of sections dominated by those SKUs. Lowering it does the opposite. Current active share: ${shareText}.`;
+  }
+
   function renderRow(cfg, hasData, weightSharePct) {
     const isActive = cfg.enabled && hasData;
+    const tooltip = weightEffectTooltip(cfg, isActive ? weightSharePct : null);
     return `
       <tr data-metric-id="${cfg.id}" style="${isActive ? '' : 'opacity:0.55;'}">
         <td style="padding:10px 16px;">
@@ -18,8 +27,8 @@ export function mount(el) {
             ? `<span class="badge badge-success">Live data</span>`
             : `<span class="badge badge-warning">No data</span>`}
         </td>
-        <td style="padding:10px 16px;width:220px;">
-          <input type="range" class="metric-weight" min="0" max="100" step="1" value="${cfg.weight}" style="width:140px;vertical-align:middle;" ${hasData ? '' : 'disabled'} />
+        <td style="padding:10px 16px;width:220px;" title="${tooltip}">
+          <input type="range" class="metric-weight" min="0" max="100" step="1" value="${cfg.weight}" style="width:140px;vertical-align:middle;" ${hasData ? '' : 'disabled'} title="${tooltip}" />
           <span class="metric-weight-value" style="font-family:var(--font-mono);margin-left:8px;">${cfg.weight}</span>
         </td>
         <td style="padding:10px 16px;font-family:var(--font-mono);" class="metric-share">
@@ -56,6 +65,11 @@ export function mount(el) {
       if (shareCell) shareCell.textContent = share != null ? share.toFixed(1) + '%' : '--';
       const weightValue = row.querySelector('.metric-weight-value');
       if (weightValue) weightValue.textContent = cfg.weight;
+      const tooltip = weightEffectTooltip(cfg, share);
+      const weightCell = row.querySelector('.metric-weight')?.closest('td');
+      if (weightCell) weightCell.title = tooltip;
+      const slider = row.querySelector('.metric-weight');
+      if (slider) slider.title = tooltip;
     });
 
     const summary = el.querySelector('.active-metric-summary');
