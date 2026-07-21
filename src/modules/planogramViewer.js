@@ -650,7 +650,7 @@ export function mount(el) {
           <a href="#set-layout" class="btn">Reorder Sections &rarr;</a>
         </div>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:14px;">
+      <div style="display:flex;align-items:stretch;gap:14px;">
         <div class="viewer-output" style="flex:1;min-width:0;"></div>
         <div class="next-in-line-column"></div>
       </div>
