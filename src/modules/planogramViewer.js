@@ -170,14 +170,34 @@ function buildBayRowMap(sections, bays) {
     return (lastAvailable + 1) * BAY_INCHES + overflowInches;
   }
 
+  // Andrew, 2026-07-22: the very LAST section in the store can land straddling
+  // a bay boundary by pure accident of real-content compaction -- e.g. 3LT
+  // Box needing ~3.96ft (basically one whole bay) but starting 0.81ft before
+  // a bay boundary, leaving a near-unreadable 0.81ft sliver in one bay
+  // (brand names truncated) and a half-empty ~3.15ft remainder in the next.
+  // Since nothing renders after the last section, snapping its start
+  // forward to the next bay boundary trades that broken-looking sliver for
+  // one honest, empty gap at the tail of the PREVIOUS bay -- better than a
+  // truncated fragment, and unlike every other section, doing this here
+  // can't reopen a gap between two pieces of content (07-19's "no gaps"
+  // fix), since there's no next section to leave a gap before.
+  const MIN_READABLE_SLIVER_INCHES = BAY_INCHES * 0.25;
+
   let runningCompactedInches = 0;
-  normal.forEach((section) => {
-    const compactedStart = runningCompactedInches;
+  normal.forEach((section, i) => {
+    let compactedStart = runningCompactedInches;
+    if (i === normal.length - 1) {
+      const naiveRealStart = toRealInches(compactedStart);
+      const roomLeftInStartBay = BAY_INCHES - (naiveRealStart % BAY_INCHES);
+      if (roomLeftInStartBay > 0 && roomLeftInStartBay < MIN_READABLE_SLIVER_INCHES) {
+        compactedStart += roomLeftInStartBay;
+      }
+    }
     const contentInches = placeSectionBoxes(map, section, (localOffset) => toRealInches(compactedStart + localOffset), bays);
     const realStartInches = toRealInches(compactedStart);
     const realEndInches = toRealInches(compactedStart + contentInches);
     spans.set(section.key, { startFt: realStartInches / 12, endFt: realEndInches / 12 });
-    runningCompactedInches += contentInches;
+    runningCompactedInches = compactedStart + contentInches;
   });
 
   return { map, spans };
