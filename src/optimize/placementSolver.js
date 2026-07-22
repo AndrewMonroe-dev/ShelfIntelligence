@@ -389,7 +389,7 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
     return items.findIndex((it) => !it.hasAppeared); // -1: nothing left that hasn't already appeared
   }
 
-  function packGroupsIntoRows(orderedGroups, rows, resetState = true) {
+  function packGroupsIntoRows(orderedGroups, rows, resetState = true, rowSizeTag = null) {
     if (!orderedGroups.length || !rows.length) return;
     if (resetState) {
       orderedGroups.forEach((g) => {
@@ -402,6 +402,7 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
     rows.forEach((row) => {
       const rowSkus = [];
       let used = 0;
+      const sizeInchesThisRow = new Map(); // dominant-size tracking for packGroupsWithGuaranteedRows' contiguity pass
       for (let steps = 0; steps < maxStepsPerRow; steps++) {
         if (groupCursor >= orderedGroups.length) groupCursor = 0;
         const gIdx = pickIndex(orderedGroups, groupCursor);
@@ -448,6 +449,7 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
           const chunk = fam.remaining.splice(0, Math.max(1, fit));
           rowSkus.push(...chunk);
           used += fitWidth;
+          sizeInchesThisRow.set(group.size, (sizeInchesThisRow.get(group.size) ?? 0) + fitWidth);
           if (!fam.remaining.length) {
             fam.hasAppeared = true;
             group.familyCursor++;
@@ -462,6 +464,7 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
 
         rowSkus.push(...fam.remaining);
         used += w;
+        sizeInchesThisRow.set(group.size, (sizeInchesThisRow.get(group.size) ?? 0) + w);
         fam.hasAppeared = true;
         group.familyCursor++;
         if (group.familyCursor >= group.families.length) {
@@ -476,6 +479,12 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
           const widthInches = bottleWidthInches(sku, bottleDimensions);
           facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
         });
+        if (rowSizeTag) {
+          let dominantSize = null;
+          let dominantInches = -1;
+          sizeInchesThisRow.forEach((inches, size) => { if (inches > dominantInches) { dominantInches = inches; dominantSize = size; } });
+          rowSizeTag.set(row.position - 1, dominantSize);
+        }
       }
     });
   }
@@ -510,21 +519,51 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
   // floor principle used elsewhere), THEN whatever rows remain go to
   // whichever groups still have real depth, highest-score first, same as
   // before.
-  function packGroupsWithGuaranteedRows(orderedGroups, rows) {
+  function packGroupsWithGuaranteedRows(orderedGroups, rows, rowSizeTag) {
     if (!orderedGroups.length || !rows.length) return;
     const guaranteedRowCount = Math.min(orderedGroups.length, rows.length);
     orderedGroups.slice(0, guaranteedRowCount).forEach((group, i) => {
-      packGroupsIntoRows([group], [rows[i]]);
+      packGroupsIntoRows([group], [rows[i]], true, rowSizeTag);
     });
     const extraRows = rows.slice(guaranteedRowCount);
     if (extraRows.length) {
-      packGroupsIntoRows(orderedGroups, extraRows, false); // continue existing state, no reset -- don't repeat what guaranteed rows already placed
+      packGroupsIntoRows(orderedGroups, extraRows, false, rowSizeTag); // continue existing state, no reset -- don't repeat what guaranteed rows already placed
     }
   }
 
   const halfLiterGroups = buildSizeGroups(halfLiterPool);
   const otherGroups = buildSizeGroups(otherPool).sort((a, b) => b.totalScore - a.totalScore);
-  packGroupsWithGuaranteedRows([...halfLiterGroups, ...otherGroups], remainingShelves);
+  const remainingGroupOrder = [...halfLiterGroups, ...otherGroups];
+  const rowSizeTag = new Map(); // remainingShelves row index (0-based within rowGroups) -> dominant size
+  packGroupsWithGuaranteedRows(remainingGroupOrder, remainingShelves, rowSizeTag);
+
+  // Andrew, 2026-07-22: guaranteeing every size a row (above) placed one row
+  // per group in group order, then extra depth-based rows for the biggest
+  // groups (0.5LT, 0.187LT X4) landed AFTER every group's guaranteed row --
+  // splitting a single size's content across non-adjacent physical rows
+  // with other sizes sandwiched in between (confirmed live: 0.5LT split
+  // across an early row and a later one, with 0.187LT X3/X4/0.2LT X4
+  // in between). Regroups rows by their dominant size, in the same
+  // group-priority order already used for guaranteed-row assignment, so
+  // each size's rows land as one contiguous block instead of interleaved.
+  // A row can technically have more than one size's content if the extra-
+  // row pass filled leftover space with a different group's chunk (rare,
+  // small); it's placed by whichever size contributed the most width.
+  if (remainingShelves.length > 1) {
+    const remainingIndices = remainingShelves.map((s) => s.position - 1);
+    const rowsBySize = new Map();
+    remainingIndices.forEach((idx) => {
+      const size = rowSizeTag.get(idx) ?? '__unassigned__';
+      if (!rowsBySize.has(size)) rowsBySize.set(size, []);
+      rowsBySize.get(size).push(rowGroups[idx]);
+    });
+    const orderedContents = [];
+    remainingGroupOrder.forEach((g) => {
+      if (rowsBySize.has(g.size)) { orderedContents.push(...rowsBySize.get(g.size)); rowsBySize.delete(g.size); }
+    });
+    rowsBySize.forEach((contents) => orderedContents.push(...contents)); // any leftover/unassigned rows, original relative order
+    remainingIndices.forEach((idx, i) => { rowGroups[idx] = orderedContents[i] ?? []; });
+  }
 
   // Andrew, 2026-07-22: splice each alwaysInclude SKU into whichever row
   // already has its exact size -- that row is guaranteed to exist as long
