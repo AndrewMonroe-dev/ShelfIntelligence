@@ -331,20 +331,19 @@ export function mount(el) {
 
           if (currentTargetKey && currentTargetKey !== draggedKey) {
             const allocations = store.getSectionAllocations(selectedStoreId);
-            const moved = allocations.find((a) => a.key === draggedKey);
-            const target = allocations.find((a) => a.key === currentTargetKey);
-            if (moved && target) {
-              // Test: swap only the two involved sections' order/startFt
-              // instead of recompacting the whole set, to check whether
-              // recompactAndSave's full-set reflow is what's scrambling
-              // everything else on drag.
-              const movedOrder = moved.order;
-              const movedStartFt = moved.startFt;
-              moved.order = target.order;
-              moved.startFt = target.startFt;
-              target.order = movedOrder;
-              target.startFt = movedStartFt;
-              store.setSectionAllocations(selectedStoreId, allocations);
+            const fromIndex = allocations.findIndex((a) => a.key === draggedKey);
+            const targetIndex = allocations.findIndex((a) => a.key === currentTargetKey);
+            if (fromIndex !== -1 && targetIndex !== -1) {
+              // Real insert-and-shift: pull the dragged section out, drop it
+              // in at the target's position, and recompact the whole run so
+              // every section between old and new position slides over by
+              // one slot -- not a two-item swap (see recompactAndSave's own
+              // comment on why it must run off final array order, not each
+              // item's stale .order field).
+              const reordered = [...allocations];
+              const [moved] = reordered.splice(fromIndex, 1);
+              reordered.splice(targetIndex, 0, moved);
+              recompactAndSave(reordered);
             }
           }
           draggedKey = null;
