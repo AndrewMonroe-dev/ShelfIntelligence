@@ -61,20 +61,45 @@ export function appliesPriceBandRules(section) {
   return section.type === 'varietal'; // 750ml sections only
 }
 
+// Approximate price range per band, used only to normalize where a SKU
+// sits within its own band for the within-band tiebreak below -- not a
+// hard boundary (bands themselves are defined in priceBand()).
+const BAND_RANGE = {
+  under10: [0, 10],
+  '10to14': [10, 14],
+  '14to20': [14, 20],
+  '20plus': [20, 40], // open-ended band; 40 is just a normalization cap
+};
+
 // Soft preference layered on top of the hard allowed-position constraint:
 // eye level mainly goes to $10-14/$14-20 ("TOP SKUs" for those bands), top
 // shelf mostly goes to $20+. Implemented as a scoring multiplier so the
 // constrained greedy assignment naturally favors these matches without
 // hard-excluding other eligible bands from those positions.
-export function positionPreferenceMultiplier(band, position, eyePosition) {
+//
+// Andrew, 2026-07-22: layered a small within-band tiebreak on top, per
+// retail eye-tracking research -- higher price maps to a (moderate, not
+// absolute) preference for a physically higher shelf. Deliberately capped
+// small (max ~8% swing) so it only breaks near-ties between two SKUs of the
+// same price band; it never overrides the eye-level/top-shelf preferences
+// above or the hard band constraints in allowedPositions().
+export function positionPreferenceMultiplier(band, position, eyePosition, priceUsd, shelfCount) {
+  let base = 1.0;
   if (position === 1) {
-    if (band === '20plus') return 1.4;
-    if (band === '14to20') return 1.0;
-    return 0.6;
+    if (band === '20plus') base = 1.4;
+    else if (band === '14to20') base = 1.0;
+    else base = 0.6;
+  } else if (eyePosition != null && position === eyePosition) {
+    base = (band === '10to14' || band === '14to20') ? 1.4 : 1.0;
   }
-  if (eyePosition != null && position === eyePosition) {
-    if (band === '10to14' || band === '14to20') return 1.4;
-    return 1.0;
+
+  if (priceUsd != null && shelfCount > 1) {
+    const [lo, hi] = BAND_RANGE[band] || [0, 40];
+    const priceNorm = Math.max(0, Math.min(1, (priceUsd - lo) / (hi - lo || 1))); // 0 (band floor) .. 1 (band ceiling)
+    const heightNorm = (shelfCount - position) / (shelfCount - 1); // 0 (bottom) .. 1 (top)
+    const tiebreak = (priceNorm - 0.5) * (heightNorm - 0.5) * 0.16; // max +/-0.04 each way, -> up to ~8% total swing
+    base *= 1 + tiebreak;
   }
-  return 1.0;
+
+  return base;
 }

@@ -521,7 +521,7 @@ function partitionIntoShelvesConstrained(sortedSkus, shelfDefs) {
     let bestValue = -Infinity;
     candidates.forEach((p) => {
       const def = shelfDefs[p - 1];
-      const value = def.shelfScore * positionPreferenceMultiplier(band, p, eyePosition);
+      const value = def.shelfScore * positionPreferenceMultiplier(band, p, eyePosition, sku.priceUsd, shelfCount);
       if (value > bestValue) { bestValue = value; best = p; }
     });
 
