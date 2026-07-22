@@ -193,9 +193,10 @@ function renderSkuBox(entry) {
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
   const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
   const facingCount = Math.max(1, sku.facings || 1);
-  // Name reads vertically, bottom-to-top (like a real shelf spine label) so
-  // it stays readable at facing-width instead of truncating to "BOTA ..."
-  // in a box only 1-2in wide. Andrew's rule 2026-07-15.
+  // Name reads vertically, top-to-bottom, brand first, so it stays readable
+  // at facing-width instead of truncating in a box only 1-2in wide.
+  // Andrew's rule 2026-07-15 (vertical text), refined 2026-07-22 (brand
+  // must read first/top-most, not get buried at the bottom).
   const box = `
     <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
