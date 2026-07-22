@@ -127,6 +127,19 @@ export function isExcludedSku(sku) {
   return false;
 }
 
+// Andrew, 2026-07-22: catalog-level opposite of isExcludedSku -- a SKU
+// flagged alwaysInclude (data/skus.json) is force-placed into its own size
+// section regardless of sales/score, in every store, every session. First
+// use: Francis Coppola Diamond Collection 0.187LT X3 (Prosecco 3-pack,
+// skuId 003180) -- new to market, doing well in the field, but with too
+// little tracked sales history to win a spot on score alone against
+// established competitors in the same size group. Different from a
+// per-store "locked" override (placementsBySkuId/overrides): this is
+// permanent and store-independent, set on the SKU itself.
+export function isAlwaysIncludeSku(sku) {
+  return sku.alwaysInclude === true;
+}
+
 // Andrew, 2026-07-15: Franzia 3L doesn't make sense as its own presence --
 // it's redirected into the Franzia group in the 5L section (sectionForSku
 // below), placed top-shelf-only within that block (see the pinnedToTopIds

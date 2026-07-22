@@ -81763,6 +81763,7 @@
     "region": "ITALY",
     "bottleSizeRaw": "0.187LT X3",
     "upc": "82242018661",
+    "alwaysInclude": true,
     "priceUsd": 16.88,
     "pricePointSegment": "ULTRA PREMIUM $15.00+",
     "nationalRank": 3029,

@@ -3,7 +3,7 @@ import { dedupeByBrandVarietalSize } from './assortment.js';
 import {
   sectionForSku, applyBlackBoxTiebreak, isBota3LSection, isBotaBrand, tradeUpPartnerNote,
   isSparklingSection, subBlockBySubtype, rankByBrandBlocks, brandGroups,
-  isExcludedSku, isFranzia3LRedirect, isSmallFormatSection, pinBotaBlackBoxFamilyOrder,
+  isExcludedSku, isFranzia3LRedirect, isSmallFormatSection, pinBotaBlackBoxFamilyOrder, isAlwaysIncludeSku,
 } from './blocking.js';
 import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js';
 import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js';
@@ -343,11 +343,20 @@ function collapseToRootBrand(skus, scoreMap) {
 // only changes WHICH rows a tier is allowed to use, not how it fills them.
 const SMALL_FORMAT_TOP_SHELF_SIZES = new Set(['0.187LT', '0.375LT']);
 
-function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scoreMap, bottleDimensions, floorFacings) {
+function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, scoreMap, bottleDimensions, floorFacings) {
   const shelfCount = shelfDefs.length;
   const rowGroups = Array.from({ length: shelfCount }, () => []);
   const facingsBySkuId = new Map();
-  if (!naturalPool.length) return { rowGroups, facingsBySkuId };
+  if (!fullNaturalPool.length) return { rowGroups, facingsBySkuId };
+
+  // Andrew, 2026-07-22: alwaysInclude SKUs (data/skus.json) are pulled out
+  // of the competitive pool entirely -- they don't compete for a row slot
+  // on score, they get spliced into their size's row after everything else
+  // is placed (see bottom of this function). Guarantees placement
+  // regardless of sales history, for every store, permanently.
+  const forcedSkus = fullNaturalPool.filter(isAlwaysIncludeSku);
+  const naturalPool = fullNaturalPool.filter((s) => !isAlwaysIncludeSku(s));
+  if (!naturalPool.length && !forcedSkus.length) return { rowGroups, facingsBySkuId };
 
   const familyWidth = (fam) => fam.sorted.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
 
@@ -516,6 +525,49 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
   const halfLiterGroups = buildSizeGroups(halfLiterPool);
   const otherGroups = buildSizeGroups(otherPool).sort((a, b) => b.totalScore - a.totalScore);
   packGroupsWithGuaranteedRows([...halfLiterGroups, ...otherGroups], remainingShelves);
+
+  // Andrew, 2026-07-22: splice each alwaysInclude SKU into whichever row
+  // already has its exact size -- that row is guaranteed to exist as long
+  // as its size has at least one other competitive SKU (packGroupsWithGuaranteedRows
+  // above), since alwaysInclude SKUs aren't in the pool that earns that row.
+  // Falls back to the row with the least content if this SKU's size has no
+  // other members at all (its own size group would otherwise never surface),
+  // so it never silently fails to place.
+  //
+  // If the row is already at its width budget, bump the LOWEST-scoring
+  // existing SKU in that same row (not just append past the limit) --
+  // otherwise this reintroduces the exact bay-overflow bug fixed earlier
+  // today: even a couple inches past totalWidthInches forces buildBayRowMap
+  // to reserve an entire neighboring bay for this one row.
+  forcedSkus.forEach((sku) => {
+    let targetRowIdx = rowGroups.findIndex((rowSkus) => rowSkus.some((s) => s.bottleSizeRaw === sku.bottleSizeRaw));
+    if (targetRowIdx === -1) {
+      let minInches = Infinity;
+      rowGroups.forEach((rowSkus, i) => {
+        const inches = rowSkus.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
+        if (inches < minInches) { minInches = inches; targetRowIdx = i; }
+      });
+    }
+    if (targetRowIdx === -1) return;
+
+    const rowSkus = rowGroups[targetRowIdx];
+    const skuWidth = bottleWidthInches(sku, bottleDimensions) * floorFacings;
+    let rowInches = rowSkus.reduce((s, sk) => s + bottleWidthInches(sk, bottleDimensions) * floorFacings, 0);
+    while (rowInches + skuWidth > totalWidthInches && rowSkus.length) {
+      let worstIdx = 0;
+      let worstScore = Infinity;
+      rowSkus.forEach((sk, i) => {
+        const sc = scoreMap.get(sk.skuId)?.score ?? 0;
+        if (sc < worstScore) { worstScore = sc; worstIdx = i; }
+      });
+      const [removed] = rowSkus.splice(worstIdx, 1);
+      facingsBySkuId.delete(removed.skuId);
+      rowInches -= bottleWidthInches(removed, bottleDimensions) * floorFacings;
+    }
+    rowSkus.push(sku);
+    const widthInches = bottleWidthInches(sku, bottleDimensions);
+    facingsBySkuId.set(sku.skuId, { skuId: sku.skuId, facings: floorFacings, widthInches, allocatedInches: widthInches * floorFacings });
+  });
 
   return { rowGroups, facingsBySkuId };
 }
