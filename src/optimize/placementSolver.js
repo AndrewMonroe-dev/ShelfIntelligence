@@ -1207,10 +1207,11 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const startFt = memberAllocations[0].startFt;
     const combinedLockedSkuIds = new Set(withSkus.flatMap((d) => [...d.lockedSkuIds]));
 
-    // The merge-eligibility guard above (currentRunIsSmallFormat) guarantees
-    // every member of a merged run is either all small-format or all
-    // regular-format -- never mixed -- so checking the first member decides
-    // layout mode for the whole group.
+    // Small-format and regular-format allocations are grouped separately
+    // above (small-format always combined into its own single group,
+    // regardless of Set Layout order) -- every member of a merged run is
+    // either all small-format or all regular-format, never mixed, so
+    // checking the first member decides layout mode for the whole group.
     const isSmallFormatRun = isSmallFormatSection(withSkus[0].section);
     const storeShelves = overrideShelves ?? ((isSmallFormatRun && denseBayShelves) ? denseBayShelves : getShelvesForSpan(store.shelfLayout, startFt, combinedWidth));
     const shelfCount = storeShelves.length;
@@ -1407,22 +1408,28 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     return isSmallFormatSection(data.section);
   }
 
+  // Andrew, 2026-07-22: small-format allocations are pulled out and ALWAYS
+  // combined into one group below, regardless of where they sit in Set
+  // Layout's order -- every small-format section pins to the same physical
+  // dense bay no matter what, so treating them as separate runs just
+  // because Set Layout doesn't happen to list them adjacently (e.g. a new
+  // size category like 0.2LT X4 added at the end instead of next to the
+  // other small-format rows) fragments what should be one shared block into
+  // two independently-pinned sections. Confirmed live: a non-adjacent
+  // 0.2LT X4 allocation rendered as its own separate pinned block, landing
+  // right after the main merged block in buildBayRowMap's pinned sequence
+  // and pushing every downstream section over -- "throwing off the entire
+  // structure after it." The adjacency-based thin/sparse merge below still
+  // applies normally to everything else (varietal/regular size sections).
+  const smallFormatAllocationData = allocationData.filter(({ data }) => isSmallFormatRun(data));
+  const regularAllocationData = allocationData.filter(({ data }) => !isSmallFormatRun(data));
+
   const groups = [];
   let currentThinRun = [];
   let currentRunShelfCount = null;
-  let currentRunIsSmallFormat = null;
-  allocationData.forEach(({ allocation, data }) => {
+  regularAllocationData.forEach(({ allocation, data }) => {
     const shelfCountHere = ownShelfCount(allocation);
     const linearFeetHere = allocation.widthFt * shelfCountHere;
-    const smallFormatHere = isSmallFormatRun(data);
-    // Andrew, 2026-07-17: small-format sections always share one pool with
-    // an adjacent small-format section, regardless of width/sparsity --
-    // that's the only way row real estate can be arbitrated between sizes
-    // (e.g. capping a sparse 4-pack group to 1 row and handing the rest to
-    // 500ml, see layoutSmallFormatSection) instead of each size independently
-    // claiming every row in its own standalone section. The smallFormatMatches
-    // check below still keeps this from merging into a NON-small-format
-    // neighbor.
     // Andrew, 2026-07-17: varietal sections (Cabernet, Chardonnay, Merlot,
     // Rose, etc.) must always stay their own independently-labeled section,
     // filled only from their own ranked pool to whatever width they're
@@ -1431,23 +1438,28 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     // no longer wanted. buildSectionOutput's own sparse fallback already
     // fills every shelf row for a thin/sparse standalone section, so
     // un-merging doesn't leave empty shelves. Non-varietal (size-based)
-    // thin sections and small-format's row-arbitration merge are unchanged.
-    const isMergeEligible = data.type !== 'varietal' && (linearFeetHere <= THIN_SECTION_WIDTH_FT || isSkuSparse(allocation, data) || smallFormatHere);
+    // thin sections merge as before; small-format is handled separately
+    // above, always as one combined group.
+    const isMergeEligible = data.type !== 'varietal' && (linearFeetHere <= THIN_SECTION_WIDTH_FT || isSkuSparse(allocation, data));
     const shelfCountMatches = currentRunShelfCount === null || shelfCountHere === currentRunShelfCount;
-    const smallFormatMatches = currentRunIsSmallFormat === null || smallFormatHere === currentRunIsSmallFormat;
-    if (isMergeEligible && shelfCountMatches && smallFormatMatches) {
+    if (isMergeEligible && shelfCountMatches) {
       currentThinRun.push({ allocation, data });
       currentRunShelfCount = shelfCountHere;
-      currentRunIsSmallFormat = smallFormatHere;
     } else {
       if (currentThinRun.length) { groups.push(currentThinRun); currentThinRun = []; }
       currentRunShelfCount = isMergeEligible ? shelfCountHere : null;
-      currentRunIsSmallFormat = isMergeEligible ? smallFormatHere : null;
       if (isMergeEligible) { currentThinRun.push({ allocation, data }); return; }
       groups.push([{ allocation, data }]);
     }
   });
   if (currentThinRun.length) groups.push(currentThinRun);
+
+  if (smallFormatAllocationData.length) {
+    const firstSmallFormatStartFt = Math.min(...smallFormatAllocationData.map(({ allocation }) => allocation.startFt));
+    const insertAt = groups.findIndex((g) => g[0].allocation.startFt > firstSmallFormatStartFt);
+    if (insertAt === -1) groups.push(smallFormatAllocationData);
+    else groups.splice(insertAt, 0, smallFormatAllocationData);
+  }
 
   // Andrew, 2026-07-20: leftover space from a section that can't fill its
   // allocation used to just shrink the whole set at render time -- recovered
