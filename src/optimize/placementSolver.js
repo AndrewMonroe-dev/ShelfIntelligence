@@ -5,7 +5,7 @@ import {
   isSparklingSection, subBlockBySubtype, rankByBrandBlocks, brandGroups,
   isExcludedSku, isFranzia3LRedirect, isSmallFormatSection, pinBotaBlackBoxFamilyOrder,
 } from './blocking.js';
-import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan } from './shelfPosition.js';
+import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js';
 import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js';
 import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
 import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js';
@@ -409,10 +409,47 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
         }
         group.familyCursor = fIdx;
         const fam = group.families[group.familyCursor];
+        if (!fam.remaining) fam.remaining = [...fam.sorted];
 
-        const w = familyWidth(fam);
+        const w = familyWidth({ sorted: fam.remaining });
         if (used > 0 && used + w > totalWidthInches) break; // this size's next chunk doesn't fit -- stop the row here
-        rowSkus.push(...fam.sorted);
+
+        // Andrew, 2026-07-22: a single family can itself be wider than one
+        // physical bay (e.g. Sutter Home's 11-SKU 0.187LT X4 lineup, 51.7in
+        // vs a 48in bay) -- surfaced once today's bottle-size relabeling fix
+        // correctly unified families that used to be split (and therefore
+        // smaller) across duplicate size labels. Forcing the WHOLE family
+        // into one row past the bay boundary triggered a bay-mapping
+        // overflow (see buildBayRowMap); splitting it across this row and
+        // the next instead keeps every row within the real fixture. Doesn't
+        // advance familyCursor/hasAppeared until the family is fully
+        // consumed, so the same family continues at the top of the next row
+        // rather than losing its place to another family.
+        if (used === 0 && w > totalWidthInches) {
+          let fit = 0;
+          let fitWidth = 0;
+          for (const sk of fam.remaining) {
+            const skWidth = bottleWidthInches(sk, bottleDimensions) * floorFacings;
+            if (fit > 0 && fitWidth + skWidth > totalWidthInches) break;
+            fitWidth += skWidth;
+            fit++;
+          }
+          const chunk = fam.remaining.splice(0, Math.max(1, fit));
+          rowSkus.push(...chunk);
+          used += fitWidth;
+          if (!fam.remaining.length) {
+            fam.hasAppeared = true;
+            group.familyCursor++;
+            if (group.familyCursor >= group.families.length) {
+              group.familyCursor = 0;
+              group.hasAppeared = true;
+              groupCursor++;
+            }
+          }
+          break; // this row is now full from the split chunk -- move to the next row
+        }
+
+        rowSkus.push(...fam.remaining);
         used += w;
         fam.hasAppeared = true;
         group.familyCursor++;
@@ -1061,6 +1098,14 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     const shelfCount = storeShelves.length;
     const shelfDefs = buildSectionShelves(storeShelves, shelfCount);
     const pinnedBayIndex = (isSmallFormatRun && denseBayIndex != null) ? denseBayIndex : null;
+    // Andrew, 2026-07-22: a section pinned to one physical bay can't
+    // actually use more than that bay's real width no matter what Set
+    // Layout/redistribution nominally allocated it -- effectiveWidth feeds
+    // both the row-layout budget below and the depth-exhaustion/reporting
+    // math further down, so they agree with what's physically renderable
+    // instead of measuring against a nominal width the section will never
+    // really occupy.
+    const effectiveWidth = pinnedBayIndex != null ? Math.min(combinedWidth, BAY_WIDTH_FT) : combinedWidth;
     let rowGroups, blockFacingsBySkuId;
     if (isSmallFormatRun) {
       // Each exact size code (187s, 4-packs, 375s, 500mls) keeps its own
@@ -1074,9 +1119,24 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // if it didn't score high enough to win a bin-packing slot). They're
       // spliced in afterward at their exact stated position instead, same
       // as the standalone (non-merged) section path already does.
+      // Andrew, 2026-07-22: a small-format run is pinned to ONE physical bay
+      // (denseBayShelves) by design -- but this was still handing
+      // layoutSmallFormatSection the full Set-Layout/redistribution
+      // combinedWidth as its row budget, which can (and, after today's
+      // bottle-size relabeling consolidated the 187mL X3/X4 families into
+      // bigger single buckets, now does) exceed one physical bay's real
+      // width. A row a few inches over one bay's width forces
+      // buildBayRowMap to reserve the ENTIRE next bay for every one of this
+      // section's rows, even though only the single widest row actually
+      // needs it -- starving that whole reserved bay of the normal-section
+      // content it should have gotten, and pushing everything downstream
+      // out of bounds. Capping the row budget at one physical bay's width
+      // keeps this section's real content within the bay it's actually
+      // pinned to, matching what "pinned to the dense bay" was always
+      // supposed to mean.
       const pooled = withSkus.flatMap((d) => [...d.naturalPool]);
       const result = layoutSmallFormatSection(
-        pooled, shelfDefs, combinedWidth * 12, scoreMap, bottleDimensions, STANDARD_FLOOR_FACINGS
+        pooled, shelfDefs, effectiveWidth * 12, scoreMap, bottleDimensions, STANDARD_FLOOR_FACINGS
       );
       rowGroups = result.rowGroups;
       blockFacingsBySkuId = result.facingsBySkuId;
@@ -1154,7 +1214,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     });
 
     const combinedPool = withSkus.flatMap((d) => d.naturalPool);
-    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(shelves, shelfCount, combinedWidth, combinedPool.length);
+    const { skuDepthExhausted, depthExhaustedNote } = computeDepthExhaustion(shelves, shelfCount, effectiveWidth, combinedPool.length);
 
     return {
       key: `merged:${memberAllocations.map((a) => a.key).join('+')}`,
@@ -1162,7 +1222,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       label: memberAllocations.map((a) => a.label).join(' + '),
       multiplier: 1,
       startFt,
-      linearFeet: combinedWidth,
+      linearFeet: effectiveWidth,
       shelfCount,
       shelves,
       // Andrew, 2026-07-21: the "next in line" rail is scoped to a single
