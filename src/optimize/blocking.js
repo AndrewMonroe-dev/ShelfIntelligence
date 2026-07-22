@@ -63,15 +63,27 @@ export const CONFIRMED_PACKAGE_TYPES = {
 // codes and missed every multi-pack variant.
 // Andrew, 2026-07-18: 0.748LT X4 is a 4-pack (same shelf category as the
 // other X4 packs, not its own size) and 0.2LT -- despite its raw ct=1
-// label -- is also effectively a 4-pack for shelf purposes. Every other
-// odd/rare container size surfaced by the pool-cap removal (0.72LT, 1LT,
-// 1LT X4, 0.8LT X4, 1.42LT X4, 0.561LT X3, 4LT, 1.25LT X2, 9.464LT X12)
-// stays OUT of this set on purpose -- those are real standalone categories,
-// choosable independently like any other size, not small-format.
+// label -- is also effectively a 4-pack for shelf purposes.
+// Andrew, 2026-07-22: REVERSES part of the 07-18 note above. That note
+// treated 0.561LT X3 and 0.8LT X4 as "real standalone categories, not
+// small-format" -- an inference made without checking the raw MI Specific
+// Data source text. Direct cross-reference against that file (La Marca,
+// Chloe, and 17 other brands' 3-packs; Gallo/Barefoot/Sofia Mini 4-packs)
+// confirmed they're the SAME physical products as 0.187LT X3 and
+// 0.2LT X4, just recorded under summed pack volume instead of per-bottle
+// size -- same mislabeling pattern as the 0.748LT/0.187LT X4 case above,
+// just not caught yet on 07-18. data/skus.json now has 0.561LT X3 (3 SKUs)
+// and 0.8LT X4 (10 SKUs) relabeled into 0.187LT X3 / 0.2LT X4, so those
+// raw labels no longer exist in the data -- removed from this set.
+// NOTE: skus.json has no repeatable import script in this repo. If it's
+// ever fully regenerated from the raw MI Specific Data export again, this
+// relabeling (0.748LT->0.187LT X4, 0.561LT X3->0.187LT X3,
+// 0.8LT X4->0.2LT X4) must be reapplied manually or the regression from
+// 07-18 will recur.
 export const SMALL_FORMAT_SIZES = new Set([
   '0.5LT', '0.375LT', '0.25LT', '0.187LT',
   '0.187LT X2', '0.187LT X3', '0.187LT X4', '0.187LT X6',
-  '0.2LT X4', '0.275LT X4', '0.355LT X4', '0.748LT X4', '0.2LT',
+  '0.2LT X4', '0.275LT X4', '0.355LT X4', '0.2LT',
 ]);
 
 export function isSmallFormatSection(section) {
