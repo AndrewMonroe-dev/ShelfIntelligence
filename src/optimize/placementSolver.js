@@ -532,7 +532,15 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
   }
 
   const halfLiterGroups = buildSizeGroups(halfLiterPool);
-  const otherGroups = buildSizeGroups(otherPool).sort((a, b) => b.totalScore - a.totalScore);
+  // Andrew, 2026-07-22: 0.2LT X4 must render above (in earlier/higher rows
+  // than) 0.187LT X4 -- overrides plain score ordering for this pair only,
+  // since 0.187LT X4 (40 SKUs) would otherwise always outscore and out-rank
+  // 0.2LT X4 (13 SKUs). Every other pairing still falls back to score order.
+  const otherGroups = buildSizeGroups(otherPool).sort((a, b) => {
+    if (a.size === '0.2LT X4' && b.size === '0.187LT X4') return -1;
+    if (a.size === '0.187LT X4' && b.size === '0.2LT X4') return 1;
+    return b.totalScore - a.totalScore;
+  });
   const remainingGroupOrder = [...halfLiterGroups, ...otherGroups];
   const rowSizeTag = new Map(); // remainingShelves row index (0-based within rowGroups) -> dominant size
   packGroupsWithGuaranteedRows(remainingGroupOrder, remainingShelves, rowSizeTag);
