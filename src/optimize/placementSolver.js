@@ -380,12 +380,14 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
     return items.findIndex((it) => !it.hasAppeared); // -1: nothing left that hasn't already appeared
   }
 
-  function packGroupsIntoRows(orderedGroups, rows) {
+  function packGroupsIntoRows(orderedGroups, rows, resetState = true) {
     if (!orderedGroups.length || !rows.length) return;
-    orderedGroups.forEach((g) => {
-      g.hasAppeared = false;
-      g.families.forEach((f) => { f.hasAppeared = false; });
-    });
+    if (resetState) {
+      orderedGroups.forEach((g) => {
+        g.hasAppeared = false;
+        g.families.forEach((f) => { f.hasAppeared = false; });
+      });
+    }
     let groupCursor = 0;
     const maxStepsPerRow = orderedGroups.reduce((s, g) => s + g.families.length, 0) * 200;
     rows.forEach((row) => {
@@ -486,9 +488,34 @@ function layoutSmallFormatSection(naturalPool, shelfDefs, totalWidthInches, scor
   const topGroups = buildSizeGroups(topShelfPool).sort((a, b) => b.totalScore - a.totalScore);
   packGroupsIntoRows(topGroups, topShelf);
 
+  // Andrew, 2026-07-22: plain packGroupsIntoRows drains one size-group's
+  // families completely -- across as many WHOLE rows as it takes -- before
+  // ever moving to the next group. With 0.5LT hardcoded first and the rest
+  // score-sorted, a couple of large groups (0.5LT, 0.187LT X4) can exhaust
+  // every available row before a small group (0.187LT X3, 0.2LT X4) ever
+  // gets a turn -- confirmed live: both were placed exactly zero times
+  // despite being valid, allocated, in-pool inventory. Same class of bug as
+  // the 07-20 "20-of-25 brands silently dropped" fix, one level up (size
+  // category instead of brand). Fix: every distinct size group gets ONE
+  // guaranteed row first (funded ahead of anything else, same mandatory-
+  // floor principle used elsewhere), THEN whatever rows remain go to
+  // whichever groups still have real depth, highest-score first, same as
+  // before.
+  function packGroupsWithGuaranteedRows(orderedGroups, rows) {
+    if (!orderedGroups.length || !rows.length) return;
+    const guaranteedRowCount = Math.min(orderedGroups.length, rows.length);
+    orderedGroups.slice(0, guaranteedRowCount).forEach((group, i) => {
+      packGroupsIntoRows([group], [rows[i]]);
+    });
+    const extraRows = rows.slice(guaranteedRowCount);
+    if (extraRows.length) {
+      packGroupsIntoRows(orderedGroups, extraRows, false); // continue existing state, no reset -- don't repeat what guaranteed rows already placed
+    }
+  }
+
   const halfLiterGroups = buildSizeGroups(halfLiterPool);
   const otherGroups = buildSizeGroups(otherPool).sort((a, b) => b.totalScore - a.totalScore);
-  packGroupsIntoRows([...halfLiterGroups, ...otherGroups], remainingShelves);
+  packGroupsWithGuaranteedRows([...halfLiterGroups, ...otherGroups], remainingShelves);
 
   return { rowGroups, facingsBySkuId };
 }
