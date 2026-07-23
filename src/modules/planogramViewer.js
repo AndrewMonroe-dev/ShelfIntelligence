@@ -315,12 +315,19 @@ function renderBayRow(rowEntries, position, bay) {
     <div class="planogram-shelf-row">
       <div class="planogram-shelf-label">Shelf ${position}${shelfDef ? ` &middot; ${shelfDef.zone} &middot; ${shelfDef.traffic} traffic` : ''}</div>
       <div class="planogram-shelf-frame" style="width:${BAY_INCHES * PX_PER_INCH}px;">
-        ${groups.map((g) => `
+        ${groups.map((g) => {
+          // Andrew, 2026-07-23: gold shimmer highlight around any category
+          // group containing a Bota SKU (Bota Box, Bota Mini, any sub-line,
+          // any size), purely for visual scanning -- no placement/scoring
+          // effect.
+          const hasBota = g.entries.some((e) => /BOTA/i.test(e.sku.brand || ''));
+          return `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
-          <div class="planogram-category-group" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
+          <div class="planogram-category-group${hasBota ? ' planogram-category-group-bota' : ''}" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
             ${g.entries.map(renderSkuBox).join('')}
           </div>
-        `).join('')}
+        `;
+        }).join('')}
         ${emptySlotHtml}
       </div>
     </div>
