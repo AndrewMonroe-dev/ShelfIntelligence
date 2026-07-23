@@ -64,14 +64,18 @@
   margin-right:2px;
 }
 
-/* Andrew, 2026-07-23: extra gold shimmer ring around any category group
-   containing a Bota SKU (any sub-line, any size) -- viewing aid only, no
-   effect on placement/scoring. Layered as an outline + animated glow so it
-   doesn't fight the category's own inline border-color underneath. */
-.planogram-category-group-bota{
+/* Andrew, 2026-07-23 (revised same day): gold shimmer ring around just the
+   contiguous run of Bota boxes within a category group -- not the whole
+   group, which can hold other brands too. Wraps only the Bota sub-run (see
+   renderEntriesWithBotaHighlight), so it needs to behave like a normal
+   flex item/container itself to slot into the category group's row
+   without breaking layout. Viewing aid only, no placement/scoring effect. */
+.planogram-bota-highlight{
+  display:flex;
+  align-items:stretch;
   outline:2px solid #d4af37;
   outline-offset:2px;
-  border-radius:6px;
+  border-radius:4px;
   animation:bota-shimmer 2.4s ease-in-out infinite;
 }
 @keyframes bota-shimmer{

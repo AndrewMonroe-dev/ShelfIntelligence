@@ -266,6 +266,26 @@ function categoryColor(sectionKey) {
   return color;
 }
 
+// Andrew, 2026-07-23: gold shimmer highlight around just the contiguous
+// run of Bota boxes (any sub-line, any size) within a category group --
+// NOT the whole category group, which can hold other brands too. Splits
+// a category's entries into consecutive Bota/non-Bota runs and wraps only
+// the Bota runs in a highlight div; purely visual, no placement/scoring
+// effect.
+function renderEntriesWithBotaHighlight(entries) {
+  const runs = [];
+  entries.forEach((entry) => {
+    const isBota = /BOTA/i.test(entry.sku.brand || '');
+    const last = runs[runs.length - 1];
+    if (last && last.isBota === isBota) last.entries.push(entry);
+    else runs.push({ isBota, entries: [entry] });
+  });
+  return runs.map((run) => {
+    const html = run.entries.map(renderSkuBox).join('');
+    return run.isBota ? `<div class="planogram-bota-highlight">${html}</div>` : html;
+  }).join('');
+}
+
 // Renders one bay's row: groups the row's entries by contiguous section so
 // a bay shared by two categories (a section boundary fell inside it) shows
 // a small divider badge at the handoff point, keeping them distinguishable.
@@ -315,19 +335,12 @@ function renderBayRow(rowEntries, position, bay) {
     <div class="planogram-shelf-row">
       <div class="planogram-shelf-label">Shelf ${position}${shelfDef ? ` &middot; ${shelfDef.zone} &middot; ${shelfDef.traffic} traffic` : ''}</div>
       <div class="planogram-shelf-frame" style="width:${BAY_INCHES * PX_PER_INCH}px;">
-        ${groups.map((g) => {
-          // Andrew, 2026-07-23: gold shimmer highlight around any category
-          // group containing a Bota SKU (Bota Box, Bota Mini, any sub-line,
-          // any size), purely for visual scanning -- no placement/scoring
-          // effect.
-          const hasBota = g.entries.some((e) => /BOTA/i.test(e.sku.brand || ''));
-          return `
+        ${groups.map((g) => `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
-          <div class="planogram-category-group${hasBota ? ' planogram-category-group-bota' : ''}" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
-            ${g.entries.map(renderSkuBox).join('')}
+          <div class="planogram-category-group" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
+            ${renderEntriesWithBotaHighlight(g.entries)}
           </div>
-        `;
-        }).join('')}
+        `).join('')}
         ${emptySlotHtml}
       </div>
     </div>
