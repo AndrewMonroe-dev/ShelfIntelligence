@@ -15,14 +15,16 @@ export function priceBand(priceUsd) {
   if (priceUsd < 10) return 'under10';
   if (priceUsd < 14) return '10to14';
   if (priceUsd < 20) return '14to20';
-  return '20plus';
+  if (priceUsd < 30) return '20plus';
+  return '30plus';
 }
 
 export const PRICE_BAND_LABELS = {
   under10: 'Under $10',
   '10to14': '$10-$14',
   '14to20': '$14-$20',
-  '20plus': '$20+',
+  '20plus': '$20-$30',
+  '30plus': 'Over $30',
 };
 
 // Physical position numbers, 1 = topmost shelf, shelfCount = bottommost.
@@ -52,6 +54,12 @@ export function allowedPositions(band, shelfCount) {
       // excluding the section's only shelf would leave zero allowed
       // positions.
       return shelfCount <= 1 ? all : all.filter((p) => p !== shelfCount);
+    case '30plus':
+      // Andrew, 2026-07-23: Over $30 ARP goes top shelf only, in both 4-
+      // and 5-shelf sets -- not just "not the bottom," the whole point is
+      // keeping it above eye level entirely. Position 1 is always the top
+      // shelf regardless of shelfCount, so this needs no shelfCount branch.
+      return [1];
     default:
       return all;
   }
@@ -68,7 +76,8 @@ const BAND_RANGE = {
   under10: [0, 10],
   '10to14': [10, 14],
   '14to20': [14, 20],
-  '20plus': [20, 40], // open-ended band; 40 is just a normalization cap
+  '20plus': [20, 30],
+  '30plus': [30, 60], // open-ended band; 60 is just a normalization cap
 };
 
 // Soft preference layered on top of the hard allowed-position constraint:
@@ -86,7 +95,8 @@ const BAND_RANGE = {
 export function positionPreferenceMultiplier(band, position, eyePosition, priceUsd, shelfCount) {
   let base = 1.0;
   if (position === 1) {
-    if (band === '20plus') base = 1.4;
+    if (band === '30plus') base = 1.8; // the only allowed position for this band -- large so it never loses a quota tie to a lower-preference SKU that CAN go elsewhere
+    else if (band === '20plus') base = 1.4;
     else if (band === '14to20') base = 1.0;
     else base = 0.6;
   } else if (eyePosition != null && position === eyePosition) {
