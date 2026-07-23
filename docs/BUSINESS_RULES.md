@@ -30,6 +30,14 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   Gnarly Head, Noble Vines, Relax, Schmitt Sohne, Three Finger Jack, Z. Alexander Brown.
   Stoneleigh, Diora, and Torbreck exist in the national brand data but have no SKUs in the
   current top-1000 volume pool. Sam Jasper does not appear in the national brand data at all.
+- **2026-07-23 addition: Francis Coppola Diamond Collection** (all sub-lines -- Diamond
+  Collection, Diamond Collection Black Label, Diamond Collection Paso Robles -- every size,
+  20 SKUs) added to Strategic Supplier Priority, reversing the 07-12 exclusion above per
+  Andrew's explicit instruction. Also flagged `alwaysInclude: true` (stronger than every
+  other brand on this list, which only get a score boost) -- Coppola Diamond SKUs place in
+  their set regardless of score, not just win ties. Implemented via
+  `data/curationRules.json`'s `supplierFavoredBrands` rule (brand-substring match, so future
+  new Coppola Diamond sizes/flavors are covered automatically without a code change).
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.

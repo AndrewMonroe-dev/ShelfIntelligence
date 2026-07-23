@@ -20,6 +20,8 @@ export function applyCurationRules(skus, rules) {
   const manualAdditions = rules.manualAdditions?.skus || [];
   const brandVarietalOverrides = (rules.varietalOverrides?.brandContains || [])
     .map((r) => ({ match: r.match.toUpperCase(), varietal: r.varietal }));
+  const supplierFavoredBrands = (rules.supplierFavoredBrands?.brandContains || [])
+    .map((r) => r.match.toUpperCase());
 
   const kept = skus
     .filter((sku) => {
@@ -34,11 +36,13 @@ export function applyCurationRules(skus, rules) {
       const alwaysInclude = upc ? alwaysIncludeUpcs[upc] === true : false;
       const brandUpper = (sku.brand || '').toUpperCase();
       const varietalOverride = brandVarietalOverrides.find((r) => brandUpper.includes(r.match));
-      if (!relabel && !alwaysInclude && !varietalOverride) return sku;
+      const isSupplierFavored = supplierFavoredBrands.some((m) => brandUpper.includes(m));
+      if (!relabel && !alwaysInclude && !varietalOverride && !isSupplierFavored) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
-        ...(alwaysInclude ? { alwaysInclude: true } : null),
+        ...(alwaysInclude || isSupplierFavored ? { alwaysInclude: true } : null),
+        ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
         ...(varietalOverride ? { varietal: varietalOverride.varietal } : null),
       };
     });

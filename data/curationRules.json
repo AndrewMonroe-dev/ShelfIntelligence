@@ -224,9 +224,7 @@
     "86003002591": "0.187LT X4"
   },
   "alwaysIncludeUpcs": {
-    "_readme": "UPC -> true forces this SKU to always place in its size section, in every store, regardless of sales score. Andrew, 2026-07-22.",
-    "0082242018661": true,
-    "82242018661": true
+    "_readme": "UPC -> true forces this SKU to always place in its size section, in every store, regardless of sales score. Andrew, 2026-07-22. The Coppola Prosecco 0.187LT X3 entry that used to live here (UPC 0082242018661) is now covered by the broader supplierFavoredBrands rule below (COPPOLA DIAMOND matches its brand too), so it moved out rather than being duplicated in two places."
   },
   "alwaysExclude": {
     "_readme": "Removes matching SKUs entirely before the rest of the app ever sees them. 'brands' matches case-insensitively against the exact brand string (not a substring) -- list every brand variant a discontinued line appears under.",
@@ -323,6 +321,16 @@
         "growthPct9L": "-",
         "priceSegmentShare9L": null,
         "alwaysInclude": true
+      }
+    ]
+  },
+
+  "supplierFavoredBrands": {
+    "_readme": "Brand-substring match (case-insensitive) -- every matching SKU, any size, gets BOTH strategicSupplierPriority:true (scoring boost + wins the anchor/prime-position tiebreak in its section, see anchorPlacement.js) AND alwaysInclude:true (always places regardless of score). Not a UPC list so future new sizes/sub-lines of the same brand are covered automatically.",
+    "brandContains": [
+      {
+        "match": "COPPOLA DIAMOND",
+        "reason": "Andrew, 2026-07-23: reverses the 2026-07-12 BUSINESS_RULES.md decision that had excluded Coppola from Strategic Supplier Priority -- explicit new instruction to favor all Francis Coppola Diamond Collection SKUs (Diamond Collection, Diamond Collection Black Label, Diamond Collection Paso Robles), every size, in every store. docs/BUSINESS_RULES.md updated to match."
       }
     ]
   },
