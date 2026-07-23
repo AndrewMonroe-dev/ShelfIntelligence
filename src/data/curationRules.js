@@ -22,6 +22,7 @@ export function applyCurationRules(skus, rules) {
     .map((r) => ({ match: r.match.toUpperCase(), varietal: r.varietal }));
   const supplierFavoredBrands = (rules.supplierFavoredBrands?.brandContains || [])
     .map((r) => r.match.toUpperCase());
+  const supplierFavoredUpcs = rules.supplierFavoredUpcs || {};
 
   const kept = skus
     .filter((sku) => {
@@ -36,12 +37,18 @@ export function applyCurationRules(skus, rules) {
       const alwaysInclude = upc ? alwaysIncludeUpcs[upc] === true : false;
       const brandUpper = (sku.brand || '').toUpperCase();
       const varietalOverride = brandVarietalOverrides.find((r) => brandUpper.includes(r.match));
-      const isSupplierFavored = supplierFavoredBrands.some((m) => brandUpper.includes(m));
+      const isSupplierFavoredByBrand = supplierFavoredBrands.some((m) => brandUpper.includes(m));
+      // UPC-scoped priority (unlike the brand-wide rule above) grants ONLY
+      // the scoring/anchor boost, not alwaysInclude -- for a single SKU
+      // Andrew wants favored without force-placing it regardless of score,
+      // as opposed to an entire brand line. Andrew, 2026-07-23.
+      const isSupplierFavoredByUpc = upc ? supplierFavoredUpcs[upc] === true : false;
+      const isSupplierFavored = isSupplierFavoredByBrand || isSupplierFavoredByUpc;
       if (!relabel && !alwaysInclude && !varietalOverride && !isSupplierFavored) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
-        ...(alwaysInclude || isSupplierFavored ? { alwaysInclude: true } : null),
+        ...(alwaysInclude || isSupplierFavoredByBrand ? { alwaysInclude: true } : null),
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
         ...(varietalOverride ? { varietal: varietalOverride.varietal } : null),
       };

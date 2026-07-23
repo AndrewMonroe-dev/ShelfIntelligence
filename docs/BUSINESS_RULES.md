@@ -38,6 +38,13 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   their set regardless of score, not just win ties. Implemented via
   `data/curationRules.json`'s `supplierFavoredBrands` rule (brand-substring match, so future
   new Coppola Diamond sizes/flavors are covered automatically without a code change).
+- **2026-07-23 addition: plain Francis Coppola (non-Diamond) Cabernet Sauvignon 0.75LT**
+  (skuId 001200, UPC 0739958079301) added to Strategic Supplier Priority -- scoring/anchor
+  boost only, deliberately NOT alwaysInclude, per Andrew's explicit instruction. The other
+  two plain Francis Coppola SKUs (003334 Cabernet Sauvignon, 004063 Chardonnay) were
+  explicitly excluded -- do not add them without a new instruction. Implemented via
+  `data/curationRules.json`'s `supplierFavoredUpcs` rule (UPC-scoped, not brand-wide, since
+  this is one SKU out of three sharing the same brand).
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.
