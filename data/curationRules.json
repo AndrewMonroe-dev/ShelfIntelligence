@@ -1,5 +1,13 @@
 {
   "_readme": "Manual, human-editable overlay applied automatically at load time (see src/data/curationRules.js, wired into jsonAdapter.getSkus). These are judgment calls a fresh data export can't know about on its own -- they persist here so a brand-new skus.json (from an updated brand ranking / MI Specific Data export) doesn't silently lose them the way the 07-16 relabel fix did in the 07-18 rebuild. Edit this file directly to add/remove rules; no code changes needed for a new entry of an existing kind.",
+  "nonAlcoholicUpcs": {
+    "_readme": "UPC -> true moves this SKU into a brand-new NON-ALCOHOLIC varietal section, out of whatever varietal section it used to occupy. A standing, growing list -- Andrew, 2026-07-23: 'we will be putting a number of existing SKUs' here over time, not a one-off fix. Add new UPCs directly, no code change needed; the section itself needs no separate registration (sectionForSku builds a section from whatever string sku.varietal holds).",
+    "0082242018081": true,
+    "82242018081": true,
+    "0082242017871": true,
+    "82242017871": true,
+    "_relaxZeroReadme": "Relax Zero Sauvignon Blanc (82242018081, was varietal SAUVIGNON BLANC) and Relax Zero Chardonnay (82242017871, was varietal CHARDONNAY) -- both non-alcoholic, so they no longer belong in a regular varietal section."
+  },
   "varietalRelabels": {
     "_readme": "UPC -> corrected varietal, for raw-export mislabels on a specific SKU where the region got put in the varietal field instead of the actual grape/style. Andrew, 2026-07-23.",
     "0082242017051": "SAUVIGNON BLANC",
@@ -367,6 +375,11 @@
         "match": "STELLA ROSA",
         "varietal": "FLAVORED/SWEET",
         "reason": "Andrew, 2026-07-23: Il Conte Stella Rosa is a sweet/flavored line despite being from Italy -- raw data mostly labels it varietal ITALY or SPARKLING (routing into the Sparkling Wine section), neither of which is right for the whole brand. All SKUs, all sub-lines (Il Conte, plain Stella Rosa, Organic, Assorted)."
+      },
+      {
+        "match": "SCHMITT SOHNE",
+        "varietal": "GERMANY",
+        "reason": "Andrew, 2026-07-23: all Schmitt Sohne 750ml SKUs belong in the Germany section by country of origin, not split out by grape -- most were already varietal GERMANY, but Riesling (skuId 002294) was still varietal RIESLING. Brand-wide so any future new Schmitt Sohne 750ml SKU routes to Germany automatically."
       }
     ]
   }

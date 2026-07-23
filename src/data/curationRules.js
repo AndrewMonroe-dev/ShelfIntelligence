@@ -29,6 +29,15 @@ export function applyCurationRules(skus, rules) {
   const supplierFavoredBrands = (rules.supplierFavoredBrands?.brandContains || [])
     .map((r) => ({ match: r.match.toUpperCase(), alwaysInclude: r.alwaysInclude === true }));
   const supplierFavoredUpcs = rules.supplierFavoredUpcs || {};
+  // Dedicated, growing list (Andrew, 2026-07-23: "we will be putting a
+  // number of existing SKUs" into this over time) -- moves a SKU into a
+  // brand-new NON-ALCOHOLIC varietal section (sectionForSku, blocking.js,
+  // builds a section from whatever string sku.varietal holds, so this needs
+  // no separate section-registration step) and OUT of whatever varietal
+  // section it used to occupy. Kept as its own key rather than folded into
+  // varietalRelabels so it reads as its own standing category-move list,
+  // not a one-off mislabel fix.
+  const nonAlcoholicUpcs = new Set(Object.keys(rules.nonAlcoholicUpcs || {}).filter((k) => rules.nonAlcoholicUpcs[k] === true));
 
   const kept = skus
     .filter((sku) => {
@@ -56,16 +65,18 @@ export function applyCurationRules(skus, rules) {
       // as opposed to an entire brand line. Andrew, 2026-07-23.
       const isSupplierFavoredByUpc = upc ? supplierFavoredUpcs[upc] === true : false;
       const isSupplierFavored = !!favoredBrandMatch || isSupplierFavoredByUpc;
-      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored) return sku;
+      const isNonAlcoholic = upc ? nonAlcoholicUpcs.has(upc) : false;
+      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
         ...(alwaysInclude || favoredBrandMatch?.alwaysInclude ? { alwaysInclude: true } : null),
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
-        // varietalOverride (brand-wide) takes precedence if somehow both are
-        // defined for the same SKU -- varietalRelabel (UPC-scoped) applies
-        // otherwise.
-        ...(varietalOverride ? { varietal: varietalOverride.varietal } : varietalRelabel ? { varietal: varietalRelabel } : null),
+        // A confirmed category move (isNonAlcoholic) wins over every other
+        // varietal source -- it's a definitive "this SKU belongs elsewhere
+        // now," not a soft preference. varietalOverride (brand-wide) then
+        // varietalRelabel (UPC-scoped mislabel fix) in that order otherwise.
+        ...(isNonAlcoholic ? { varietal: 'NON-ALCOHOLIC' } : varietalOverride ? { varietal: varietalOverride.varietal } : varietalRelabel ? { varietal: varietalRelabel } : null),
       };
     });
 
