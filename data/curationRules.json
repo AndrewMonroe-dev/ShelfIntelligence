@@ -1,5 +1,14 @@
 {
   "_readme": "Manual, human-editable overlay applied automatically at load time (see src/data/curationRules.js, wired into jsonAdapter.getSkus). These are judgment calls a fresh data export can't know about on its own -- they persist here so a brand-new skus.json (from an updated brand ranking / MI Specific Data export) doesn't silently lose them the way the 07-16 relabel fix did in the 07-18 rebuild. Edit this file directly to add/remove rules; no code changes needed for a new entry of an existing kind.",
+  "varietalRelabels": {
+    "_readme": "UPC -> corrected varietal, for raw-export mislabels on a specific SKU where the region got put in the varietal field instead of the actual grape/style. Andrew, 2026-07-23.",
+    "0082242017051": "SAUVIGNON BLANC",
+    "82242017051": "SAUVIGNON BLANC",
+    "_stoneleighReadme": "Stoneleigh (82242017051) is a Sauvignon Blanc from New Zealand -- raw source confirms 'STONELEIGH SAUVIGNON BLANC NEW ZEALAND', but skus.json had varietal set to the region (NEW ZEALAND) instead of the grape, landing it in the wrong section.",
+    "0088474008051": "ROSE",
+    "88474008051": "ROSE",
+    "_relaxReadme": "Relax Pink (88474008051) is a rose sourced from Spain -- raw source confirms 'RELAX PINK SPAIN', but skus.json had varietal set to the region (SPAIN) instead of ROSE. Not the same SKU as Relax's actual Riesling (88474022401, varietal correctly RIESLING, region GERMANY) -- do not confuse the two."
+  },
   "sizeRelabels": {
     "_readme": "UPC -> canonical bottleSizeRaw. Raw MI Specific Data exports record some multi-packs by SUMMED volume (e.g. 3x187mL as '.561 LT') instead of the real per-bottle size code used everywhere else in the app. Extracted directly from the raw source 2026-07-23 (both with and without a leading zero, since skus.json's own UPC formatting is inconsistent) -- covers every known affected product in the source data, not just whichever ones happened to be in today's skus.json snapshot.",
     "0085200618741": "0.187LT X4",
@@ -227,8 +236,12 @@
     "_readme": "UPC -> true forces this SKU to always place in its size section, in every store, regardless of sales score. Andrew, 2026-07-22. The Coppola Prosecco 0.187LT X3 entry that used to live here (UPC 0082242018661) is now covered by the broader supplierFavoredBrands rule below (COPPOLA DIAMOND matches its brand too), so it moved out rather than being duplicated in two places."
   },
   "alwaysExclude": {
-    "_readme": "Removes matching SKUs entirely before the rest of the app ever sees them. 'brands' matches case-insensitively against the exact brand string (not a substring) -- list every brand variant a discontinued line appears under.",
-    "upcs": [],
+    "_readme": "Removes matching SKUs entirely before the rest of the app ever sees them. 'brands' matches case-insensitively against the exact brand string (not a substring) -- list every brand variant a discontinued line appears under. 'upcs' is for individual discontinued SKUs within a brand that otherwise stays active.",
+    "upcs": [
+      "0082242016741", "82242016741",
+      "0082242016881", "82242016881"
+    ],
+    "_upcsReadme": "Three Finger Jack Chardonnay (82242016741) and Zinfandel (82242016881), 750ml -- discontinued per Andrew, 2026-07-23. The rest of the Three Finger Jack line (Cabernet Sauvignon, Red Blend) stays active.",
     "brands": [
       "SOFIA ROSE",
       "SOFIA MINI",
@@ -326,11 +339,17 @@
   },
 
   "supplierFavoredBrands": {
-    "_readme": "Brand-substring match (case-insensitive) -- every matching SKU, any size, gets BOTH strategicSupplierPriority:true (scoring boost + wins the anchor/prime-position tiebreak in its section, see anchorPlacement.js) AND alwaysInclude:true (always places regardless of score). Not a UPC list so future new sizes/sub-lines of the same brand are covered automatically.",
+    "_readme": "Brand-substring match (case-insensitive) -- every matching SKU, any size, gets strategicSupplierPriority:true (scoring boost + wins the anchor/prime-position tiebreak in its section, see anchorPlacement.js). alwaysInclude:true ONLY if the entry itself sets alwaysInclude:true -- most preferred brands (matching the original hardcoded-in-skus.json list) want the boost only, same as Bota/1924/Black Stallion/etc. Not a UPC list so future new sizes/sub-lines of the same brand are covered automatically.",
     "brandContains": [
       {
         "match": "COPPOLA DIAMOND",
+        "alwaysInclude": true,
         "reason": "Andrew, 2026-07-23: reverses the 2026-07-12 BUSINESS_RULES.md decision that had excluded Coppola from Strategic Supplier Priority -- explicit new instruction to favor all Francis Coppola Diamond Collection SKUs (Diamond Collection, Diamond Collection Black Label, Diamond Collection Paso Robles), every size, in every store. docs/BUSINESS_RULES.md updated to match."
+      },
+      {
+        "match": "STONELEIGH",
+        "alwaysInclude": false,
+        "reason": "Andrew, 2026-07-23: Stoneleigh was already named in the original 2026-07-12 preferred-brand list in BUSINESS_RULES.md, but had zero matching SKUs in the pool at the time so the flag was never actually live. Now has one (Stoneleigh Sauvignon Blanc, skuId 000589) -- boost only, same as every other original-list brand, not alwaysInclude."
       }
     ]
   },

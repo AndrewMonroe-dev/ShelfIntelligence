@@ -14,14 +14,20 @@ export function applyCurationRules(skus, rules) {
   if (!rules) return skus;
 
   const sizeRelabels = rules.sizeRelabels || {};
+  const varietalRelabels = rules.varietalRelabels || {};
   const alwaysIncludeUpcs = rules.alwaysIncludeUpcs || {};
   const excludeUpcs = new Set(rules.alwaysExclude?.upcs || []);
   const excludeBrands = new Set((rules.alwaysExclude?.brands || []).map((b) => b.toUpperCase()));
   const manualAdditions = rules.manualAdditions?.skus || [];
   const brandVarietalOverrides = (rules.varietalOverrides?.brandContains || [])
     .map((r) => ({ match: r.match.toUpperCase(), varietal: r.varietal }));
+  // Each brand entry declares its own alwaysInclude -- most supplier-priority
+  // brands (e.g. Stoneleigh) only want the scoring/anchor boost, same as the
+  // original hardcoded list; Coppola Diamond is the one exception that also
+  // force-places regardless of score, so it opts in explicitly rather than
+  // every brand getting alwaysInclude by default. Andrew, 2026-07-23.
   const supplierFavoredBrands = (rules.supplierFavoredBrands?.brandContains || [])
-    .map((r) => r.match.toUpperCase());
+    .map((r) => ({ match: r.match.toUpperCase(), alwaysInclude: r.alwaysInclude === true }));
   const supplierFavoredUpcs = rules.supplierFavoredUpcs || {};
 
   const kept = skus
@@ -34,23 +40,32 @@ export function applyCurationRules(skus, rules) {
     .map((sku) => {
       const upc = normalizeUpc(sku.upc);
       const relabel = upc ? sizeRelabels[upc] : null;
+      // UPC-scoped varietal fix -- for a raw-export mislabel on ONE specific
+      // SKU (region put in the varietal field, e.g. "NEW ZEALAND" instead of
+      // "SAUVIGNON BLANC"), as opposed to varietalOverrides.brandContains
+      // below, which intentionally reclassifies an entire brand line.
+      // Andrew, 2026-07-23.
+      const varietalRelabel = upc ? varietalRelabels[upc] : null;
       const alwaysInclude = upc ? alwaysIncludeUpcs[upc] === true : false;
       const brandUpper = (sku.brand || '').toUpperCase();
       const varietalOverride = brandVarietalOverrides.find((r) => brandUpper.includes(r.match));
-      const isSupplierFavoredByBrand = supplierFavoredBrands.some((m) => brandUpper.includes(m));
+      const favoredBrandMatch = supplierFavoredBrands.find((r) => brandUpper.includes(r.match));
       // UPC-scoped priority (unlike the brand-wide rule above) grants ONLY
       // the scoring/anchor boost, not alwaysInclude -- for a single SKU
       // Andrew wants favored without force-placing it regardless of score,
       // as opposed to an entire brand line. Andrew, 2026-07-23.
       const isSupplierFavoredByUpc = upc ? supplierFavoredUpcs[upc] === true : false;
-      const isSupplierFavored = isSupplierFavoredByBrand || isSupplierFavoredByUpc;
-      if (!relabel && !alwaysInclude && !varietalOverride && !isSupplierFavored) return sku;
+      const isSupplierFavored = !!favoredBrandMatch || isSupplierFavoredByUpc;
+      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
-        ...(alwaysInclude || isSupplierFavoredByBrand ? { alwaysInclude: true } : null),
+        ...(alwaysInclude || favoredBrandMatch?.alwaysInclude ? { alwaysInclude: true } : null),
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
-        ...(varietalOverride ? { varietal: varietalOverride.varietal } : null),
+        // varietalOverride (brand-wide) takes precedence if somehow both are
+        // defined for the same SKU -- varietalRelabel (UPC-scoped) applies
+        // otherwise.
+        ...(varietalOverride ? { varietal: varietalOverride.varietal } : varietalRelabel ? { varietal: varietalRelabel } : null),
       };
     });
 

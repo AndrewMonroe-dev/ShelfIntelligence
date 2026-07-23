@@ -45,6 +45,25 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   explicitly excluded -- do not add them without a new instruction. Implemented via
   `data/curationRules.json`'s `supplierFavoredUpcs` rule (UPC-scoped, not brand-wide, since
   this is one SKU out of three sharing the same brand).
+- **2026-07-23: Stoneleigh Sauvignon Blanc now live.** Stoneleigh was already named in the
+  07-12 preferred-brand list above, but had zero matching SKUs in the pool at the time so
+  the flag was never actually set anywhere. It now has one (skuId 000589) -- boost only,
+  same as the rest of the original list, not alwaysInclude. Also fixed a raw-export mislabel
+  found while adding it: this SKU's `varietal` was set to `NEW ZEALAND` (the region) instead
+  of `SAUVIGNON BLANC` (the actual grape), which had it landing in the wrong varietal
+  section entirely. Both fixes live in `data/curationRules.json` (`supplierFavoredBrands`
+  and `varietalRelabels`).
+- **2026-07-23: Three Finger Jack Chardonnay and Zinfandel (both 750ml) discontinued and
+  removed entirely** per Andrew -- no longer in the SKU pool, and no longer on the Strategic
+  Supplier Priority list as a result. The rest of the Three Finger Jack line (Cabernet
+  Sauvignon, Red Blend) is unaffected and stays on the priority list. Implemented via
+  `data/curationRules.json`'s `alwaysExclude.upcs`.
+- **2026-07-23: Relax Rose miscategorized.** skuId 003602 ("Relax Pink," sourced from Spain)
+  had `varietal` set to `SPAIN` (the region) instead of `ROSE`, landing it in the Spain
+  varietal section instead of Rose. Confirmed against the raw MI source string ("RELAX PINK
+  SPAIN") before fixing -- distinct from Relax's actual Riesling (skuId 000327, varietal
+  correctly `RIESLING`, region `GERMANY`), which was not touched. Fixed via
+  `data/curationRules.json`'s `varietalRelabels`.
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.
