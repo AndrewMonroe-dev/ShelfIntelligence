@@ -181,7 +181,13 @@ function buildBayRowMap(sections, bays) {
   // truncated fragment, and unlike every other section, doing this here
   // can't reopen a gap between two pieces of content (07-19's "no gaps"
   // fix), since there's no next section to leave a gap before.
-  const MIN_READABLE_SLIVER_INCHES = BAY_INCHES * 0.25;
+  // Andrew, 2026-07-23: bumped from 0.25 to 1/3 -- a real live case (3LT
+  // Box, Retailer X - Location 12) left 12.84in of room (26.75% of a bay),
+  // just above the old 25% cutoff, so it went unsnapped: a cramped sliver
+  // in one bay plus most of that row's real content stranded there, leaving
+  // the next (last) bay looking starved of inventory that was actually
+  // available, just misplaced by the boundary miss.
+  const MIN_READABLE_SLIVER_INCHES = BAY_INCHES * (1 / 3);
 
   let runningCompactedInches = 0;
   normal.forEach((section, i) => {
