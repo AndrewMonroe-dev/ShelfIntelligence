@@ -5,7 +5,7 @@
 // data/bottleDimensions.json (2026-07-16 rewrite) holds Andrew's own
 // corrected measurements, keyed by the EXACT bottleSizeRaw string ("0.75LT",
 // "0.187LT X4", etc.) -- sourced from
-// "D:\Jarvis\Suggested Measurements of wine sizes.xlsx", not derived or
+// "docs/Suggested Measurements of wine sizes.xlsx" (moved here from the vault 2026-07-23; was D:\Jarvis\...), not derived or
 // estimated. No per-size mapping table needed anymore: bottleSizeRaw *is*
 // the dimension type. A size with no entry (e.g. the single-SKU "0.72LT")
 // falls back to a generic width rather than guessing a specific shape.

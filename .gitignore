@@ -1,0 +1,9 @@
+# Historical skus.json snapshots taken before risky data changes during
+# July 2026 data-cleanup sessions -- large, superseded by git history for
+# anything that matters, kept locally as an extra safety net only.
+data/backups/
+
+# Working CSV exports from the July 2026 MI Specific Data cleanup passes
+# (region/varietal review, brand-rebuild diffs, etc.) -- reference/audit
+# trail, not something the app reads or that needs to travel in git.
+data/review-exports/
