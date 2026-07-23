@@ -349,7 +349,9 @@ function layoutSmallFormatSection(fullNaturalPool, shelfDefs, totalWidthInches, 
   const facingsBySkuId = new Map();
   if (!fullNaturalPool.length) return { rowGroups, facingsBySkuId };
 
-  // Andrew, 2026-07-22: alwaysInclude SKUs (data/skus.json) are pulled out
+  // Andrew, 2026-07-22: alwaysInclude SKUs (set directly on a SKU, or
+  // applied automatically at load time via data/curationRules.json -- see
+  // src/data/curationRules.js) are pulled out
   // of the competitive pool entirely -- they don't compete for a row slot
   // on score, they get spliced into their size's row after everything else
   // is placed (see bottom of this function). Guarantees placement

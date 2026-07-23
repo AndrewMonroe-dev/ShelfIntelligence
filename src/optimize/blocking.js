@@ -75,11 +75,12 @@ export const CONFIRMED_PACKAGE_TYPES = {
 // just not caught yet on 07-18. data/skus.json now has 0.561LT X3 (3 SKUs)
 // and 0.8LT X4 (10 SKUs) relabeled into 0.187LT X3 / 0.2LT X4, so those
 // raw labels no longer exist in the data -- removed from this set.
-// NOTE: skus.json has no repeatable import script in this repo. If it's
-// ever fully regenerated from the raw MI Specific Data export again, this
-// relabeling (0.748LT->0.187LT X4, 0.561LT X3->0.187LT X3,
-// 0.8LT X4->0.2LT X4) must be reapplied manually or the regression from
-// 07-18 will recur.
+// Andrew, 2026-07-23: this relabeling no longer depends on skus.json
+// itself staying correct -- data/curationRules.json + src/data/
+// curationRules.js reapply it (by UPC) automatically every time the app
+// loads, regardless of what a fresh skus.json regeneration contains. See
+// that file for the full, source-verified UPC list. This comment stays as
+// the historical record of WHY the rule exists.
 export const SMALL_FORMAT_SIZES = new Set([
   '0.5LT', '0.375LT', '0.25LT', '0.187LT',
   '0.187LT X2', '0.187LT X3', '0.187LT X4', '0.187LT X6',
@@ -128,14 +129,17 @@ export function isExcludedSku(sku) {
 }
 
 // Andrew, 2026-07-22: catalog-level opposite of isExcludedSku -- a SKU
-// flagged alwaysInclude (data/skus.json) is force-placed into its own size
-// section regardless of sales/score, in every store, every session. First
-// use: Francis Coppola Diamond Collection 0.187LT X3 (Prosecco 3-pack,
-// skuId 003180) -- new to market, doing well in the field, but with too
-// little tracked sales history to win a spot on score alone against
-// established competitors in the same size group. Different from a
-// per-store "locked" override (placementsBySkuId/overrides): this is
-// permanent and store-independent, set on the SKU itself.
+// flagged alwaysInclude is force-placed into its own size section
+// regardless of sales/score, in every store, every session. First use:
+// Francis Coppola Diamond Collection 0.187LT X3 (Prosecco 3-pack, skuId
+// 003180) -- new to market, doing well in the field, but with too little
+// tracked sales history to win a spot on score alone against established
+// competitors in the same size group. Different from a per-store "locked"
+// override (placementsBySkuId/overrides): this is permanent and
+// store-independent. As of 2026-07-23 this flag is normally applied
+// automatically at load time via data/curationRules.json (see
+// src/data/curationRules.js), not hand-edited onto a SKU in skus.json --
+// that's what makes it survive a fresh data regeneration.
 export function isAlwaysIncludeSku(sku) {
   return sku.alwaysInclude === true;
 }
