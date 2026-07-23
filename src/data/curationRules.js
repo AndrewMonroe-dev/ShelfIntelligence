@@ -18,6 +18,8 @@ export function applyCurationRules(skus, rules) {
   const excludeUpcs = new Set(rules.alwaysExclude?.upcs || []);
   const excludeBrands = new Set((rules.alwaysExclude?.brands || []).map((b) => b.toUpperCase()));
   const manualAdditions = rules.manualAdditions?.skus || [];
+  const brandVarietalOverrides = (rules.varietalOverrides?.brandContains || [])
+    .map((r) => ({ match: r.match.toUpperCase(), varietal: r.varietal }));
 
   const kept = skus
     .filter((sku) => {
@@ -30,11 +32,14 @@ export function applyCurationRules(skus, rules) {
       const upc = normalizeUpc(sku.upc);
       const relabel = upc ? sizeRelabels[upc] : null;
       const alwaysInclude = upc ? alwaysIncludeUpcs[upc] === true : false;
-      if (!relabel && !alwaysInclude) return sku;
+      const brandUpper = (sku.brand || '').toUpperCase();
+      const varietalOverride = brandVarietalOverrides.find((r) => brandUpper.includes(r.match));
+      if (!relabel && !alwaysInclude && !varietalOverride) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
         ...(alwaysInclude ? { alwaysInclude: true } : null),
+        ...(varietalOverride ? { varietal: varietalOverride.varietal } : null),
       };
     });
 

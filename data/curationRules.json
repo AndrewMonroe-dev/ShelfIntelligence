@@ -325,5 +325,16 @@
         "alwaysInclude": true
       }
     ]
+  },
+
+  "varietalOverrides": {
+    "_readme": "Forces sku.varietal for every SKU whose brand contains 'match' (case-insensitive substring, not exact) -- only affects 750mL SKUs, since that's the only size sectionForSku keys off varietal instead of bottleSizeRaw. Brand-substring match (not a UPC list) so future new flavors of the same line get corrected automatically without needing to know their UPC in advance.",
+    "brandContains": [
+      {
+        "match": "STELLA ROSA",
+        "varietal": "FLAVORED/SWEET",
+        "reason": "Andrew, 2026-07-23: Il Conte Stella Rosa is a sweet/flavored line despite being from Italy -- raw data mostly labels it varietal ITALY or SPARKLING (routing into the Sparkling Wine section), neither of which is right for the whole brand. All SKUs, all sub-lines (Il Conte, plain Stella Rosa, Organic, Assorted)."
+      }
+    ]
   }
 }
