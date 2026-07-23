@@ -207,7 +207,13 @@ function buildBayRowMap(sections, bays) {
 // side-by-side boxes instead of 1 box with a "3f" label -- fills the
 // section the way it actually looks on the real shelf, and reads as
 // immediately obvious rather than requiring you to parse a facings count.
-function renderSkuBox(entry) {
+// Andrew, 2026-07-23: botaEdge ({first, last}) marks whether this ENTRY
+// sits at the very start/end of a contiguous Bota run within its category
+// group (see renderEntriesWithBotaHighlight) -- used to cap the gold
+// highlight's left/right edge on the true first/last PHYSICAL box only
+// (not every repeated facing-copy of this SKU), so a same-SKU multi-facing
+// run doesn't get a stray gold line between its own facings.
+function renderSkuBox(entry, botaEdge = null) {
   const { sku, sectionKey, shelfDef, columnIndex } = entry;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
@@ -217,8 +223,15 @@ function renderSkuBox(entry) {
   // at facing-width instead of truncating in a box only 1-2in wide.
   // Andrew's rule 2026-07-15 (vertical text), refined 2026-07-22 (brand
   // must read first/top-most, not get buried at the bottom).
-  const box = `
-    <div class="planogram-box${sku.isLocked ? ' locked' : ''}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
+  const boxes = [];
+  for (let i = 0; i < facingCount; i++) {
+    const botaClass = botaEdge
+      ? ' planogram-box-bota'
+        + (botaEdge.first && i === 0 ? ' planogram-box-bota-first' : '')
+        + (botaEdge.last && i === facingCount - 1 ? ' planogram-box-bota-last' : '')
+      : '';
+    boxes.push(`
+    <div class="planogram-box${sku.isLocked ? ' locked' : ''}${botaClass}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
       <div class="planogram-box-facing-controls">
         <button type="button" class="planogram-facing-btn planogram-facing-minus" draggable="false" title="${sku.facings <= 1 ? 'Remove from set' : 'Remove one facing'}">&minus;</button>
@@ -229,8 +242,9 @@ function renderSkuBox(entry) {
         <span class="planogram-box-price">${sku.priceUsd != null ? '$' + sku.priceUsd.toFixed(2) : '--'}</span>
       </div>
     </div>
-  `;
-  return box.repeat(facingCount);
+  `);
+  }
+  return boxes.join('');
 }
 
 // A merged section's label concatenates every original category it absorbed
@@ -266,12 +280,18 @@ function categoryColor(sectionKey) {
   return color;
 }
 
-// Andrew, 2026-07-23: gold shimmer highlight around just the contiguous
-// run of Bota boxes (any sub-line, any size) within a category group --
-// NOT the whole category group, which can hold other brands too. Splits
-// a category's entries into consecutive Bota/non-Bota runs and wraps only
-// the Bota runs in a highlight div; purely visual, no placement/scoring
-// effect.
+// Andrew, 2026-07-23 (revised a second time): gold shimmer highlight around
+// just the contiguous run of Bota boxes (any sub-line, any size) within a
+// category group -- NOT the whole category group, which can hold other
+// brands too. A wrapping div around the run (both a plain outline and an
+// inset box-shadow version) failed: the ring ended up covered either by
+// the next sibling box (outline, positive offset) or by the wrapper's own
+// children (inset, since they fill it edge to edge with no padding) --
+// confirmed live both times. Styling each Bota box's OWN border instead
+// can't be covered by anything else, since it's part of that box's own
+// paint: every Bota box gets a continuous gold top/bottom edge, and only
+// the true first/last physical box in the run also gets a gold left/right
+// cap, closing the ring exactly at the seam with a competitor brand.
 function renderEntriesWithBotaHighlight(entries) {
   const runs = [];
   entries.forEach((entry) => {
@@ -281,8 +301,11 @@ function renderEntriesWithBotaHighlight(entries) {
     else runs.push({ isBota, entries: [entry] });
   });
   return runs.map((run) => {
-    const html = run.entries.map(renderSkuBox).join('');
-    return run.isBota ? `<div class="planogram-bota-highlight">${html}</div>` : html;
+    if (!run.isBota) return run.entries.map((e) => renderSkuBox(e)).join('');
+    return run.entries.map((entry, i) => renderSkuBox(entry, {
+      first: i === 0,
+      last: i === run.entries.length - 1,
+    })).join('');
   }).join('');
 }
 

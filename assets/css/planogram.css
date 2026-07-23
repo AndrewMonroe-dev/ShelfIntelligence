@@ -64,27 +64,46 @@
   margin-right:2px;
 }
 
-/* Andrew, 2026-07-23 (revised twice same day): gold shimmer ring around
-   just the contiguous run of Bota boxes within a category group -- not
-   the whole group, which can hold other brands too. Wraps only the Bota
-   sub-run (see renderEntriesWithBotaHighlight).
-   Second revision: an `outline` with positive offset draws OUTSIDE the
-   wrapper's own box -- fine on the top/bottom edges (open space above/
-   below the row), but on the left/right seams that space is occupied by
-   the very next sibling box, whose opaque background painted over it,
-   hiding the ring exactly where Bota meets a competitor brand (confirmed
-   live: visible top curve, missing vertical seam). Switched to an INSET
-   box-shadow instead -- it paints inside the wrapper's own box on all
-   four sides, so no sibling can ever cover it, including that seam. */
-.planogram-bota-highlight{
-  display:flex;
-  align-items:stretch;
-  border-radius:4px;
-  animation:bota-shimmer 2.4s ease-in-out infinite;
+/* Andrew, 2026-07-23 (third revision): gold shimmer ring around just the
+   contiguous run of Bota boxes within a category group -- not the whole
+   group, which can hold other brands too. Two wrapping-div approaches
+   failed live: a plain `outline` got covered by the next sibling box on
+   the left/right seams (positive offset draws outside the wrapper, where
+   the sibling already paints), and an inset box-shadow got covered by the
+   wrapper's OWN children instead (they fill it edge to edge, no padding,
+   so the shadow painted on the wrapper's inner edge sits directly behind
+   them). Styling each Bota box's OWN border can't be covered by anything,
+   since it's part of that box's own paint layer: every Bota box gets a
+   continuous gold top/bottom edge, and only the true first/last physical
+   box in the run (see renderSkuBox's botaEdge param) also gets a gold
+   left/right cap, closing the ring at the exact seam with a competitor. */
+.planogram-box-bota{
+  animation:bota-shimmer-mid 2.4s ease-in-out infinite;
 }
-@keyframes bota-shimmer{
+.planogram-box-bota-first{
+  animation:bota-shimmer-first 2.4s ease-in-out infinite;
+}
+.planogram-box-bota-last{
+  animation:bota-shimmer-last 2.4s ease-in-out infinite;
+}
+.planogram-box-bota-first.planogram-box-bota-last{
+  animation:bota-shimmer-single 2.4s ease-in-out infinite;
+}
+@keyframes bota-shimmer-mid{
+  0%, 100% { box-shadow:inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 6px 1px rgba(212,175,55,0.4); }
+  50% { box-shadow:inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 14px 4px rgba(212,175,55,0.85); }
+}
+@keyframes bota-shimmer-first{
+  0%, 100% { box-shadow:inset 2px 0 0 0 #d4af37, inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 6px 1px rgba(212,175,55,0.4); }
+  50% { box-shadow:inset 2px 0 0 0 #d4af37, inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 14px 4px rgba(212,175,55,0.85); }
+}
+@keyframes bota-shimmer-last{
+  0%, 100% { box-shadow:inset -2px 0 0 0 #d4af37, inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 6px 1px rgba(212,175,55,0.4); }
+  50% { box-shadow:inset -2px 0 0 0 #d4af37, inset 0 2px 0 0 #d4af37, inset 0 -2px 0 0 #d4af37, 0 0 14px 4px rgba(212,175,55,0.85); }
+}
+@keyframes bota-shimmer-single{
   0%, 100% { box-shadow:inset 0 0 0 2px #d4af37, 0 0 6px 1px rgba(212,175,55,0.4); }
-  50% { box-shadow:inset 0 0 0 2px #d4af37, 0 0 16px 5px rgba(212,175,55,0.9); }
+  50% { box-shadow:inset 0 0 0 2px #d4af37, 0 0 14px 4px rgba(212,175,55,0.85); }
 }
 
 .planogram-category-legend{
