@@ -379,10 +379,10 @@
       },
       {
         "match": "STONELEIGH",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 4,
         "tier": 1,
-        "reason": "Andrew, 2026-07-23: Stoneleigh was already named in the original 2026-07-12 preferred-brand list in BUSINESS_RULES.md, but had zero matching SKUs in the pool at the time so the flag was never actually live. Now has one (Stoneleigh Sauvignon Blanc, skuId 000589) -- boost only, same as every other original-list brand, not alwaysInclude."
+        "reason": "Andrew, 2026-07-23: Stoneleigh was already named in the original 2026-07-12 preferred-brand list in BUSINESS_RULES.md, but had zero matching SKUs in the pool at the time so the flag was never actually live. Now has one (Stoneleigh Sauvignon Blanc, skuId 000589). Andrew, 2026-07-24: upgraded to alwaysInclude (was boost-only) per explicit instruction."
       },
       {
         "match": "BOTA",
@@ -393,45 +393,45 @@
       },
       {
         "match": "BLACK STALLION",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 3,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: already a Strategic Supplier Priority brand since the original 2026-07-12 list (flag baked directly into skus.json, no curationRules entry existed for it) -- added here to give it a rank in the 2026-07-24 ranking without changing its existing boost-only behavior."
+        "reason": "Andrew, 2026-07-24: already a Strategic Supplier Priority brand since the original 2026-07-12 list (flag baked directly into skus.json, no curationRules entry existed for it) -- added here to give it a rank, and upgraded to alwaysInclude, per explicit instruction."
       },
       {
         "match": "1924",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 5,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction."
       },
       {
         "match": "Z ALEXANDER BROWN",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 6,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction."
       },
       {
         "match": "THREE FINGER JACK",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 7,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank. Chardonnay/Zinfandel sub-lines were discontinued 2026-07-23 (see alwaysExclude) -- unaffected by this rank entry, which only matters for whatever's still in the pool (Cabernet Sauvignon, Red Blend)."
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction. Chardonnay/Zinfandel sub-lines were discontinued 2026-07-23 (see alwaysExclude) -- unaffected by this entry, which only matters for whatever's still in the pool (Cabernet Sauvignon, Red Blend)."
       },
       {
         "match": "RELAX",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 8,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank. Matches every Relax SKU still in the pool after the 2026-07-24 Sparkling discontinuation, including the two Relax Zero (non-alcoholic) SKUs -- ranking them is harmless even though they've moved out of a normal varietal section."
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction. Matches every Relax SKU still in the pool after the 2026-07-24 Sparkling discontinuation, including the two Relax Zero (non-alcoholic) SKUs -- alwaysInclude force-places them too, harmless since they've moved to their own Non-Alcoholic section."
       },
       {
         "match": "SCHMITT SOHNE",
-        "alwaysInclude": false,
+        "alwaysInclude": true,
         "rank": 9,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction."
       },
       {
         "match": "NOBLE VINES",

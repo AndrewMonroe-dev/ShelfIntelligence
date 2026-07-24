@@ -101,6 +101,18 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
     (and `supplierFavoredUpcs` for the one UPC-scoped entry) -- **this order is explicitly
     expected to change over time per Andrew**, so reordering, adding, or removing a brand is
     a JSON edit only, never a code change.
+  - **2026-07-24 (same day): Stoneleigh, Black Stallion, 1924, Z Alexander Brown, Three
+    Finger Jack, Relax, and Schmitt Sohne upgraded to `alwaysInclude: true`** (were boost-only
+    before) per Andrew's explicit follow-up instruction -- every SKU in these 7 brands now
+    force-places in its size/varietal section regardless of score, same as Coppola Diamond.
+    Bota, Noble Vines, Gnarly Head, and Diora were deliberately left as boost-only -- not
+    named in this instruction. Prompted by checking on Noble Vines 337 Cabernet Sauvignon
+    (skuId 000548): confirmed it correctly carries `strategicSupplierPriority` (its boost
+    contributed 10.4 of its 11.95 total score) but still lost the width competition for its
+    one price-band-eligible shelf, landing 14th in line for an 11-slot row -- the boost
+    raises a SKU's score, it doesn't reserve it a spot. `alwaysInclude` is the mechanism for
+    an actual guarantee, which is why these 7 brands got upgraded to it while Noble Vines
+    (explicitly not requested) did not.
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.
