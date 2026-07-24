@@ -49,6 +49,9 @@ export function applyCurationRules(skus, rules) {
   // linear feet against this at generation time.
   const widthGatedBrands = (rules.widthGatedAlwaysInclude?.brandContains || [])
     .map((r) => ({ match: r.match.toUpperCase(), minWidthFt: r.minWidthFt }));
+  // UPC-scoped version -- a curated subset of a brand, not the whole line
+  // (e.g. exactly 4 of Schmitt Sohne's 14 SKUs). Andrew, 2026-07-24.
+  const widthGatedUpcs = rules.widthGatedAlwaysIncludeUpcs || {};
   // Dedicated, growing list (Andrew, 2026-07-23: "we will be putting a
   // number of existing SKUs" into this over time) -- moves a SKU into a
   // brand-new NON-ALCOHOLIC varietal section (sectionForSku, blocking.js,
@@ -59,7 +62,25 @@ export function applyCurationRules(skus, rules) {
   // not a one-off mislabel fix.
   const nonAlcoholicUpcs = new Set(Object.keys(rules.nonAlcoholicUpcs || {}).filter((k) => rules.nonAlcoholicUpcs[k] === true));
 
-  const kept = skus
+  // Andrew, 2026-07-24 (bug found while narrowing Schmitt Sohne's
+  // width-gated guarantee to 4 specific SKUs): manualAdditions used to be
+  // pushed in raw, AFTER the filter/map pipeline below -- meaning every
+  // rule in this file (supplierFavoredBrands, widthGatedAlwaysInclude,
+  // varietalOverrides, all of it) silently never applied to a
+  // manualAddition. Invisible until now because the 3 original Bota
+  // manualAdditions happen to ALSO exist as real entries in skus.json
+  // (which DO go through the pipeline) -- their manualAdditions copies
+  // were always dead duplicates, skipped by the idempotency check below,
+  // never actually the ones supplying the flag. 12 of the 146 Germany
+  // auxiliary additions (Schmitt Sohne/Relax brand) exist ONLY via
+  // manualAdditions and were silently missing their
+  // strategicSupplierPriority boost as a result. Fixed by merging
+  // manualAdditions into the pool BEFORE the pipeline runs (idempotent by
+  // skuId, same as before) instead of appending raw after it.
+  const existingSkuIds = new Set(skus.map((s) => s.skuId));
+  const combinedSkus = [...skus, ...manualAdditions.filter((s) => !existingSkuIds.has(s.skuId))];
+
+  const kept = combinedSkus
     .filter((sku) => {
       const upc = normalizeUpc(sku.upc);
       if (upc && excludeUpcs.has(upc)) return false;
@@ -94,8 +115,14 @@ export function applyCurationRules(skus, rules) {
       const supplierRank = (typeof upcFavor?.rank === 'number') ? upcFavor.rank : favoredBrandMatch?.rank;
       const supplierTier = (typeof upcFavor?.tier === 'number') ? upcFavor.tier : favoredBrandMatch?.tier;
       const isNonAlcoholic = upc ? nonAlcoholicUpcs.has(upc) : false;
-      const widthGatedMatch = widthGatedBrands.find((r) => brandUpper.includes(r.match));
-      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic && !widthGatedMatch) return sku;
+      const widthGatedBrandMatch = widthGatedBrands.find((r) => brandUpper.includes(r.match));
+      const widthGatedUpcMatch = upc ? widthGatedUpcs[upc] : undefined;
+      // UPC-scoped entry wins as the more specific instruction, same
+      // precedent as supplierFavoredUpcs vs supplierFavoredBrands above.
+      const widthGatedMinWidthFt = (typeof widthGatedUpcMatch?.minWidthFt === 'number')
+        ? widthGatedUpcMatch.minWidthFt
+        : widthGatedBrandMatch?.minWidthFt;
+      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic && widthGatedMinWidthFt === undefined) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
@@ -103,7 +130,7 @@ export function applyCurationRules(skus, rules) {
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
         ...(isSupplierFavored && supplierRank !== undefined ? { strategicSupplierRank: supplierRank } : null),
         ...(isSupplierFavored && supplierTier !== undefined ? { strategicSupplierTier: supplierTier } : null),
-        ...(widthGatedMatch ? { alwaysIncludeMinWidthFt: widthGatedMatch.minWidthFt } : null),
+        ...(widthGatedMinWidthFt !== undefined ? { alwaysIncludeMinWidthFt: widthGatedMinWidthFt } : null),
         // A confirmed category move (isNonAlcoholic) wins over every other
         // varietal source -- it's a definitive "this SKU belongs elsewhere
         // now," not a soft preference. varietalOverride (brand-wide) then
@@ -111,14 +138,6 @@ export function applyCurationRules(skus, rules) {
         ...(isNonAlcoholic ? { varietal: 'NON-ALCOHOLIC' } : varietalOverride ? { varietal: varietalOverride.varietal } : varietalRelabel ? { varietal: varietalRelabel } : null),
       };
     });
-
-  // Manual additions are idempotent by skuId -- re-running this over a
-  // skus.json that already has them (e.g. it was regenerated but happened
-  // to re-include one) never creates a duplicate.
-  const existingIds = new Set(kept.map((s) => s.skuId));
-  manualAdditions.forEach((sku) => {
-    if (!existingIds.has(sku.skuId)) kept.push(sku);
-  });
 
   return kept;
 }

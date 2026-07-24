@@ -594,3 +594,31 @@ This is being used to replace the Phase 2 demo fixtures with a real SKU universe
     (both below 1ft), rising to 3/4/7 as actual width grew to 1.82ft/3.88ft/7.76ft (all at or
     above 1ft) -- confirms the gate activates at the threshold rather than just reflecting
     "more room fits more SKUs" generically.
+- **2026-07-24 (later same day): Schmitt Sohne width-gate narrowed to 4 specific SKUs, plus
+  a real pipeline bug found and fixed along the way.** Andrew's follow-up: in a Germany set
+  1ft or wider, exactly 4 Schmitt Sohne SKUs should be *guaranteed* -- the QbA flagship
+  (skuId 000358, by far the highest-selling Schmitt Sohne SKU, $131.7K sales9L), Sweet
+  Riesling (004299), Late Harvest Riesling (004280), and the Gluhwein (002089) -- not all 14.
+  Confirmed the other 10 keep their `strategicSupplierPriority` boost and can still win a
+  slot on score merit, just aren't force-placed. Replaced the brand-wide
+  `widthGatedAlwaysInclude` entry with a new UPC-scoped `widthGatedAlwaysIncludeUpcs`
+  (same brand-vs-UPC precedent as `supplierFavoredBrands`/`supplierFavoredUpcs`).
+  - **Real bug found while wiring this up**: `manualAdditions` entries were being pushed
+    into the final SKU list AFTER the whole rule-application pipeline ran, meaning every
+    rule in this file (`supplierFavoredBrands`, the new width-gate, `varietalOverrides`,
+    all of it) silently never applied to a `manualAddition`. Invisible until now because
+    the original 3 Bota `manualAdditions` (07-22) happen to ALSO exist as real entries in
+    `skus.json` (which DOES go through the pipeline) -- their `manualAdditions` copies were
+    always dead duplicates, skipped by the idempotency check, never the ones actually
+    supplying the flag. 12 of the 146 Germany auxiliary additions (Schmitt Sohne/Relax
+    brand, added earlier today) exist ONLY via `manualAdditions` and were silently missing
+    their `strategicSupplierPriority` boost as a result -- confirmed live before this fix
+    (`priority: false` on all 12) and after (`priority: true`, `rank: 9`, on all 14 Schmitt
+    Sohne and all 8 Relax SKUs). Fixed in `curationRules.js` by merging `manualAdditions`
+    into the pool BEFORE the filter/map pipeline runs (still idempotent by skuId) instead
+    of appending raw records after it -- this fix applies to every current and future
+    `manualAdditions` entry, not just these 12.
+  - Also fixed a UPC-format mismatch: the Gluhwein SKU's `upc` field is stored without a
+    leading zero in `skus.json` (unlike most others), so it needed both the padded and
+    unpadded UPC listed to match (same dual-key precedent already used in
+    `supplierFavoredUpcs`).

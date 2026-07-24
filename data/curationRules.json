@@ -4576,14 +4576,16 @@
     }
   },
   "widthGatedAlwaysInclude": {
-    "_readme": "Andrew, 2026-07-24: a conditional alternative to alwaysInclude -- grants the guarantee only once the SECTION the SKU actually lands in is at least minWidthFt wide (checked at generation time against that section's real linear feet, not a fixed store-wide assumption). Below the threshold, the SKU falls back to normal score-based competition (still carrying whatever strategicSupplierPriority boost it has from supplierFavoredBrands, if any -- this mechanism only controls the alwaysInclude guarantee, not the score boost). Brand-substring match, same convention as supplierFavoredBrands.",
-    "brandContains": [
-      {
-        "match": "SCHMITT SOHNE",
-        "minWidthFt": 1.0,
-        "reason": "Andrew, 2026-07-24: below 1ft, Schmitt Sohne competes normally (with its Strategic Supplier Priority boost intact via supplierFavoredBrands). At 1ft or wider, every Schmitt Sohne SKU in the section is guaranteed a spot."
-      }
-    ]
+    "_readme": "Andrew, 2026-07-24: a conditional alternative to alwaysInclude -- grants the guarantee only once the SECTION the SKU actually lands in is at least minWidthFt wide (checked at generation time against that section's real linear feet, not a fixed store-wide assumption). Below the threshold, the SKU falls back to normal score-based competition (still carrying whatever strategicSupplierPriority boost it has from supplierFavoredBrands, if any -- this mechanism only controls the alwaysInclude guarantee, not the score boost). Brand-substring match, same convention as supplierFavoredBrands. See widthGatedAlwaysIncludeUpcs below for the UPC-scoped version (a curated subset of a brand, not the whole line).",
+    "brandContains": []
+  },
+  "widthGatedAlwaysIncludeUpcs": {
+    "_readme": "Andrew, 2026-07-24: same width-gated mechanism as widthGatedAlwaysInclude above, but scoped to specific UPCs instead of a whole brand -- for when Andrew wants a curated subset guaranteed, not every SKU a brand sells. First use: in a Germany set 1ft or wider, exactly 4 Schmitt Sohne SKUs are guaranteed (the QbA flagship, Sweet Riesling, Late Harvest Riesling, and the Gluhwein) -- the other 10 Schmitt Sohne SKUs still get the strategicSupplierPriority score boost and rank-9 tiebreak preference from supplierFavoredBrands, they just aren't force-placed anymore. Replaces the brand-wide widthGatedAlwaysInclude entry that briefly existed for Schmitt Sohne (forced ALL 14 SKUs once a section hit 1ft) -- narrowed same day per explicit follow-up.",
+    "0088474018201": { "minWidthFt": 1.0, "reason": "Schmitt Sohne Riesling QbA (skuId 000358) -- the flagship, by far the highest-selling Schmitt Sohne SKU ($131.7K sales9L vs a few thousand for the others)." },
+    "0088474020101": { "minWidthFt": 1.0, "reason": "Schmitt Sohne Sweet Riesling (skuId 004299)." },
+    "0088474018401": { "minWidthFt": 1.0, "reason": "Schmitt Sohne Late Harvest Riesling (skuId 004280)." },
+    "0088474011551": { "minWidthFt": 1.0, "reason": "Schmitt Sohne Gluhwein (skuId 002089, 1LT -- redirected into varietal:GERMANY via isGluhweinRedirect, see blocking.js)." },
+    "88474011551": { "minWidthFt": 1.0, "reason": "Same SKU as 0088474011551 above, no leading zero -- this SKU's actual upc field in skus.json is stored without the leading zero, unlike most others, so both forms are listed (same precedent as supplierFavoredUpcs)." }
   },
   "varietalOverrides": {
     "_readme": "Forces sku.varietal for every SKU whose brand contains 'match' (case-insensitive substring, not exact) -- only affects 750mL SKUs, since that's the only size sectionForSku keys off varietal instead of bottleSizeRaw. Brand-substring match (not a UPC list) so future new flavors of the same line get corrected automatically without needing to know their UPC in advance.",
