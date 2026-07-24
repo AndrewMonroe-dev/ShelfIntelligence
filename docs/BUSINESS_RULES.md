@@ -64,6 +64,11 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   SPAIN") before fixing -- distinct from Relax's actual Riesling (skuId 000327, varietal
   correctly `RIESLING`, region `GERMANY`), which was not touched. Fixed via
   `data/curationRules.json`'s `varietalRelabels`.
+- **2026-07-24: Relax Sparkling discontinued and removed entirely.** skuId 002955 (UPC
+  88474012001, 0.75LT) per Andrew -- no longer in the SKU pool. Rest of the Relax line
+  (Sauvignon Blanc/Chardonnay, actually Relax Zero and non-alcoholic; Relax Pink/Rose;
+  Relax's Germany SKU) is unaffected. Implemented via `data/curationRules.json`'s
+  `alwaysExclude.upcs`.
 - **2026-07-24: Bota now flagged via `supplierFavoredBrands` too.** 39 of 42 Bota SKUs
   already carried `strategicSupplierPriority: true` baked directly into `data/skus.json`
   from the original 07-12 flagging, but the 3 newest Bota Box 0.2LT X4 additions (skuIds

@@ -266,9 +266,10 @@
     "_readme": "Removes matching SKUs entirely before the rest of the app ever sees them. 'brands' matches case-insensitively against the exact brand string (not a substring) -- list every brand variant a discontinued line appears under. 'upcs' is for individual discontinued SKUs within a brand that otherwise stays active.",
     "upcs": [
       "0082242016741", "82242016741",
-      "0082242016881", "82242016881"
+      "0082242016881", "82242016881",
+      "0088474012001", "88474012001"
     ],
-    "_upcsReadme": "Three Finger Jack Chardonnay (82242016741) and Zinfandel (82242016881), 750ml -- discontinued per Andrew, 2026-07-23. The rest of the Three Finger Jack line (Cabernet Sauvignon, Red Blend) stays active.",
+    "_upcsReadme": "Three Finger Jack Chardonnay (82242016741) and Zinfandel (82242016881), 750ml -- discontinued per Andrew, 2026-07-23. The rest of the Three Finger Jack line (Cabernet Sauvignon, Red Blend) stays active. Relax Sparkling (88474012001, skuId 002955, 0.75LT) -- discontinued per Andrew, 2026-07-24. The rest of the Relax line (Sauvignon Blanc/Chardonnay -- actually Relax Zero, see nonAlcoholicUpcs; Relax Pink/Rose; Relax's Germany SKU) stays active.",
     "brands": [
       "SOFIA ROSE",
       "SOFIA MINI",
