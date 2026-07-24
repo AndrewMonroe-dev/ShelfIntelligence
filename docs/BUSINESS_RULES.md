@@ -129,6 +129,26 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
     fully resolved; two genuinely unavoidable cases were correctly left alone (Red Blend: 4
     priority SKUs and zero non-priority ones in that row; Sauvignon Blanc: 3 priority against
     only 1 non-priority, short of the 2 needed to fully separate 3).
+  - **2026-07-24 (same day): alwaysInclude fixed for 750ml varietal/price-band sections --
+    it had ZERO effect there before this fix.** `isAlwaysIncludeSku` was only ever checked
+    inside `layoutSmallFormatSection` (size sections like 3L Box), so every alwaysInclude
+    brand from earlier today (Coppola Diamond, Stoneleigh, Black Stallion, 1924, Z Alexander
+    Brown, Three Finger Jack, Relax, Schmitt Sohne) just competed on score like everyone else
+    in its normal 750ml section despite the flag -- the flag was real, it just wasn't wired
+    into that code path at all. Found via Andrew asking why Germany's 1.0ft set only showed
+    2 SKUs: confirmed live that 4 of 5 alwaysInclude Schmitt Sohne SKUs were completely
+    absent. Fixed the same way small-format already does it -- forced SKUs pulled out of the
+    competing pool, then spliced into whichever of their own price band's ALLOWED rows still
+    has room (tracking cumulative forced width per row as they're placed, falling back to the
+    least-full allowed row if every allowed row is already full for that section's actual
+    width -- a genuine fixture-size limit at that point, flagged via constraintNotes, not
+    silently dropped). First attempt at this fix used a single best-position pick per SKU
+    and still silently lost SKUs when several piled onto the same row -- caught by testing
+    live before shipping, replaced with the proper per-row-budget version. Separately
+    surfaced while investigating: all 5 Schmitt Sohne Germany SKUs are priced under $10,
+    which hard-restricts them (via the existing Under-$10 price band rule) to only the
+    bottom two shelf rows regardless of section width -- their combined bottle width can
+    genuinely exceed what those two rows hold in a narrow section, independent of this fix.
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.

@@ -1019,6 +1019,20 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     let constraintNotes = new Map();
     let blockFacingsBySkuId = null; // set only for size sections -- bypasses the generic per-row facings call below
     if (usesPriceBandRules) {
+      // Andrew, 2026-07-24: alwaysInclude SKUs (Coppola Diamond, Stoneleigh,
+      // Black Stallion, 1924, Z Alexander Brown, Three Finger Jack, Relax,
+      // Schmitt Sohne) had ZERO effect in 750ml varietal/price-band
+      // sections until this fix -- isAlwaysIncludeSku was only ever checked
+      // in layoutSmallFormatSection (size sections), so these SKUs just
+      // competed on score like everyone else here despite the flag. Found
+      // via Andrew asking why Germany's 1.0ft set only showed 2 SKUs: 4 of
+      // 5 alwaysInclude Schmitt Sohne SKUs were silently absent. Pulled out
+      // of the competing pool entirely (same as small-format already does),
+      // spliced back in below after normal partitioning decides everyone
+      // else's row.
+      const forcedSkus = naturalPool.filter(isAlwaysIncludeSku);
+      const competingPool = naturalPool.filter((s) => !isAlwaysIncludeSku(s));
+
       // Price band is a harder constraint than "fill greedily" -- keep the
       // existing constrained position assignment as the primary row
       // decision, then fit-to-width each resulting row (a rare trim, since
@@ -1030,13 +1044,46 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // the hard band restrictions leave a shelf with zero eligible SKUs
       // even though there's plenty of product overall. "No set should have
       // empty space" wins over the price-band rule in that case.
-      let result = naturalPool.length < shelfCount
-        ? partitionIntoShelvesSparse(naturalPool, shelfDefs)
-        : partitionIntoShelvesConstrained(naturalPool, shelfDefs);
-      if (result.groups.some((rowSkus) => rowSkus.length === 0) && naturalPool.length >= shelfCount) {
-        result = partitionIntoShelvesSparse(naturalPool, shelfDefs);
+      let result = competingPool.length < shelfCount
+        ? partitionIntoShelvesSparse(competingPool, shelfDefs)
+        : partitionIntoShelvesConstrained(competingPool, shelfDefs);
+      if (result.groups.some((rowSkus) => rowSkus.length === 0) && competingPool.length >= shelfCount) {
+        result = partitionIntoShelvesSparse(competingPool, shelfDefs);
       }
       constraintNotes = result.constraintNotes;
+
+      // Splice each forced SKU into whichever of its own price band's
+      // ALLOWED rows still has room for it, tracking cumulative forced
+      // width per row as they're placed -- picking blind "single best
+      // position" per SKU (an earlier version of this fix) let several
+      // forced SKUs pile onto the same row and silently lose the ones that
+      // didn't fit that one row's width budget, even though a different
+      // allowed row had space. Falls back to whichever allowed row has the
+      // LEAST accumulated forced width if every allowed row is already
+      // full -- a genuine fixture-size limit at that point, not a bug,
+      // flagged via constraintNotes so it's visible rather than silent.
+      const eyeDef = shelfDefs.find((d) => d.zone === 'eye');
+      const eyePosition = eyeDef ? eyeDef.position : null;
+      const forcedInchesByRow = new Array(shelfCount).fill(0);
+      const rowBudgetInches = shelfDefs.map((_, i) => Math.max(0, linearFeet * 12 - lockedInchesForRow(i)));
+      forcedSkus.forEach((sku) => {
+        const band = priceBand(sku.priceUsd);
+        const allowed = allowedPositions(band, shelfCount);
+        const skuWidth = bottleWidthInches(sku, bottleDimensions) * floorFacings;
+        const ranked = [...allowed].sort((a, b) => {
+          const valueA = shelfDefs[a - 1].shelfScore * positionPreferenceMultiplier(band, a, eyePosition, sku.priceUsd, shelfCount);
+          const valueB = shelfDefs[b - 1].shelfScore * positionPreferenceMultiplier(band, b, eyePosition, sku.priceUsd, shelfCount);
+          return valueB - valueA;
+        });
+        let best = ranked.find((p) => forcedInchesByRow[p - 1] + skuWidth <= rowBudgetInches[p - 1]);
+        if (best === undefined) {
+          best = ranked.reduce((a, b) => (forcedInchesByRow[b - 1] < forcedInchesByRow[a - 1] ? b : a));
+          constraintNotes.set(sku.skuId, `alwaysInclude SKU could not fit within any allowed row's width budget for this fixture -- placed on the least-full allowed row anyway (${PRICE_BAND_LABELS[band]}).`);
+        }
+        result.groups[best - 1].unshift(sku);
+        forcedInchesByRow[best - 1] += skuWidth;
+      });
+
       // Andrew, 2026-07-21: horizontal anchor bias applied AFTER
       // fitSkusToWidth decides which SKUs are actually included -- moving
       // the anchor earlier could push it past the width cutoff and silently
