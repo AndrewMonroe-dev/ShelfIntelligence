@@ -51,14 +51,29 @@ export function applyAnchorTiebreak(sortedSkus, scoreMap, { priorityMargin = DEF
   }
 
   const topScore = scoreMap.get(topScorer.skuId)?.score ?? 0;
-  const prioritySku = sortedSkus.find((s) => s.strategicSupplierPriority);
-  if (prioritySku && topScore > 0) {
-    const priorityScore = scoreMap.get(prioritySku.skuId)?.score ?? 0;
-    if ((topScore - priorityScore) / topScore <= priorityMargin) {
-      const ranked = [prioritySku, ...sortedSkus.filter((s) => s.skuId !== prioritySku.skuId)];
-      anchorInfoBySkuId.set(prioritySku.skuId, 'priority-override');
-      return { ranked, anchorInfoBySkuId };
-    }
+  // Andrew, 2026-07-24: when MULTIPLE priority SKUs are within margin of the
+  // top score, the brand-rank order (curationRules.json supplierFavoredBrands
+  // rank/tier, e.g. Bota before Coppola before Black Stallion...) decides
+  // which one wins the anchor slot, not just whichever happens to score
+  // highest among them. Unranked priority SKUs (no rank field) sort after
+  // every ranked one, then by their own score as the final tiebreak.
+  const eligiblePrioritySkus = topScore > 0
+    ? sortedSkus.filter((s) => {
+      if (!s.strategicSupplierPriority) return false;
+      const score = scoreMap.get(s.skuId)?.score ?? 0;
+      return (topScore - score) / topScore <= priorityMargin;
+    })
+    : [];
+  if (eligiblePrioritySkus.length) {
+    const prioritySku = [...eligiblePrioritySkus].sort((a, b) => {
+      const rankA = a.strategicSupplierRank ?? Infinity;
+      const rankB = b.strategicSupplierRank ?? Infinity;
+      if (rankA !== rankB) return rankA - rankB;
+      return (scoreMap.get(b.skuId)?.score ?? 0) - (scoreMap.get(a.skuId)?.score ?? 0);
+    })[0];
+    const ranked = [prioritySku, ...sortedSkus.filter((s) => s.skuId !== prioritySku.skuId)];
+    anchorInfoBySkuId.set(prioritySku.skuId, 'priority-override');
+    return { ranked, anchorInfoBySkuId };
   }
 
   anchorInfoBySkuId.set(topScorer.skuId, 'top-score');

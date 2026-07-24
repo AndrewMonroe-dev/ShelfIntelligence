@@ -79,6 +79,28 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   dedicated placement/floor guarantees below that don't depend on this flag), so every
   current and future Bota SKU carries the flag reliably regardless of how it entered the
   data.
+- **2026-07-24: Strategic Supplier Priority is no longer flat -- rank + tier added.**
+  Per Andrew's explicit instruction, not every priority brand carries equal weight:
+  - **Rank** (tiebreak preference, lower = higher priority) decides which brand wins a
+    section's single anchor/prime-position slot when multiple priority SKUs are near-tied
+    in score (`anchorPlacement.js`). Current order: 1 Bota, 2 Coppola Diamond (and the one
+    favored plain Coppola Cabernet SKU), 3 Black Stallion, 4 Stoneleigh, 5 1924, 6 Z
+    Alexander Brown, 7 Three Finger Jack, 8 Relax, 9 Schmitt Sohne, 10 Noble Vines, 11
+    Gnarly Head, 12 Diora. Every other brand not on this list is unranked -- normal
+    score-based competition only.
+  - **Tier** is a separate, harder rule: tier 2 (currently Noble Vines, Gnarly Head, Diora)
+    may never share a physical shelf row with a tier 1 brand in the same section --
+    `placementSolver.js`'s `partitionIntoShelvesConstrained` demotes a colliding tier-2 SKU
+    to the next row down instead. Tier-1-vs-tier-1 co-location on the same shelf is
+    unrestricted (e.g. Coppola and Stoneleigh sharing a shelf is fine). Verified live
+    against Retailer X - Location 12: Gnarly Head/Noble Vines never landed on the same
+    shelf as any tier-1 brand across every section checked (Cabernet Sauvignon, Chardonnay,
+    Pinot Noir, Pinot Grigio, Merlot, Zinfandel), while tier-1 brands freely co-located
+    (Sauvignon Blanc: Coppola/Stoneleigh/Black Stallion all on one shelf).
+  - Both rank and tier live entirely in `data/curationRules.json`'s `supplierFavoredBrands`
+    (and `supplierFavoredUpcs` for the one UPC-scoped entry) -- **this order is explicitly
+    expected to change over time per Andrew**, so reordering, adding, or removing a brand is
+    a JSON edit only, never a code change.
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.

@@ -368,29 +368,99 @@
 
   "supplierFavoredBrands": {
     "_readme": "Brand-substring match (case-insensitive) -- every matching SKU, any size, gets strategicSupplierPriority:true (scoring boost + wins the anchor/prime-position tiebreak in its section, see anchorPlacement.js). alwaysInclude:true ONLY if the entry itself sets alwaysInclude:true -- most preferred brands (matching the original hardcoded-in-skus.json list) want the boost only, same as Bota/1924/Black Stallion/etc. Not a UPC list so future new sizes/sub-lines of the same brand are covered automatically.",
+    "_rankReadme": "Andrew, 2026-07-24: 'rank' (lower number = higher priority) breaks ties when MULTIPLE Strategic Supplier Priority brands compete for the same section's single anchor/prime-position slot -- see anchorPlacement.js. 'tier' (1 or 2) is a separate, harder rule: a tier-2 SKU may never share a physical shelf ROW with a tier-1 SKU in the same section (placementSolver.js demotes it to the next row down instead). THIS ORDER IS EXPECTED TO CHANGE -- it lives here, in data, specifically so reordering/adding/removing a brand is a JSON edit, never a code change. Brands with no rank/tier here are unranked ('the others are whatever' -- normal score-based competition only, no tiebreak preference and no shelf-separation rule).",
     "brandContains": [
       {
         "match": "COPPOLA DIAMOND",
         "alwaysInclude": true,
+        "rank": 2,
+        "tier": 1,
         "reason": "Andrew, 2026-07-23: reverses the 2026-07-12 BUSINESS_RULES.md decision that had excluded Coppola from Strategic Supplier Priority -- explicit new instruction to favor all Francis Coppola Diamond Collection SKUs (Diamond Collection, Diamond Collection Black Label, Diamond Collection Paso Robles), every size, in every store. docs/BUSINESS_RULES.md updated to match."
       },
       {
         "match": "STONELEIGH",
         "alwaysInclude": false,
+        "rank": 4,
+        "tier": 1,
         "reason": "Andrew, 2026-07-23: Stoneleigh was already named in the original 2026-07-12 preferred-brand list in BUSINESS_RULES.md, but had zero matching SKUs in the pool at the time so the flag was never actually live. Now has one (Stoneleigh Sauvignon Blanc, skuId 000589) -- boost only, same as every other original-list brand, not alwaysInclude."
       },
       {
         "match": "BOTA",
         "alwaysInclude": false,
-        "reason": "Andrew, 2026-07-24: Bota was always a de facto Strategic Supplier Priority brand (family-ordering and 3L-majority-space rules in blocking.js/placementSolver.js predate this JSON mechanism, and this file's own readme already referenced it as a comparison case) but never actually carried the strategicSupplierPriority flag itself -- most visibly, it was excluded from the new gold-highlight UI treatment until this entry. Boost only, not alwaysInclude, since Bota already has its own dedicated placement/floor guarantees that don't depend on this flag. Matches BOTA BOX, BOTA MINI, and every sub-line (Breeze, Nighthawk, Redvolution, etc.)."
+        "rank": 1,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: Bota was always a de facto Strategic Supplier Priority brand (family-ordering and 3L-majority-space rules in blocking.js/placementSolver.js predate this JSON mechanism, and this file's own readme already referenced it as a comparison case) but never actually carried the strategicSupplierPriority flag itself -- most visibly, it was excluded from the new gold-highlight UI treatment until this entry. Boost only, not alwaysInclude, since Bota already has its own dedicated placement/floor guarantees that don't depend on this flag. Matches BOTA BOX, BOTA MINI, and every sub-line (Breeze, Nighthawk, Redvolution, etc.). Rank 1 -- highest priority per Andrew's 2026-07-24 ranking."
+      },
+      {
+        "match": "BLACK STALLION",
+        "alwaysInclude": false,
+        "rank": 3,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: already a Strategic Supplier Priority brand since the original 2026-07-12 list (flag baked directly into skus.json, no curationRules entry existed for it) -- added here to give it a rank in the 2026-07-24 ranking without changing its existing boost-only behavior."
+      },
+      {
+        "match": "1924",
+        "alwaysInclude": false,
+        "rank": 5,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+      },
+      {
+        "match": "Z ALEXANDER BROWN",
+        "alwaysInclude": false,
+        "rank": 6,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+      },
+      {
+        "match": "THREE FINGER JACK",
+        "alwaysInclude": false,
+        "rank": 7,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank. Chardonnay/Zinfandel sub-lines were discontinued 2026-07-23 (see alwaysExclude) -- unaffected by this rank entry, which only matters for whatever's still in the pool (Cabernet Sauvignon, Red Blend)."
+      },
+      {
+        "match": "RELAX",
+        "alwaysInclude": false,
+        "rank": 8,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank. Matches every Relax SKU still in the pool after the 2026-07-24 Sparkling discontinuation, including the two Relax Zero (non-alcoholic) SKUs -- ranking them is harmless even though they've moved out of a normal varietal section."
+      },
+      {
+        "match": "SCHMITT SOHNE",
+        "alwaysInclude": false,
+        "rank": 9,
+        "tier": 1,
+        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, added here only to carry a rank."
+      },
+      {
+        "match": "NOBLE VINES",
+        "alwaysInclude": false,
+        "rank": 10,
+        "tier": 2,
+        "reason": "Andrew, 2026-07-24: slightly lower priority than the rank 1-9 brands per explicit instruction -- tier 2 means this brand's SKUs may never share a physical shelf row with a tier-1 priority brand in the same section (placementSolver.js demotes to the next row down). Already a Strategic Supplier Priority brand since 2026-07-12 (flag baked into skus.json); added here for rank/tier only."
+      },
+      {
+        "match": "GNARLY HEAD",
+        "alwaysInclude": false,
+        "rank": 11,
+        "tier": 2,
+        "reason": "Andrew, 2026-07-24: tier 2, same reasoning as Noble Vines above."
+      },
+      {
+        "match": "DIORA",
+        "alwaysInclude": false,
+        "rank": 12,
+        "tier": 2,
+        "reason": "Andrew, 2026-07-24: tier 2, same reasoning as Noble Vines above."
       }
     ]
   },
 
   "supplierFavoredUpcs": {
-    "_readme": "UPC -> true grants strategicSupplierPriority ONLY (scoring/anchor-tiebreak boost, not alwaysInclude) -- for a single SKU Andrew wants favored without force-placing it regardless of score, unlike the brand-wide supplierFavoredBrands rule above.",
-    "0739958079301": true,
-    "739958079301": true
+    "_readme": "UPC -> true (or an object with rank/tier) grants strategicSupplierPriority ONLY (scoring/anchor-tiebreak boost, not alwaysInclude) -- for a single SKU Andrew wants favored without force-placing it regardless of score, unlike the brand-wide supplierFavoredBrands rule above. Plain 'true' means no rank/tier (unranked, same as an unlisted brand for tiebreak/shelf-separation purposes, just still scored higher).",
+    "0739958079301": { "priority": true, "rank": 2, "tier": 1 },
+    "739958079301": { "priority": true, "rank": 2, "tier": 1 }
   },
 
   "varietalOverrides": {

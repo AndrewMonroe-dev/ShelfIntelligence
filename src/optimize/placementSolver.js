@@ -703,6 +703,40 @@ function partitionIntoShelvesConstrained(sortedSkus, shelfDefs) {
     if (remainingQuota[best - 1] > 0) remainingQuota[best - 1]--;
   });
 
+  // Andrew, 2026-07-24: tier-2 Strategic Supplier Priority brands (currently
+  // Noble Vines/Gnarly Head/Diora -- see curationRules.json
+  // supplierFavoredBrands' rank/tier fields) must never share a physical
+  // shelf row with a tier-1 priority brand in the same section. This can
+  // only be checked AFTER every SKU has been assigned once (which row a
+  // tier-1 SKU landed on isn't known until then), so it's a post-pass: any
+  // tier-2 SKU sharing a row with a tier-1 SKU gets bumped down to the next
+  // row instead. Looped up to shelfCount times so a bumped SKU that lands on
+  // ANOTHER tier-1 row keeps getting pushed down rather than stopping after
+  // one move; a tier-2/tier-1 collision on the last row has nowhere lower to
+  // go and is left in place (flagged via constraintNotes).
+  for (let pass = 0; pass < shelfCount; pass++) {
+    let moved = false;
+    for (let i = 0; i < groups.length - 1; i++) {
+      const hasTier1 = groups[i].some((s) => s.strategicSupplierPriority && s.strategicSupplierTier !== 2);
+      if (!hasTier1) continue;
+      const tier2Idx = groups[i].findIndex((s) => s.strategicSupplierPriority && s.strategicSupplierTier === 2);
+      if (tier2Idx === -1) continue;
+      const [demoted] = groups[i].splice(tier2Idx, 1);
+      groups[i + 1].push(demoted);
+      moved = true;
+    }
+    if (!moved) break;
+  }
+  const lastGroup = groups[groups.length - 1];
+  if (lastGroup) {
+    const hasTier1OnLast = lastGroup.some((s) => s.strategicSupplierPriority && s.strategicSupplierTier !== 2);
+    if (hasTier1OnLast) {
+      lastGroup.filter((s) => s.strategicSupplierPriority && s.strategicSupplierTier === 2).forEach((s) => {
+        constraintNotes.set(s.skuId, 'Tier-2 Strategic Supplier Priority shares the last shelf row with a tier-1 brand -- no lower row available to separate them.');
+      });
+    }
+  }
+
   return { groups, constraintNotes };
 }
 

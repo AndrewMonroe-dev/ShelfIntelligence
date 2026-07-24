@@ -26,8 +26,21 @@ export function applyCurationRules(skus, rules) {
   // original hardcoded list; Coppola Diamond is the one exception that also
   // force-places regardless of score, so it opts in explicitly rather than
   // every brand getting alwaysInclude by default. Andrew, 2026-07-23.
+  // rank/tier (Andrew, 2026-07-24): rank breaks ties among MULTIPLE priority
+  // brands competing for one section's anchor slot (anchorPlacement.js);
+  // tier is a harder rule -- tier 2 (currently Noble Vines/Gnarly Head/Diora)
+  // may never share a physical shelf row with a tier 1 brand in the same
+  // section (placementSolver.js). Both live only in curationRules.json,
+  // never hardcoded, since Andrew expects this ranking to keep changing.
+  // Missing rank/tier (undefined) means "unranked" -- normal score-based
+  // competition only, same as any brand not on this list at all.
   const supplierFavoredBrands = (rules.supplierFavoredBrands?.brandContains || [])
-    .map((r) => ({ match: r.match.toUpperCase(), alwaysInclude: r.alwaysInclude === true }));
+    .map((r) => ({
+      match: r.match.toUpperCase(),
+      alwaysInclude: r.alwaysInclude === true,
+      rank: typeof r.rank === 'number' ? r.rank : undefined,
+      tier: typeof r.tier === 'number' ? r.tier : undefined,
+    }));
   const supplierFavoredUpcs = rules.supplierFavoredUpcs || {};
   // Dedicated, growing list (Andrew, 2026-07-23: "we will be putting a
   // number of existing SKUs" into this over time) -- moves a SKU into a
@@ -62,9 +75,17 @@ export function applyCurationRules(skus, rules) {
       // UPC-scoped priority (unlike the brand-wide rule above) grants ONLY
       // the scoring/anchor boost, not alwaysInclude -- for a single SKU
       // Andrew wants favored without force-placing it regardless of score,
-      // as opposed to an entire brand line. Andrew, 2026-07-23.
-      const isSupplierFavoredByUpc = upc ? supplierFavoredUpcs[upc] === true : false;
+      // as opposed to an entire brand line. Andrew, 2026-07-23. Entry can be
+      // plain `true` (unranked) or an object with rank/tier (2026-07-24).
+      const upcFavor = upc ? supplierFavoredUpcs[upc] : undefined;
+      const isSupplierFavoredByUpc = upcFavor === true || upcFavor?.priority === true;
       const isSupplierFavored = !!favoredBrandMatch || isSupplierFavoredByUpc;
+      // A brand-level match and a UPC-level match should never both apply to
+      // the same SKU in practice (UPC-scoped entries exist precisely because
+      // the SKU's brand ISN'T on the brand-wide list), but if they ever did,
+      // the UPC-specific rank/tier wins as the more specific instruction.
+      const supplierRank = (typeof upcFavor?.rank === 'number') ? upcFavor.rank : favoredBrandMatch?.rank;
+      const supplierTier = (typeof upcFavor?.tier === 'number') ? upcFavor.tier : favoredBrandMatch?.tier;
       const isNonAlcoholic = upc ? nonAlcoholicUpcs.has(upc) : false;
       if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic) return sku;
       return {
@@ -72,6 +93,8 @@ export function applyCurationRules(skus, rules) {
         ...(relabel ? { bottleSizeRaw: relabel } : null),
         ...(alwaysInclude || favoredBrandMatch?.alwaysInclude ? { alwaysInclude: true } : null),
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
+        ...(isSupplierFavored && supplierRank !== undefined ? { strategicSupplierRank: supplierRank } : null),
+        ...(isSupplierFavored && supplierTier !== undefined ? { strategicSupplierTier: supplierTier } : null),
         // A confirmed category move (isNonAlcoholic) wins over every other
         // varietal source -- it's a definitive "this SKU belongs elsewhere
         // now," not a soft preference. varietalOverride (brand-wide) then
