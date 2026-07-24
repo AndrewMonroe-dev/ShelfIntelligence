@@ -287,27 +287,34 @@ function categoryColor(sectionKey) {
 }
 
 // Andrew, 2026-07-23 (revised a second time): gold shimmer highlight around
-// just the contiguous run of Bota boxes (any sub-line, any size) within a
-// category group -- NOT the whole category group, which can hold other
-// brands too. A wrapping div around the run (both a plain outline and an
-// inset box-shadow version) failed: the ring ended up covered either by
+// just the contiguous run of highlighted boxes (any sub-line, any size)
+// within a category group -- NOT the whole category group, which can hold
+// other brands too. A wrapping div around the run (both a plain outline and
+// an inset box-shadow version) failed: the ring ended up covered either by
 // the next sibling box (outline, positive offset) or by the wrapper's own
 // children (inset, since they fill it edge to edge with no padding) --
-// confirmed live both times. Styling each Bota box's OWN border instead
-// can't be covered by anything else, since it's part of that box's own
-// paint: every Bota box gets a continuous gold top/bottom edge, and only
-// the true first/last physical box in the run also gets a gold left/right
-// cap, closing the ring exactly at the seam with a competitor brand.
+// confirmed live both times. Styling each box's OWN border instead can't be
+// covered by anything else, since it's part of that box's own paint: every
+// highlighted box gets a continuous gold top/bottom edge, and only the true
+// first/last physical box in the run also gets a gold left/right cap,
+// closing the ring exactly at the seam with a non-highlighted neighbor.
+// Andrew, 2026-07-24: extended from Bota-only to every Strategic Supplier
+// Priority SKU (curationRules.js sets sku.strategicSupplierPriority on all
+// of them -- Coppola, Stoneleigh, Schmitt Sohne, Stella Rosa, etc., plus
+// whatever gets added to that list later, no code change needed here).
+// Bota itself doesn't carry that flag (it's a hardcoded priority brand
+// predating the curation-rules mechanism), so it's kept as a second,
+// independent check rather than folded into the supplier-priority list.
 function renderEntriesWithBotaHighlight(entries) {
   const runs = [];
   entries.forEach((entry) => {
-    const isBota = /BOTA/i.test(entry.sku.brand || '');
+    const isHighlighted = /BOTA/i.test(entry.sku.brand || '') || entry.sku.strategicSupplierPriority === true;
     const last = runs[runs.length - 1];
-    if (last && last.isBota === isBota) last.entries.push(entry);
-    else runs.push({ isBota, entries: [entry] });
+    if (last && last.isHighlighted === isHighlighted) last.entries.push(entry);
+    else runs.push({ isHighlighted, entries: [entry] });
   });
   return runs.map((run) => {
-    if (!run.isBota) return run.entries.map((e) => renderSkuBox(e)).join('');
+    if (!run.isHighlighted) return run.entries.map((e) => renderSkuBox(e)).join('');
     return run.entries.map((entry, i) => renderSkuBox(entry, {
       first: i === 0,
       last: i === run.entries.length - 1,

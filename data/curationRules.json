@@ -377,6 +377,11 @@
         "match": "STONELEIGH",
         "alwaysInclude": false,
         "reason": "Andrew, 2026-07-23: Stoneleigh was already named in the original 2026-07-12 preferred-brand list in BUSINESS_RULES.md, but had zero matching SKUs in the pool at the time so the flag was never actually live. Now has one (Stoneleigh Sauvignon Blanc, skuId 000589) -- boost only, same as every other original-list brand, not alwaysInclude."
+      },
+      {
+        "match": "BOTA",
+        "alwaysInclude": false,
+        "reason": "Andrew, 2026-07-24: Bota was always a de facto Strategic Supplier Priority brand (family-ordering and 3L-majority-space rules in blocking.js/placementSolver.js predate this JSON mechanism, and this file's own readme already referenced it as a comparison case) but never actually carried the strategicSupplierPriority flag itself -- most visibly, it was excluded from the new gold-highlight UI treatment until this entry. Boost only, not alwaysInclude, since Bota already has its own dedicated placement/floor guarantees that don't depend on this flag. Matches BOTA BOX, BOTA MINI, and every sub-line (Breeze, Nighthawk, Redvolution, etc.)."
       }
     ]
   },

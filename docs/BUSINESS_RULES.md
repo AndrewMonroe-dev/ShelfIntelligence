@@ -64,6 +64,16 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
   SPAIN") before fixing -- distinct from Relax's actual Riesling (skuId 000327, varietal
   correctly `RIESLING`, region `GERMANY`), which was not touched. Fixed via
   `data/curationRules.json`'s `varietalRelabels`.
+- **2026-07-24: Bota now flagged via `supplierFavoredBrands` too.** 39 of 42 Bota SKUs
+  already carried `strategicSupplierPriority: true` baked directly into `data/skus.json`
+  from the original 07-12 flagging, but the 3 newest Bota Box 0.2LT X4 additions (skuIds
+  004270-004272, added 07-22) were missing it -- most visibly, this meant they didn't
+  qualify for the new gold-highlight UI treatment (`planogramViewer.js`), which was built
+  to key off this flag. Added a `BOTA` entry to `data/curationRules.json`'s
+  `supplierFavoredBrands` (boost only, not alwaysInclude -- Bota already has its own
+  dedicated placement/floor guarantees below that don't depend on this flag), so every
+  current and future Bota SKU carries the flag reliably regardless of how it entered the
+  data.
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.
