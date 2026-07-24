@@ -528,3 +528,44 @@ Size Package ranking, Size Ranking, SKU Ranking (42,430 products), Varietal Rank
 All share a common schema: Rank, [dimension], 9L Sales, 9L Chg vs YA, 9L % Chg vs YA,
 9L Share, 9L Share Chg vs YA, ARP, ARP Chg vs YA, IRI PODs, IRI PODs Chg vs YA.
 This is being used to replace the Phase 2 demo fixtures with a real SKU universe.
+
+## Auxiliary regional data (small-category supplements)
+
+- **2026-07-24: Germany auxiliary list added, no $1,000 sales floor.** Per Andrew: small
+  varietal sections (Germany had only 13 real 750ml SKUs before this) run into the
+  no-repeat rule wall regardless of Set Layout width -- a section can't grow past what its
+  real distinct inventory supports, so it needs genuinely more real SKUs, not more space.
+  Andrew provided `C:\Users\The Monroes\OneDrive\Desktop\Germany MI and OH.xlsx` (a
+  Michigan + Ohio combined 187-product export, same schema family as the national data
+  above: Rank, Product, $ Sales, $ Chg vs YA, $ % Chg vs YA, $ Share, Share Chg vs YA, ARP,
+  ARP Chg vs YA, IRI PODs, IRI PODs Chg vs YA) -- explicitly without the $1,000 sales floor
+  used elsewhere, since the whole point is covering long-tail demand a national ranking
+  would cut.
+  - 41 of the 187 products were already present in `skus.json` by UPC -- skipped (no
+    duplicates).
+  - **146 new SKUs added** via `data/curationRules.json`'s `manualAdditions` (skuIds
+    004273-004418), parsed directly from each row's `Product` string (brand/descriptor,
+    pack count, bottle size, UPC). 138 of the 146 are 0.75LT and land in the real
+    `varietal:GERMANY` section (13 -> 151 eligible SKUs, verified via `applyCurationRules`);
+    the other 8 (1.5LT, 1LT, 0.25LT, 0.8LT X4) route to their own size sections per
+    `sectionForSku`, mixed with every other country at that size, same as any other SKU --
+    they're still real additions to the catalog, just not part of the Germany varietal set
+    specifically.
+  - Mapped fields: `$ Sales` -> `sales9L`, `ARP` -> `priceUsd` (also drives
+    `pricePointSegment` via the same VALUE/POPULAR/PREMIUM/SUPER PREMIUM/ULTRA PREMIUM
+    boundaries used everywhere else), `IRI PODs` -> `podsDistribution`, `$ % Chg vs YA` ->
+    `growthPct9L`. `nationalRank` and every cross-referential share field
+    (`brandShare9L`, `varietalShare9L`, `regionShare9L`, `sizeShare9L`, `priceSegmentShare9L`)
+    are left `null` -- this is a standalone regional export, not the full national dataset,
+    so there's no honest denominator to compute those shares against. Matches the existing
+    precedent set by the 3 manually-added Bota Box 0.2LT X4 SKUs (07-22), which use the same
+    null pattern for the same reason.
+  - `strategicSupplierPriority`/`alwaysInclude` left `false` on the raw records -- brands
+    among these new SKUs that match existing `supplierFavoredBrands` entries (Schmitt Sohne,
+    Relax) automatically pick up both flags at load time via the existing brand-substring
+    mechanism, no per-SKU flag needed.
+  - This is the first of what's expected to be several auxiliary regional lists for other
+    thin 750ml categories (see the 2026-07-24 SKU-count survey: Italy, Riesling, Moscato,
+    and everything under ~20 distinct SKUs are candidates) -- same ingestion pattern
+    (parse Product string, map the shared schema fields, null out unavailable shares,
+    dedupe by UPC against the existing pool) applies to each.
