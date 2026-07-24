@@ -113,6 +113,22 @@ of truth for Phase 5 (Optimization Engine) until each rule is built and tested.
     raises a SKU's score, it doesn't reserve it a spot. `alwaysInclude` is the mechanism for
     an actual guarantee, which is why these 7 brands got upgraded to it while Noble Vines
     (explicitly not requested) did not.
+  - **2026-07-24 (same day): no two Strategic Supplier Priority SKUs adjacent within one
+    shelf row, in 750ml sections, when the row has a non-priority SKU to space them apart.**
+    Per Andrew: "if the section allows for it... I do not want my product next to one
+    another. If the shelf is too small to get away from it, that is fine." Any brand/rank/
+    tier counts as "priority" for this rule -- it's about physical adjacency, not which
+    brand. `anchorPlacement.js`'s `spreadPriorityAdjacency` fully separates priority SKUs
+    from each other whenever mathematically possible (priority count <= non-priority count
+    + 1, the standard bound for keeping same-category items apart), via a strict alternating
+    interleave; above that ratio, no arrangement can avoid every collision, so the row is
+    left in its natural order instead of being needlessly reshuffled. Runs after the existing
+    horizontal anchor-centering bias so it also catches (and fixes) anything centering might
+    have just caused. Verified live against Retailer X - Location 12: a real collision in the
+    Cabernet Sauvignon section (6 priority SKUs, 5 non-priority -- exactly separable) was
+    fully resolved; two genuinely unavoidable cases were correctly left alone (Red Blend: 4
+    priority SKUs and zero non-priority ones in that row; Sauvignon Blanc: 3 priority against
+    only 1 non-priority, short of the 2 needed to fully separate 3).
 - **Bota 3L** is the one exception: a **hard placement rule**, not a score boost --
   guaranteed dominant position and majority of linear shelf space within the 3L section,
   bypassing scoring for that slot.

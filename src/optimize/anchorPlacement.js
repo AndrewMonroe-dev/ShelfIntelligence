@@ -80,6 +80,43 @@ export function applyAnchorTiebreak(sortedSkus, scoreMap, { priorityMargin = DEF
   return { ranked: sortedSkus, anchorInfoBySkuId };
 }
 
+// Andrew, 2026-07-24: within one shelf row, two Strategic Supplier Priority
+// SKUs (any brand, any rank/tier) should not sit immediately next to each
+// other if the row has enough non-priority SKUs to space them all apart --
+// but if the row is too small/priority-heavy to avoid it, an unavoidable
+// adjacency is acceptable ("if the section is too small to get away from it,
+// that is fine"). Full separation is only mathematically possible when
+// priorityCount <= otherCount + 1 (classic "no two same-category adjacent"
+// bound for two categories) -- below that threshold, guaranteed via a
+// strict alternating interleave (starting with whichever category has more
+// items, so a priority-majority row like 3 priority/2 other still resolves
+// to P-O-P-O-P instead of leaving a P-P pair at the end). Each category
+// keeps its own incoming relative order, so this doesn't scramble the
+// row's underlying score order beyond what's needed to satisfy the rule.
+// Above the threshold, the row is left in its original order rather than
+// interleaved uselessly -- there's no arrangement that avoids every
+// collision, so don't disturb it chasing an impossible guarantee.
+export function spreadPriorityAdjacency(rowSkus) {
+  const priority = rowSkus.filter((s) => s.strategicSupplierPriority);
+  const other = rowSkus.filter((s) => !s.strategicSupplierPriority);
+  if (priority.length <= 1 || priority.length > other.length + 1) return rowSkus;
+
+  const result = [];
+  let pi = 0;
+  let oi = 0;
+  const startWithPriority = priority.length > other.length;
+  while (pi < priority.length || oi < other.length) {
+    if (startWithPriority) {
+      if (pi < priority.length) result.push(priority[pi++]);
+      if (oi < other.length) result.push(other[oi++]);
+    } else {
+      if (oi < other.length) result.push(other[oi++]);
+      if (pi < priority.length) result.push(priority[pi++]);
+    }
+  }
+  return result;
+}
+
 // Moves the anchor SKU to the horizontal center of its row -- ONLY called
 // after fitSkusToWidth has already decided which SKUs are included in that
 // row; reordering any earlier could push the anchor past the width cutoff

@@ -9,7 +9,7 @@ import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_F
 import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js';
 import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
 import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js';
-import { applyAnchorTiebreak, applyHorizontalAnchorBias } from './anchorPlacement.js';
+import { applyAnchorTiebreak, applyHorizontalAnchorBias, spreadPriorityAdjacency } from './anchorPlacement.js';
 
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;
@@ -1046,7 +1046,8 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
         const widthInches = Math.max(0, linearFeet * 12 - lockedInchesForRow(i));
         const fitted = fitSkusToWidth(rowSkus, widthInches, bottleDimensions, floorFacings);
         const anchorInRow = fitted.find((sku) => anchorInfoBySkuId.has(sku.skuId));
-        return anchorInRow ? applyHorizontalAnchorBias(fitted, anchorInRow.skuId) : fitted;
+        const biased = anchorInRow ? applyHorizontalAnchorBias(fitted, anchorInRow.skuId) : fitted;
+        return spreadPriorityAdjacency(biased);
       });
     } else if (isSmallFormatSection(section)) {
       // Small-format sizes (187s, 4-packs, mini multi-packs, 375s, 500mls):
