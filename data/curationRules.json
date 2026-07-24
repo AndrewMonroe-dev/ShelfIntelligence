@@ -4534,10 +4534,10 @@
       },
       {
         "match": "SCHMITT SOHNE",
-        "alwaysInclude": true,
+        "alwaysInclude": false,
         "rank": 9,
         "tier": 1,
-        "reason": "Andrew, 2026-07-24: same as Black Stallion above -- original 07-12 priority brand, now rank + alwaysInclude per explicit instruction."
+        "reason": "Andrew, 2026-07-24: original 07-12 priority brand, rank added same as Black Stallion above. Briefly upgraded to flat alwaysInclude the same day, then replaced hours later with the width-gated version in widthGatedAlwaysInclude below -- below 1ft, Schmitt Sohne competes normally (still gets the strategicSupplierPriority score boost from this entry); at/above 1ft, every Schmitt Sohne SKU force-places. Kept alwaysInclude:false here so the two mechanisms don't fight -- the width-gated one is what actually grants the guarantee now."
       },
       {
         "match": "NOBLE VINES",
@@ -4574,6 +4574,16 @@
       "rank": 2,
       "tier": 1
     }
+  },
+  "widthGatedAlwaysInclude": {
+    "_readme": "Andrew, 2026-07-24: a conditional alternative to alwaysInclude -- grants the guarantee only once the SECTION the SKU actually lands in is at least minWidthFt wide (checked at generation time against that section's real linear feet, not a fixed store-wide assumption). Below the threshold, the SKU falls back to normal score-based competition (still carrying whatever strategicSupplierPriority boost it has from supplierFavoredBrands, if any -- this mechanism only controls the alwaysInclude guarantee, not the score boost). Brand-substring match, same convention as supplierFavoredBrands.",
+    "brandContains": [
+      {
+        "match": "SCHMITT SOHNE",
+        "minWidthFt": 1.0,
+        "reason": "Andrew, 2026-07-24: below 1ft, Schmitt Sohne competes normally (with its Strategic Supplier Priority boost intact via supplierFavoredBrands). At 1ft or wider, every Schmitt Sohne SKU in the section is guaranteed a spot."
+      }
+    ]
   },
   "varietalOverrides": {
     "_readme": "Forces sku.varietal for every SKU whose brand contains 'match' (case-insensitive substring, not exact) -- only affects 750mL SKUs, since that's the only size sectionForSku keys off varietal instead of bottleSizeRaw. Brand-substring match (not a UPC list) so future new flavors of the same line get corrected automatically without needing to know their UPC in advance.",

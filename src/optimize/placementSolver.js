@@ -1030,8 +1030,19 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // of the competing pool entirely (same as small-format already does),
       // spliced back in below after normal partitioning decides everyone
       // else's row.
-      const forcedSkus = naturalPool.filter(isAlwaysIncludeSku);
-      const competingPool = naturalPool.filter((s) => !isAlwaysIncludeSku(s));
+      // Andrew, 2026-07-24: width-gated force-place (Schmitt Sohne, this
+      // section's specific case) -- a SKU carrying alwaysIncludeMinWidthFt
+      // (set via curationRules.json's widthGatedAlwaysInclude, see
+      // curationRules.js) is only forced once THIS section's actual linear
+      // feet meets that threshold; below it, the SKU falls through to
+      // competingPool and competes normally (still keeping whatever
+      // strategicSupplierPriority score boost it has). Checked against
+      // linearFeet, not caseOnlyMode/floorFacings-adjusted width, since the
+      // threshold is about the section's physical size, not facing depth.
+      const isForced = (s) => isAlwaysIncludeSku(s)
+        || (typeof s.alwaysIncludeMinWidthFt === 'number' && linearFeet >= s.alwaysIncludeMinWidthFt);
+      const forcedSkus = naturalPool.filter(isForced);
+      const competingPool = naturalPool.filter((s) => !isForced(s));
 
       // Price band is a harder constraint than "fill greedily" -- keep the
       // existing constrained position assignment as the primary row

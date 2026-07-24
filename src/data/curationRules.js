@@ -42,6 +42,13 @@ export function applyCurationRules(skus, rules) {
       tier: typeof r.tier === 'number' ? r.tier : undefined,
     }));
   const supplierFavoredUpcs = rules.supplierFavoredUpcs || {};
+  // Andrew, 2026-07-24: width-gated alwaysInclude alternative -- see
+  // widthGatedAlwaysInclude's _readme in curationRules.json. Attaches a
+  // minimum-section-width threshold to the SKU instead of a flat
+  // alwaysInclude:true; placementSolver.js checks the actual section's
+  // linear feet against this at generation time.
+  const widthGatedBrands = (rules.widthGatedAlwaysInclude?.brandContains || [])
+    .map((r) => ({ match: r.match.toUpperCase(), minWidthFt: r.minWidthFt }));
   // Dedicated, growing list (Andrew, 2026-07-23: "we will be putting a
   // number of existing SKUs" into this over time) -- moves a SKU into a
   // brand-new NON-ALCOHOLIC varietal section (sectionForSku, blocking.js,
@@ -87,7 +94,8 @@ export function applyCurationRules(skus, rules) {
       const supplierRank = (typeof upcFavor?.rank === 'number') ? upcFavor.rank : favoredBrandMatch?.rank;
       const supplierTier = (typeof upcFavor?.tier === 'number') ? upcFavor.tier : favoredBrandMatch?.tier;
       const isNonAlcoholic = upc ? nonAlcoholicUpcs.has(upc) : false;
-      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic) return sku;
+      const widthGatedMatch = widthGatedBrands.find((r) => brandUpper.includes(r.match));
+      if (!relabel && !varietalRelabel && !alwaysInclude && !varietalOverride && !isSupplierFavored && !isNonAlcoholic && !widthGatedMatch) return sku;
       return {
         ...sku,
         ...(relabel ? { bottleSizeRaw: relabel } : null),
@@ -95,6 +103,7 @@ export function applyCurationRules(skus, rules) {
         ...(isSupplierFavored ? { strategicSupplierPriority: true } : null),
         ...(isSupplierFavored && supplierRank !== undefined ? { strategicSupplierRank: supplierRank } : null),
         ...(isSupplierFavored && supplierTier !== undefined ? { strategicSupplierTier: supplierTier } : null),
+        ...(widthGatedMatch ? { alwaysIncludeMinWidthFt: widthGatedMatch.minWidthFt } : null),
         // A confirmed category move (isNonAlcoholic) wins over every other
         // varietal source -- it's a definitive "this SKU belongs elsewhere
         // now," not a soft preference. varietalOverride (brand-wide) then

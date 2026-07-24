@@ -569,3 +569,28 @@ This is being used to replace the Phase 2 demo fixtures with a real SKU universe
     and everything under ~20 distinct SKUs are candidates) -- same ingestion pattern
     (parse Product string, map the shared schema fields, null out unavailable shares,
     dedupe by UPC against the existing pool) applies to each.
+- **2026-07-24 (same day): Gluhwein redirect + Schmitt Sohne width-gated guarantee.**
+  - **Gluhwein redirect**: every Gluhwein (mulled wine) SKU, any brand, any bottle size,
+    now routes into `varietal:GERMANY` regardless of what `sectionForSku` would otherwise
+    do with its size -- 2 of the 6 total Gluhwein SKUs (both 1LT: "ST Christopher Blueberry
+    Gluhwein" and "Starling Castle Gluehwein") were previously landing in the generic
+    `size:1LT` bucket, mixed with unrelated countries. Implemented as a new
+    `isGluhweinRedirect` check in `blocking.js` (brand-text match on
+    GLUH/GLUEH + WEIN/MEIN, same pattern as the existing Franzia-3L and Livingston-Cellars-3L
+    redirects), checked first in `sectionForSku` before the normal 750ml-vs-size branch. One
+    UPC (88474011551, Schmitt Sohne's Gluhwein) is also listed explicitly by UPC -- its brand
+    field was collapsed to plain "SCHMITT SOHNE" in the original national source, so the
+    product name itself isn't in any field this function can read.
+  - **Schmitt Sohne width-gated alwaysInclude**: reverted the flat `alwaysInclude: true`
+    added earlier today (see the "7 brands upgraded" entry above) and replaced it with a
+    conditional version specific to Schmitt Sohne, per Andrew: below 1ft, Schmitt Sohne
+    competes normally (still keeping its `strategicSupplierPriority` score boost); at 1ft or
+    wider, every Schmitt Sohne SKU in the section is guaranteed. New
+    `widthGatedAlwaysInclude` mechanism in `curationRules.json`/`curationRules.js` attaches
+    `alwaysIncludeMinWidthFt` to matching SKUs instead of a flat boolean;
+    `placementSolver.js`'s forced-SKU check (added earlier today for the varietal-section
+    alwaysInclude fix) now also honors this threshold against the section's actual linear
+    feet at generation time. Verified live: 0 Schmitt Sohne SKUs placed at 0.52ft/0.78ft
+    (both below 1ft), rising to 3/4/7 as actual width grew to 1.82ft/3.88ft/7.76ft (all at or
+    above 1ft) -- confirms the gate activates at the threshold rather than just reflecting
+    "more room fits more SKUs" generically.

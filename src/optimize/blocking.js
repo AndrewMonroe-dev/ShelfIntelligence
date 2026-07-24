@@ -163,7 +163,30 @@ export function isLivingstonCellars3LRedirect(sku) {
   return /^LIVINGSTON CELLARS/i.test(sku.brand || '') && sku.bottleSizeRaw === '3LT';
 }
 
+// Andrew, 2026-07-24: Gluhwein (mulled wine) belongs in the Germany varietal
+// section regardless of its bottle size or brand -- it was otherwise
+// scattering into whatever size section its bottle happened to be (a 1LT
+// Gluhwein landed in the generic "size:1LT" bucket next to unrelated
+// countries, nowhere near the rest of the German lineup). Matches on brand
+// text first (case-insensitive, catches "GLUHWEIN"/"GLUEHWEIN"/the
+// "GLUHMEIN" typo variant seen in the raw MI+OH export). One known UPC is
+// listed explicitly (Schmitt Sohne's Gluhwein, skuId 002089) because its
+// brand field was collapsed to plain "SCHMITT SOHNE" in the original
+// national source -- the product name itself never made it into any field
+// this function can read, so brand-text matching alone can't catch it.
+const KNOWN_GLUHWEIN_UPCS = new Set(['88474011551']); // Schmitt Sohne Gluhwein, 1LT
+export function isGluhweinRedirect(sku) {
+  const brandUpper = (sku.brand || '').toUpperCase();
+  const hasGluhweinName = (brandUpper.includes('GLUH') || brandUpper.includes('GLUEH'))
+    && (brandUpper.includes('WEIN') || brandUpper.includes('MEIN'));
+  const upc = (sku.upc || '').replace(/^0+/, '');
+  return hasGluhweinName || KNOWN_GLUHWEIN_UPCS.has(upc);
+}
+
 export function sectionForSku(sku) {
+  if (isGluhweinRedirect(sku)) {
+    return { key: 'varietal:GERMANY', type: 'varietal', label: 'GERMANY' };
+  }
   if (sku.bottleSizeRaw === SEVEN_FIFTY_ML) {
     if (isSparklingVarietal(sku.varietal)) {
       return { key: 'varietal:SPARKLING WINE', type: 'varietal', label: 'Sparkling Wine' };
