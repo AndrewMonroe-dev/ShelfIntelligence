@@ -1151,6 +1151,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
             widthInches: facing?.widthInches ?? null,
             allocatedInches: facing?.allocatedInches ?? null,
             isLocked,
+            strategicSupplierPriority: sku.strategicSupplierPriority === true,
             reasons,
           };
         }),
@@ -1336,6 +1337,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
             widthInches: facing?.widthInches ?? null,
             allocatedInches: facing?.allocatedInches ?? null,
             isLocked,
+            strategicSupplierPriority: sku.strategicSupplierPriority === true,
             reasons,
           };
         }),
