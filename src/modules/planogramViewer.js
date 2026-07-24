@@ -333,8 +333,26 @@ function renderBayRow(rowEntries, position, bay) {
   const shelfDef = rowEntries[0]?.shelfDef;
   const groups = [];
   rowEntries.forEach((entry) => {
+    // Andrew, 2026-07-24: an emptied spot (removeSkuFromPlan) renders as
+    // its own standalone "+ Add SKU" box at the exact reserved width,
+    // rather than folding into a category group -- keeps every OTHER
+    // box's position stable instead of condensing toward the start.
+    if (entry.sku?.isEmptySlot) {
+      // Raw sectionKey, not resolved through realSectionKeyFor -- that
+      // helper needs a real neighboring SKU to resolve a merged section's
+      // combined key down to one sub-category, which isn't available here.
+      // Matches the existing whole-row-empty case (line below), which also
+      // opens the Add SKU form unscoped rather than guessing.
+      groups.push({
+        isEmptySlot: true,
+        widthInches: entry.sku.widthInches,
+        sectionKey: entry.sectionKey,
+        columnIndex: entry.columnIndex,
+      });
+      return;
+    }
     const last = groups[groups.length - 1];
-    if (last && last.sectionKey === entry.sectionKey) last.entries.push(entry);
+    if (last && !last.isEmptySlot && last.sectionKey === entry.sectionKey) last.entries.push(entry);
     else groups.push({ sectionKey: entry.sectionKey, sectionLabel: entry.sectionLabel, entries: [entry] });
   });
 
@@ -371,7 +389,9 @@ function renderBayRow(rowEntries, position, bay) {
     <div class="planogram-shelf-row">
       <div class="planogram-shelf-label">Shelf ${position}${shelfDef ? ` &middot; ${shelfDef.zone} &middot; ${shelfDef.traffic} traffic` : ''}</div>
       <div class="planogram-shelf-frame" style="width:${BAY_INCHES * PX_PER_INCH}px;">
-        ${groups.map((g) => `
+        ${groups.map((g) => g.isEmptySlot ? `
+          <div class="planogram-empty-slot" style="width:${(g.widthInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${g.sectionKey}" data-shelf-position="${position}" data-column-index="${g.columnIndex}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>
+        ` : `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
           <div class="planogram-category-group" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
             ${renderEntriesWithBotaHighlight(g.entries)}
@@ -461,11 +481,35 @@ export function mount(el) {
     return plan.sections.find((s) => s.key.startsWith('merged:') && s.key.slice('merged:'.length).split('+').includes(sectionKey)) || null;
   }
 
+  // Andrew, 2026-07-24: emptying a spot in Editing Mode used to splice it
+  // out of the array entirely, which shifted every box after it one
+  // position left -- a removal at column 2 of 8 visually "condensed" the
+  // whole rest of the row toward the start. Replacing the entry with an
+  // empty-slot placeholder (same reserved width, rendered as a
+  // "+ Add SKU" box in renderBayRow) keeps everything else exactly where
+  // it was; the gap only closes if a new SKU is deliberately dropped into
+  // that same spot (see applyPatchToPlan's in-place-replace branch below).
   function removeSkuFromPlan(plan, skuId) {
     for (const section of plan.sections) {
       for (const shelf of section.shelves) {
         const idx = shelf.skus.findIndex((sk) => sk.skuId === skuId);
-        if (idx !== -1) { shelf.skus.splice(idx, 1); return true; }
+        if (idx !== -1) {
+          const removed = shelf.skus[idx];
+          const fallbackWidth = removed.facings ? (removed.allocatedInches ?? 0) / removed.facings : 0;
+          const widthInches = removed.widthInches ?? (fallbackWidth || 3);
+          shelf.skus[idx] = {
+            skuId: null,
+            isEmptySlot: true,
+            brand: '', varietal: '', priceUsd: null,
+            facings: 1,
+            widthInches,
+            allocatedInches: widthInches,
+            score: 0,
+            isLocked: false,
+            reasons: [],
+          };
+          return true;
+        }
       }
     }
     return false;
@@ -506,7 +550,12 @@ export function mount(el) {
     if (!sku) return false;
     const entry = buildPatchedSkuEntry(sku, action.facings || 1, context.bottleDimensions, context.scoreMap);
     const insertAt = action.columnIndex == null ? shelf.skus.length : Math.max(0, Math.min(action.columnIndex, shelf.skus.length));
-    shelf.skus.splice(insertAt, 0, entry);
+    // Andrew, 2026-07-24: dropping a SKU onto an emptied spot fills that
+    // exact gap instead of pushing every box after it one column right --
+    // only insert-and-shift when there's no placeholder there to replace
+    // (e.g. adding into genuinely leftover row width at the end).
+    if (shelf.skus[insertAt]?.isEmptySlot) shelf.skus[insertAt] = entry;
+    else shelf.skus.splice(insertAt, 0, entry);
     return true;
   }
 
