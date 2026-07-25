@@ -451,6 +451,20 @@ export function mount(el) {
   let nextInLineSectionKey = ''; // which section's "next in line" rail list is showing, Editing Mode only
   let nextInLineSearchTerm = ''; // filters the rail's own list by brand/varietal/size/skuId
 
+  // Andrew, 2026-07-25: bayIndex -> last-rendered HTML string for that bay.
+  // renderOutput used to rebuild EVERY bay's DOM (up to ~1000 SKU boxes on
+  // a large store, each with 7-8 listeners) on every single edit, even a
+  // one-facing change to one SKU -- Editing Mode's data-layer patch
+  // (commitEdits/applyPatchToPlan) only touches the exact shelf/SKU it's
+  // told to, but the render layer never got the same treatment, so a
+  // handful of edits in a row was enough to pile up main-thread work
+  // faster than the browser could paint (looked exactly like a freeze
+  // requiring a refresh, even though every edit's commit had already
+  // landed -- confirmed live: all changes were present after reload).
+  // See patchBays: a bay whose computed HTML hasn't changed since last
+  // render is skipped entirely, DOM and listeners untouched.
+  let bayHtmlCache = new Map();
+
   function currentStore() {
     return store.getSnapshot().stores.find((s) => s.storeId === selectedStoreId);
   }
@@ -767,6 +781,7 @@ export function mount(el) {
   }
 
   function render() {
+    bayHtmlCache = new Map(); // fresh .viewer-output element below -- old bay wrappers no longer exist
     const { stores, currentPlan } = store.getSnapshot();
     if (!selectedStoreId) selectedStoreId = store.getActiveStoreId() || currentPlan?.storeId || stores[0]?.storeId;
 
@@ -909,11 +924,13 @@ export function mount(el) {
     const output = el.querySelector('.viewer-output');
     if (!plan) {
       output.innerHTML = '<div class="card empty-state">No plan could be generated for this store.</div>';
+      bayHtmlCache.clear();
       return;
     }
     const targetStore = currentStore();
     if (!targetStore) {
       output.innerHTML = '<div class="card empty-state">Store not found.</div>';
+      bayHtmlCache.clear();
       return;
     }
 
@@ -926,7 +943,7 @@ export function mount(el) {
     const physicalWidthFt = getPhysicalWidthFt(targetStore.shelfLayout);
     const { map: rowMap, spans: bayCompactedSpans } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays);
 
-    output.innerHTML = `
+    const chromeHtml = `
       ${renderOverridesList()}
       ${renderAddSkuForm(plan)}
       ${renderOverridePanel(plan)}
@@ -990,10 +1007,25 @@ export function mount(el) {
           </tbody>
         </table>
       </div>
-      ${targetStore.shelfLayout.bays.map((bay, i) => renderBay(bay, i, rowMap)).join('')}
     `;
 
-    bindListeners(output);
+    // Andrew, 2026-07-25: the bays container is a PERSISTENT sibling of the
+    // chrome, never torn down here -- only patchBays touches it, and only
+    // the specific bay wrappers whose content actually changed. Rebuilding
+    // it via innerHTML on every render (like chrome, which is cheap and
+    // always fully rebuilt) would destroy and recreate every bay's DOM
+    // every time, defeating the whole point.
+    let chromeEl = output.querySelector('.planogram-chrome');
+    let baysContainer = output.querySelector('.planogram-bays-container');
+    if (!chromeEl || !baysContainer) {
+      output.innerHTML = '<div class="planogram-chrome"></div><div class="planogram-bays-container"></div>';
+      chromeEl = output.querySelector('.planogram-chrome');
+      baysContainer = output.querySelector('.planogram-bays-container');
+      bayHtmlCache.clear();
+    }
+    chromeEl.innerHTML = chromeHtml;
+    bindChromeListeners(output);
+    patchBays(baysContainer, targetStore.shelfLayout.bays, rowMap);
   }
 
   // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
@@ -1023,8 +1055,41 @@ export function mount(el) {
     }
   }
 
-  function bindListeners(output) {
-    output.querySelectorAll('.planogram-box').forEach((box) => {
+  // Andrew, 2026-07-25: rebuilds one bay's DOM + listeners, but only when
+  // that bay's actual rendered content changed since last render -- see
+  // bayHtmlCache above. On a typical single-SKU edit, only the bay(s) the
+  // edit and any downstream compaction shift actually touch get rebuilt;
+  // every other bay's existing elements and listeners are left completely
+  // alone, instead of the whole store's ~1000 boxes being torn down and
+  // re-listened on every click.
+  function patchBays(container, bays, rowMap) {
+    bays.forEach((bay, i) => {
+      const html = renderBay(bay, i, rowMap);
+      if (bayHtmlCache.get(i) === html) return; // unchanged -- skip entirely
+      bayHtmlCache.set(i, html);
+      let wrapper = container.querySelector(`[data-bay-index="${i}"]`);
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.dataset.bayIndex = String(i);
+        container.appendChild(wrapper);
+      }
+      wrapper.innerHTML = html;
+      bindBoxAndSlotListeners(wrapper);
+    });
+    // Store switched to a fixture with fewer bays -- drop the stale extras
+    // (render() already resets bayHtmlCache on any store switch, but this
+    // keeps patchBays correct even if ever called without that reset).
+    Array.from(container.children).forEach((child) => {
+      const idx = Number(child.dataset.bayIndex);
+      if (idx >= bays.length) { container.removeChild(child); bayHtmlCache.delete(idx); }
+    });
+  }
+
+  // Bay-scoped listeners (SKU boxes + empty "+ Add SKU" slots) -- split out
+  // from bindChromeListeners so patchBays can bind just the one bay wrapper
+  // that actually changed, not the whole output panel.
+  function bindBoxAndSlotListeners(scopeEl) {
+    scopeEl.querySelectorAll('.planogram-box').forEach((box) => {
       box.addEventListener('click', () => {
         const skuId = box.dataset.skuId;
         openSkuId = openSkuId === skuId ? null : skuId;
@@ -1130,7 +1195,7 @@ export function mount(el) {
       });
     });
 
-    output.querySelectorAll('.planogram-empty-slot').forEach((slot) => {
+    scopeEl.querySelectorAll('.planogram-empty-slot').forEach((slot) => {
       slot.addEventListener('click', () => {
         openSkuId = null;
         addSectionKey = slot.dataset.sectionKey || '';
@@ -1168,7 +1233,13 @@ export function mount(el) {
         commitEdit({ skuId: dragged.skuId, sectionKey, shelfPosition, facings: dragged.facings, columnIndex });
       });
     });
+  }
 
+  // Everything in the output panel EXCEPT the bays themselves (overrides
+  // list, Add SKU form, override edit panel, etc.) -- comparatively cheap
+  // (a handful of elements, not ~1000), so this still fully rebuilds every
+  // render; only the bays get the incremental treatment (patchBays).
+  function bindChromeListeners(output) {
     output.querySelector('.override-cancel-btn')?.addEventListener('click', () => {
       openSkuId = null;
       renderOutput(store.getSnapshot().currentPlan);
