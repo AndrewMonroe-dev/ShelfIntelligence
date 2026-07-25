@@ -18,6 +18,7 @@ function realSectionKeyFor(rawKey, sku) {
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
 const MIN_BOX_PX = 16; // just enough to avoid a zero-width render glitch, not a proportionality-distorting floor
+const OVERSHOOT_CLAMP_INCHES = 1; // a rounding hair, not a real overflow -- see placeSectionBoxes
 
 function rowInches(shelf) {
   return shelf.skus.reduce((sum, s) => sum + (s.allocatedInches ?? s.facings * (s.widthInches ?? 3)), 0);
@@ -50,12 +51,28 @@ function rowInches(shelf) {
 // actually used (its widest row).
 function placeSectionBoxes(map, section, mapper, bays) {
   const bayCount = bays ? bays.length : null;
+  const physicalInches = bayCount != null ? bayCount * BAY_INCHES : null;
   let sectionContentInches = 0;
   section.shelves.forEach((shelf) => {
     let cumulative = 0;
-    shelf.skus.forEach((sku, columnIndex) => {
+    for (let columnIndex = 0; columnIndex < shelf.skus.length; columnIndex++) {
+      const sku = shelf.skus[columnIndex];
       const w = sku.allocatedInches ?? sku.facings * (sku.widthInches ?? 3);
       const absoluteStart = mapper(cumulative);
+      // Andrew, 2026-07-25: this used to clamp EVERY overflowing box into
+      // the last real bay no matter how far past the fixture it landed --
+      // fine for a rounding-hair overshoot (still handled below via
+      // OVERSHOOT_CLAMP_INCHES), but a section that's genuinely over
+      // budget (Set Layout allocated more total width than the store
+      // physically has -- see plan.isOverflowing) could pile dozens of
+      // boxes onto one bay's row, which rendered illegibly and was
+      // effectively as invisible/unusable as if it had been dropped
+      // outright (confirmed: a merged small-format section landing here
+      // was reported "missing" even though technically still in the DOM).
+      // Trim instead: once content is genuinely past the fixture, stop
+      // placing this section's remaining boxes. Whatever already fit
+      // stays visible and selectable; only the true excess is cut.
+      if (physicalInches != null && absoluteStart >= physicalInches + OVERSHOOT_CLAMP_INCHES) break;
       // Clamp rather than drop: a section can land a hair past the store's
       // real bay count on a rounding-level overshoot (content width sums
       // fractionally past the nominal allocation) -- render it in the last
@@ -81,7 +98,7 @@ function placeSectionBoxes(map, section, mapper, bays) {
       // another SKU occupied, not just "somewhere in this row."
       rowMap.get(rowPosition).push({ sku, sectionKey: section.key, sectionLabel: section.label, shelfDef: shelf, columnIndex });
       cumulative += w;
-    });
+    }
     sectionContentInches = Math.max(sectionContentInches, cumulative);
   });
   return sectionContentInches;

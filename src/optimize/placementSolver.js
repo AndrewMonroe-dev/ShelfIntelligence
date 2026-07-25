@@ -1771,6 +1771,41 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     }
   }
 
+  // Andrew, 2026-07-25: everything above is budget-neutral relative to the
+  // SUM of every group's ORIGINAL (pre-redistribution) Set Layout width --
+  // it can shrink or conserve that total, never grow past it. So if Set
+  // Layout's own nominal allocation already summed past the store's
+  // physical width (e.g. from resizing sections over many sessions with
+  // no hard cap), the overflow survives untouched and lands on whichever
+  // section happens to render last (see plan.isOverflowing) -- previously
+  // that section (a merged small-format cluster, in the case that surfaced
+  // this) got silently cut off in the render, and consumers scoped to it
+  // (debug bay mapping, Add SKU) disagreed about whether it existed. Final
+  // pass: if the total STILL exceeds the physical fixture after ordinary
+  // redistribution, force-shrink every non-mandatory group proportionally
+  // to its own current share (lowest-priority categories give up the same
+  // fraction as highest, so nothing arbitrary wins/loses) until the plan
+  // actually fits. Mandatory small-format family-floor groups are exempt,
+  // same as ordinary shrink above -- shrinking them recreates the exact
+  // "family doesn't fit its own widest brand" overflow the mandatory
+  // system exists to prevent.
+  {
+    const finalWidthFt = (g) => (shrinkToWidthFtByGroup.get(g.group) ?? g.currentWidthFt) + (extraWidthFtByGroup.get(g.group) ?? 0);
+    const totalFinalWidthFt = groupInfo.reduce((sum, g) => sum + finalWidthFt(g), 0);
+    const fixtureOverflowFt = totalFinalWidthFt - physicalWidthFt;
+    if (fixtureOverflowFt > 0.01) {
+      const shrinkPool = groupInfo.filter((g) => !mandatoryExtraInchesByGroup.has(g.group));
+      const shrinkPoolTotal = shrinkPool.reduce((sum, g) => sum + finalWidthFt(g), 0);
+      if (shrinkPoolTotal > 0) {
+        const shrinkFactor = Math.max(0, 1 - fixtureOverflowFt / shrinkPoolTotal);
+        shrinkPool.forEach((g) => {
+          shrinkToWidthFtByGroup.set(g.group, finalWidthFt(g) * shrinkFactor);
+          extraWidthFtByGroup.delete(g.group);
+        });
+      }
+    }
+  }
+
   // Applies a group's redistribution result to its member allocations,
   // scaling every member's widthFt so the group's TOTAL hits the target --
   // preserves each member's relative share within a merged group. A
