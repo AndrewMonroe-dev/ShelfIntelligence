@@ -224,6 +224,10 @@ function renderSkuBox(entry, botaEdge = null) {
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
   const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
+  const salesStr = sku.sales9L != null ? '$' + Math.round(sku.sales9L).toLocaleString() : '--';
+  const growthStr = (typeof sku.growthPct9L === 'number' && Number.isFinite(sku.growthPct9L))
+    ? (sku.growthPct9L >= 0 ? '+' : '') + (sku.growthPct9L * 100).toFixed(1) + '%'
+    : '--';
   const facingCount = Math.max(1, sku.facings || 1);
   // Name reads vertically, top-to-bottom, brand first, so it stays readable
   // at facing-width instead of truncating in a box only 1-2in wide.
@@ -237,7 +241,7 @@ function renderSkuBox(entry, botaEdge = null) {
         + (botaEdge.last && i === facingCount - 1 ? ' planogram-box-bota-last' : '')
       : '';
     boxes.push(`
-    <div class="planogram-box${sku.isLocked ? ' locked' : ''}${botaClass}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
+    <div class="planogram-box${sku.isLocked ? ' locked' : ''}${botaClass}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${salesStr} sales, ${growthStr} vs YA, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
       <div class="planogram-box-facing-controls">
         <button type="button" class="planogram-facing-btn planogram-facing-minus" draggable="false" title="${sku.facings <= 1 ? 'Remove from set' : 'Remove one facing'}">&minus;</button>
