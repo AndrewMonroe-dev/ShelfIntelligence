@@ -18,7 +18,6 @@ function realSectionKeyFor(rawKey, sku) {
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
 const MIN_BOX_PX = 16; // just enough to avoid a zero-width render glitch, not a proportionality-distorting floor
-const OVERSHOOT_CLAMP_INCHES = 1; // a rounding hair, not a real overflow -- see placeSectionBoxes
 
 function rowInches(shelf) {
   return shelf.skus.reduce((sum, s) => sum + (s.allocatedInches ?? s.facings * (s.widthInches ?? 3)), 0);
@@ -51,7 +50,6 @@ function rowInches(shelf) {
 // actually used (its widest row).
 function placeSectionBoxes(map, section, mapper, bays) {
   const bayCount = bays ? bays.length : null;
-  const physicalInches = bayCount != null ? bayCount * BAY_INCHES : null;
   let sectionContentInches = 0;
   section.shelves.forEach((shelf) => {
     let cumulative = 0;
@@ -59,20 +57,18 @@ function placeSectionBoxes(map, section, mapper, bays) {
       const sku = shelf.skus[columnIndex];
       const w = sku.allocatedInches ?? sku.facings * (sku.widthInches ?? 3);
       const absoluteStart = mapper(cumulative);
-      // Andrew, 2026-07-25: this used to clamp EVERY overflowing box into
-      // the last real bay no matter how far past the fixture it landed --
-      // fine for a rounding-hair overshoot (still handled below via
-      // OVERSHOOT_CLAMP_INCHES), but a section that's genuinely over
-      // budget (Set Layout allocated more total width than the store
-      // physically has -- see plan.isOverflowing) could pile dozens of
-      // boxes onto one bay's row, which rendered illegibly and was
-      // effectively as invisible/unusable as if it had been dropped
-      // outright (confirmed: a merged small-format section landing here
-      // was reported "missing" even though technically still in the DOM).
-      // Trim instead: once content is genuinely past the fixture, stop
-      // placing this section's remaining boxes. Whatever already fit
-      // stays visible and selectable; only the true excess is cut.
-      if (physicalInches != null && absoluteStart >= physicalInches + OVERSHOOT_CLAMP_INCHES) break;
+      // Andrew, 2026-07-25: tried making genuinely-past-the-fixture content
+      // stop rendering entirely instead of cramming into the last bay, to
+      // fix a merged small-format section that piled up so illegibly it
+      // was effectively invisible. That overcorrected: reverted 2026-07-26
+      // after it made an ordinary Editing Mode edit (dropping one more SKU
+      // into a section already sitting right at the fixture boundary --
+      // e.g. Fortified, confirmed via the debug table's "OUT OF BOUNDS"
+      // flag) silently vanish instead of rendering a little messily like
+      // it used to. For everyday edits, "visible but crowded" beats
+      // "invisible" every time -- the debug table's out-of-bounds flag
+      // already gives visibility into genuine over-allocation without
+      // needing the render itself to hide anything. Back to clamping.
       // Clamp rather than drop: a section can land a hair past the store's
       // real bay count on a rounding-level overshoot (content width sums
       // fractionally past the nominal allocation) -- render it in the last
