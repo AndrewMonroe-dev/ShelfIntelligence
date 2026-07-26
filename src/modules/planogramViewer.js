@@ -222,6 +222,37 @@ function buildBayRowMap(sections, bays) {
   return { map, spans };
 }
 
+// Andrew, 2026-07-26 (bay-locked rebuild, Step 1): captures the bay layout
+// that buildBayRowMap derives into an EXPLICIT structure -- the eventual
+// source of truth for the Planogram Viewer's render + edit path, so a manual
+// arrangement stays put per-bay instead of re-flowing on every edit. Each
+// (bay, shelf) holds its ordered `slots` = exactly the entries the renderer
+// already consumes per row, so rendering from this is a drop-in. Pure
+// addition for now (nothing renders from it yet); a Node test asserts its
+// per-(bay,shelf) skuId sequence is byte-identical to the map the renderer
+// builds today. Full design: "ShelfIntelligence Bay-Locked Rebuild Spec.md"
+// in the vault.
+function materializeBayLayout(plan, bays) {
+  const { map, spans } = buildBayRowMap(plan.sections, bays);
+  return {
+    storeId: plan.storeId,
+    spans,
+    bays: bays.map((bay, bayIndex) => {
+      const rowsForBay = map.get(bayIndex) || new Map();
+      return {
+        bayIndex,
+        bayId: bay.bayId,
+        shelfCount: bay.shelfCount,
+        shelves: Array.from({ length: bay.shelfCount }, (_, i) => {
+          const position = i + 1;
+          const entries = rowsForBay.get(position) || [];
+          return { position, slots: entries.slice() };
+        }),
+      };
+    }),
+  };
+}
+
 // One box PER FACING (2026-07-15): a SKU with 3 facings renders as 3
 // side-by-side boxes instead of 1 box with a "3f" label -- fills the
 // section the way it actually looks on the real shelf, and reads as
@@ -431,18 +462,25 @@ function renderBayRow(rowEntries, position, bay) {
   `;
 }
 
-function renderBay(bay, bayIndex, rowMap) {
-  const rowsForBay = rowMap.get(bayIndex) || new Map();
-  const positions = Array.from({ length: bay.shelfCount }, (_, i) => i + 1);
+// Andrew, 2026-07-26 (bay-locked rebuild, Step 2): renders one bay from the
+// materialized bayLayout's bay object (shelves[].slots) instead of the
+// re-derived map. Output is identical -- slots ARE the same per-row entries
+// the map held -- but the render now flows from an explicit, editable
+// structure rather than a per-render recompute.
+function renderBay(layoutBay) {
+  const positions = Array.from({ length: layoutBay.shelfCount }, (_, i) => i + 1);
 
   return `
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
-        <span class="card-label">Bay ${bay.bayId} <span class="badge" style="margin-left:6px;">${BAY_WIDTH_FT}ft</span></span>
-        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">${bay.shelfCount} shelves</span>
+        <span class="card-label">Bay ${layoutBay.bayId} <span class="badge" style="margin-left:6px;">${BAY_WIDTH_FT}ft</span></span>
+        <span style="font-family:var(--font-mono);font-size:12px;color:var(--text2);">${layoutBay.shelfCount} shelves</span>
       </div>
       <div style="overflow-x:auto;">
-        ${positions.map((position) => renderBayRow(rowsForBay.get(position) || [], position, bay)).join('')}
+        ${positions.map((position) => {
+          const shelf = layoutBay.shelves.find((s) => s.position === position);
+          return renderBayRow(shelf ? shelf.slots : [], position, layoutBay);
+        }).join('')}
       </div>
     </div>
   `;
@@ -1000,7 +1038,13 @@ export function mount(el) {
     const actualSectionFeet = (s) => Math.max(...s.shelves.map(rowInches), 0) / 12;
     const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     const physicalWidthFt = getPhysicalWidthFt(targetStore.shelfLayout);
-    const { map: rowMap, spans: bayCompactedSpans } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays);
+    // Andrew, 2026-07-26 (bay-locked rebuild, Step 2): render from the
+    // materialized bayLayout instead of the re-derived map. spans (for the
+    // debug table below) come from the same materialization, so that table
+    // is unchanged. Output is identical to before -- proven byte-for-byte
+    // by a Node test in Step 1.
+    const bayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
+    const bayCompactedSpans = bayLayout.spans;
 
     const chromeHtml = `
       ${renderOverridesList()}
@@ -1084,7 +1128,7 @@ export function mount(el) {
     }
     chromeEl.innerHTML = chromeHtml;
     bindChromeListeners(output);
-    patchBays(baysContainer, targetStore.shelfLayout.bays, rowMap);
+    patchBays(baysContainer, bayLayout);
   }
 
   // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
@@ -1121,9 +1165,9 @@ export function mount(el) {
   // every other bay's existing elements and listeners are left completely
   // alone, instead of the whole store's ~1000 boxes being torn down and
   // re-listened on every click.
-  function patchBays(container, bays, rowMap) {
-    bays.forEach((bay, i) => {
-      const html = renderBay(bay, i, rowMap);
+  function patchBays(container, bayLayout) {
+    bayLayout.bays.forEach((layoutBay, i) => {
+      const html = renderBay(layoutBay);
       if (bayHtmlCache.get(i) === html) return; // unchanged -- skip entirely
       bayHtmlCache.set(i, html);
       let wrapper = container.querySelector(`[data-bay-index="${i}"]`);
@@ -1140,7 +1184,7 @@ export function mount(el) {
     // keeps patchBays correct even if ever called without that reset).
     Array.from(container.children).forEach((child) => {
       const idx = Number(child.dataset.bayIndex);
-      if (idx >= bays.length) { container.removeChild(child); bayHtmlCache.delete(idx); }
+      if (idx >= bayLayout.bays.length) { container.removeChild(child); bayHtmlCache.delete(idx); }
     });
   }
 
