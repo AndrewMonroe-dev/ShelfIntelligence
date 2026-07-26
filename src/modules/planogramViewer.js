@@ -1226,7 +1226,21 @@ export function mount(el) {
         slot.classList.remove('drag-over-target');
         let dragged;
         try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
-        const sectionKey = slot.dataset.sectionKey;
+        // Andrew, 2026-07-26: an emptied-slot hole's data-section-key is the
+        // RAW section key from render time (see renderBayRow's isEmptySlot
+        // branch -- deliberately unresolved there, since no real neighboring
+        // SKU exists to resolve a merged composite key down to one real
+        // sub-category). Dropping a new SKU on it used to pass that raw key
+        // straight through to the override, so a hole inside a merged
+        // section (small-format cluster, or thin adjacent varietals like
+        // White Zinfandel + Fortified) recorded an override the FULL
+        // generator doesn't recognize as a real section -- the SKU vanished
+        // instead of landing anywhere, reproduced live on a fresh account.
+        // The dragged SKU itself IS real, so resolve through it instead of
+        // needing a neighbor.
+        const { skus } = store.getSnapshot();
+        const draggedSku = skus.find((s) => s.skuId === dragged?.skuId);
+        const sectionKey = draggedSku ? realSectionKeyFor(slot.dataset.sectionKey, draggedSku) : slot.dataset.sectionKey;
         const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
         const columnIndex = slot.dataset.columnIndex ? parseInt(slot.dataset.columnIndex, 10) : null;
         if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
