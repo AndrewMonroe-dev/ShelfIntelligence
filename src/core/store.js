@@ -112,6 +112,17 @@ export function clearOverrides(storeId) {
   persist();
 }
 
+// Andrew, 2026-07-26: replace the whole override list at once -- used for
+// transactional rollback in Editing Mode, where a drag/swap saves its
+// overrides up front but must be able to cleanly undo them if the in-place
+// patch can't be applied (rather than leaving a half-applied edit persisted
+// and falling back to a destructive full regeneration).
+export function setOverrides(storeId, overrides) {
+  state.overrides[storeId] = overrides.map((o) => ({ ...o }));
+  bus.emit('overrides:changed', { storeId });
+  persist();
+}
+
 export function getActiveStoreId() {
   return state.activeStoreId;
 }
@@ -376,6 +387,7 @@ export const store = {
   addOverride,
   removeOverride,
   clearOverrides,
+  setOverrides,
   getCaseOnlyMode,
   setCaseOnlyMode,
   getEditingMode,

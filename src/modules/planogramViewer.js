@@ -618,13 +618,30 @@ export function mount(el) {
   // fully regenerates (Editing Mode OFF, today's behavior). `actions` is a
   // list so a two-SKU swap commits both sides in one pass instead of
   // patching one then re-deriving state for the second.
-  function commitEdits(actions) {
+  // Andrew, 2026-07-26: `allowRegenFallback` -- when an in-place Editing
+  // Mode patch can't be applied, whether it's safe to fall back to a full
+  // regeneration. Box drag/swap/facing edits target an already-VISIBLE box
+  // or slot, so a failed patch means a resolution bug, NOT a legitimately
+  // off-screen target -- and a full regen there re-ranks the section and
+  // drops a *different* SKU into the vacated hole (the compounding
+  // "phantom SKU appeared in the empty spot" symptom, which only a page
+  // reload cleared). Those default to false: revert cleanly instead. Only
+  // Add SKU and the override edit panel (which place into a section chosen
+  // from a dropdown of ALL real sections, possibly not currently rendered)
+  // pass true, since for them a regen is the correct way to surface it.
+  function commitEdits(actions, { allowRegenFallback = false } = {}) {
+    // Snapshot overrides BEFORE mutating so a failed patch can be rolled
+    // back cleanly rather than leaving a half-applied edit persisted (which
+    // would then get partially re-applied on the next reload/regen).
+    const overridesBefore = store.getOverrides(selectedStoreId).map((o) => ({ ...o }));
+
     actions.forEach((a) => {
       if (a.remove) store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'remove' });
       else store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'place', sectionKey: a.sectionKey, shelfPosition: a.shelfPosition, facings: a.facings || 1, columnIndex: a.columnIndex ?? null });
     });
 
     let plan;
+    let applied = true;
     if (store.getEditingMode() && store.getSnapshot().currentPlan) {
       const patched = structuredClone(store.getSnapshot().currentPlan);
       const { skus, metricsConfig, bottleDimensions } = store.getSnapshot();
@@ -634,8 +651,16 @@ export function mount(el) {
         scoreMap: computeScoreMap(skus, metricsConfig, targetStore?.qualityScore != null ? { qualityScore: targetStore.qualityScore } : null),
       };
       const allOk = actions.every((a) => applyPatchToPlan(patched, a, context));
-      plan = allOk ? patched : regenerateAndSetPlan();
-      if (allOk) {
+      if (!allOk && !allowRegenFallback) {
+        // Clean no-op revert: undo the overrides just saved and re-render
+        // the UNCHANGED current plan. Nothing re-ranked, nothing persisted,
+        // no phantom SKU. Logged so the exact failing input is capturable
+        // if this ever fires (it shouldn't for an already-visible target).
+        console.warn('Editing Mode: patch could not be applied cleanly; reverted with no change.', actions);
+        store.setOverrides(selectedStoreId, overridesBefore);
+        plan = store.getSnapshot().currentPlan;
+        applied = false;
+      } else if (allOk) {
         // Andrew, 2026-07-21: applyPatchToPlan only touches the exact
         // shelf/SKU it's told to (that's the whole point of Editing Mode),
         // so each section's nextInLine array is left over from the last
@@ -654,6 +679,11 @@ export function mount(el) {
           });
         }
         store.setPlan(patched);
+        plan = patched;
+      } else {
+        // allowRegenFallback && !allOk: a legitimately off-screen target
+        // (Add SKU / override panel) -- regen to surface it.
+        plan = regenerateAndSetPlan();
       }
     } else {
       plan = regenerateAndSetPlan();
@@ -668,12 +698,14 @@ export function mount(el) {
     // first so the result is already on screen; the warning is now purely
     // a followup notice, not a gate in front of the visual update.
     renderOutput(plan);
-    warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
+    // Only warn about row overflow when an edit actually applied -- on a
+    // clean revert nothing changed, so a warning would be spurious.
+    if (applied) warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
     return plan;
   }
 
-  function commitEdit(action) {
-    return commitEdits([action]);
+  function commitEdit(action, opts) {
+    return commitEdits([action], opts);
   }
 
   function renderOverridesList() {
@@ -1302,7 +1334,10 @@ export function mount(el) {
       const facings = parseInt(output.querySelector('.override-facings').value, 10);
       const placedSkuId = openSkuId;
       openSkuId = null;
-      commitEdit({ skuId: placedSkuId, sectionKey, shelfPosition, facings });
+      // Override panel targets a section chosen from a dropdown of all real
+      // sections -- may not be currently rendered, so a regen fallback is
+      // the correct way to surface it (see commitEdits/allowRegenFallback).
+      commitEdit({ skuId: placedSkuId, sectionKey, shelfPosition, facings }, { allowRegenFallback: true });
     });
 
     output.querySelector('.override-remove-btn')?.addEventListener('click', () => {
@@ -1370,7 +1405,10 @@ export function mount(el) {
       addSectionKey = '';
       addShelfPosition = null;
       addColumnIndex = null;
-      commitEdit({ skuId, sectionKey, shelfPosition, facings, columnIndex });
+      // Add SKU targets a section chosen from a dropdown of all real
+      // sections -- may not be currently rendered (e.g. depth-exhausted),
+      // so a regen fallback is the correct way to surface it.
+      commitEdit({ skuId, sectionKey, shelfPosition, facings, columnIndex }, { allowRegenFallback: true });
     }
 
     output.querySelectorAll('.add-sku-result').forEach((row) => {
