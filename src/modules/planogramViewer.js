@@ -596,7 +596,18 @@ export function mount(el) {
     // exact gap instead of pushing every box after it one column right --
     // only insert-and-shift when there's no placeholder there to replace
     // (e.g. adding into genuinely leftover row width at the end).
-    if (shelf.skus[insertAt]?.isEmptySlot) shelf.skus[insertAt] = entry;
+    // Andrew, 2026-07-26: a two-way swap (action.swap) needs the SAME
+    // replace-in-place behavior even when the target column holds a real
+    // SKU, not just an empty-slot placeholder -- each half of a swap
+    // targets a column it KNOWS the other half is about to vacate, so
+    // displacing it is correct, not a bug. Without this, the first half's
+    // insert shifted the target (and everything after it) one column over
+    // before the second half ever ran, so a swap just pushed both SKUs
+    // right together instead of exchanging their positions. The
+    // "next in line" rail drop (not a swap -- no second action relocates
+    // whatever's displaced) still wants the original insert/shift so the
+    // existing box visibly gets pushed over, not silently overwritten.
+    if (shelf.skus[insertAt]?.isEmptySlot || (action.swap && insertAt < shelf.skus.length)) shelf.skus[insertAt] = entry;
     else shelf.skus.splice(insertAt, 0, entry);
     return true;
   }
@@ -1203,10 +1214,20 @@ export function mount(el) {
         // The swap: dragged takes target's exact row+column, target takes
         // dragged's -- this is what actually reorders two SKUs already on
         // the same row, not just assigning them both "this row" and hoping.
+        // Andrew, 2026-07-26: swap: true tells applyPatchToPlan to REPLACE
+        // whatever's sitting at the target column instead of inserting and
+        // shifting it -- each half of a swap targets a column it KNOWS is
+        // about to be vacated by the other half, so displacing in place is
+        // correct (see the swap-vs-shift split in applyPatchToPlan). Without
+        // this, the first half's insert shifted the target (and everything
+        // after it) one column over before the second half ever ran, so
+        // both SKUs ended up shifted right together instead of swapped
+        // (reproduced live: dragging White Zinfandel to Fortified's spot
+        // pushed both one column right, order unchanged).
         openSkuId = null;
         commitEdits([
-          { skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: dragged.facings, columnIndex: targetColumnIndex },
-          { skuId: targetSkuId, sectionKey: originSectionKey, shelfPosition: originShelfPosition, facings: targetFacings, columnIndex: originColumnIndex },
+          { skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: dragged.facings, columnIndex: targetColumnIndex, swap: true },
+          { skuId: targetSkuId, sectionKey: originSectionKey, shelfPosition: originShelfPosition, facings: targetFacings, columnIndex: originColumnIndex, swap: true },
         ]);
       });
     });
