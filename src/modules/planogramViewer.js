@@ -253,6 +253,109 @@ function materializeBayLayout(plan, bays) {
   };
 }
 
+// Andrew, 2026-07-26 (bay-locked rebuild, Step 3 core): pure mutation
+// helpers on a materialized bayLayout, addressed by physical
+// (bayIndex, shelfPosition, slotIndex). Every address is a concrete bay
+// slot, so a move/swap physically cannot re-flow into another bay -- the
+// whole point of the rebuild. Unit-tested in isolation before any handler
+// wiring. A "slot" is an entry {sku, sectionKey, sectionLabel, shelfDef,
+// columnIndex}; an empty slot is an entry whose sku.isEmptySlot is true.
+function bayShelf(bayLayout, bayIndex, shelfPosition) {
+  const bay = bayLayout.bays.find((b) => b.bayIndex === bayIndex);
+  return bay ? (bay.shelves.find((s) => s.position === shelfPosition) || null) : null;
+}
+
+function markSlotLocked(entry) {
+  if (entry && entry.sku && !entry.sku.isEmptySlot) entry.sku.isLocked = true;
+}
+
+function makeEmptyEntry(fromEntry) {
+  const sku = fromEntry && fromEntry.sku;
+  const widthInches = (sku && sku.widthInches)
+    ?? ((sku && sku.allocatedInches && sku.facings) ? sku.allocatedInches / sku.facings : 3);
+  return {
+    sku: {
+      skuId: null, isEmptySlot: true, brand: '', varietal: '', priceUsd: null,
+      facings: 1, widthInches, allocatedInches: widthInches, score: 0,
+      isLocked: false, reasons: [],
+    },
+    sectionKey: (fromEntry && fromEntry.sectionKey) || '',
+    sectionLabel: (fromEntry && fromEntry.sectionLabel) || '',
+    shelfDef: (fromEntry && fromEntry.shelfDef) || null,
+    columnIndex: 0,
+  };
+}
+
+// Exchange two real slot entries. Same shelf or across bays -- pure element
+// swap, no length change.
+function bayLayoutSwap(bayLayout, a, b) {
+  const shelfA = bayShelf(bayLayout, a.bayIndex, a.shelfPosition);
+  const shelfB = bayShelf(bayLayout, b.bayIndex, b.shelfPosition);
+  if (!shelfA || !shelfB) return false;
+  if (a.slotIndex < 0 || a.slotIndex >= shelfA.slots.length) return false;
+  if (b.slotIndex < 0 || b.slotIndex >= shelfB.slots.length) return false;
+  const tmp = shelfA.slots[a.slotIndex];
+  shelfA.slots[a.slotIndex] = shelfB.slots[b.slotIndex];
+  shelfB.slots[b.slotIndex] = tmp;
+  markSlotLocked(shelfA.slots[a.slotIndex]);
+  markSlotLocked(shelfB.slots[b.slotIndex]);
+  return true;
+}
+
+// Move a real entry from -> to. Source becomes an empty placeholder (hole);
+// target fills an empty placeholder there, else inserts within that shelf
+// (still same bay). Marks the moved entry locked (manual placement).
+function bayLayoutMove(bayLayout, from, to) {
+  const shelfFrom = bayShelf(bayLayout, from.bayIndex, from.shelfPosition);
+  const shelfTo = bayShelf(bayLayout, to.bayIndex, to.shelfPosition);
+  if (!shelfFrom || !shelfTo) return false;
+  if (from.slotIndex < 0 || from.slotIndex >= shelfFrom.slots.length) return false;
+  const entry = shelfFrom.slots[from.slotIndex];
+  if (!entry || (entry.sku && entry.sku.isEmptySlot)) return false;
+  shelfFrom.slots[from.slotIndex] = makeEmptyEntry(entry);
+  markSlotLocked(entry);
+  const ti = Math.max(0, Math.min(to.slotIndex == null ? shelfTo.slots.length : to.slotIndex, shelfTo.slots.length));
+  if (shelfTo.slots[ti] && shelfTo.slots[ti].sku && shelfTo.slots[ti].sku.isEmptySlot) shelfTo.slots[ti] = entry;
+  else shelfTo.slots.splice(ti, 0, entry);
+  return true;
+}
+
+// Replace a real entry with an empty placeholder (keeps the hole/width).
+function bayLayoutRemove(bayLayout, addr) {
+  const shelf = bayShelf(bayLayout, addr.bayIndex, addr.shelfPosition);
+  if (!shelf || addr.slotIndex < 0 || addr.slotIndex >= shelf.slots.length) return false;
+  const entry = shelf.slots[addr.slotIndex];
+  if (!entry || (entry.sku && entry.sku.isEmptySlot)) return false;
+  shelf.slots[addr.slotIndex] = makeEmptyEntry(entry);
+  return true;
+}
+
+// Change a slot's facings in place (recompute width). <1 removes it.
+function bayLayoutSetFacings(bayLayout, addr, newFacings) {
+  if (newFacings < 1) return bayLayoutRemove(bayLayout, addr);
+  const shelf = bayShelf(bayLayout, addr.bayIndex, addr.shelfPosition);
+  if (!shelf || addr.slotIndex < 0 || addr.slotIndex >= shelf.slots.length) return false;
+  const entry = shelf.slots[addr.slotIndex];
+  if (!entry || (entry.sku && entry.sku.isEmptySlot)) return false;
+  const per = entry.sku.widthInches ?? (entry.sku.allocatedInches && entry.sku.facings ? entry.sku.allocatedInches / entry.sku.facings : 3);
+  entry.sku.facings = newFacings;
+  entry.sku.allocatedInches = per * newFacings;
+  markSlotLocked(entry);
+  return true;
+}
+
+// Insert a prepared entry at a target slot (fill an empty placeholder there,
+// else insert within the shelf). Used for Add SKU / next-in-line drops.
+function bayLayoutInsert(bayLayout, addr, entry) {
+  const shelf = bayShelf(bayLayout, addr.bayIndex, addr.shelfPosition);
+  if (!shelf) return false;
+  const ti = Math.max(0, Math.min(addr.slotIndex == null ? shelf.slots.length : addr.slotIndex, shelf.slots.length));
+  markSlotLocked(entry);
+  if (shelf.slots[ti] && shelf.slots[ti].sku && shelf.slots[ti].sku.isEmptySlot) shelf.slots[ti] = entry;
+  else shelf.slots.splice(ti, 0, entry);
+  return true;
+}
+
 // One box PER FACING (2026-07-15): a SKU with 3 facings renders as 3
 // side-by-side boxes instead of 1 box with a "3f" label -- fills the
 // section the way it actually looks on the real shelf, and reads as
