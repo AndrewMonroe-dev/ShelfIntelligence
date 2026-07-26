@@ -647,8 +647,17 @@ export function mount(el) {
     } else {
       plan = regenerateAndSetPlan();
     }
-    warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
+    // Andrew, 2026-07-26: alert() is a browser-blocking call -- the WHOLE
+    // page (including this very render) freezes until it's dismissed. This
+    // used to run BEFORE renderOutput, so "It will still render" (the
+    // alert's own text) was a false promise: nothing actually rendered
+    // until the popup was clicked away, which looked exactly like the move
+    // had silently failed if you didn't dismiss it immediately (same trap
+    // as PizzaWineScout's blocking "Scan complete" dialog tonight). Render
+    // first so the result is already on screen; the warning is now purely
+    // a followup notice, not a gate in front of the visual update.
     renderOutput(plan);
+    warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
     return plan;
   }
 
