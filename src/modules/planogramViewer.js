@@ -368,9 +368,20 @@ function renderBayRow(rowEntries, position, bay) {
       });
       return;
     }
+    // Andrew, 2026-07-26: entry.sectionKey reflects which section's shelf
+    // array the SKU physically lives in -- correct for placement, but a
+    // manually locked/moved SKU (Editing Mode) can end up sitting inside a
+    // DIFFERENT category's section (e.g. a White Zinfandel dragged next to
+    // Fortified). Grouping/coloring by the container section made it
+    // silently repaint to the neighboring category's color, which defeats
+    // the whole point of dragging things around to see what's what. Locked
+    // SKUs group/color by their OWN natural category instead, so the color
+    // stays a fixed visual anchor no matter where the SKU gets moved.
+    const displayKey = entry.sku.isLocked ? sectionForSku(entry.sku).key : entry.sectionKey;
+    const displayLabel = entry.sku.isLocked ? sectionForSku(entry.sku).label : entry.sectionLabel;
     const last = groups[groups.length - 1];
-    if (last && !last.isEmptySlot && last.sectionKey === entry.sectionKey) last.entries.push(entry);
-    else groups.push({ sectionKey: entry.sectionKey, sectionLabel: entry.sectionLabel, entries: [entry] });
+    if (last && !last.isEmptySlot && last.sectionKey === displayKey) last.entries.push(entry);
+    else groups.push({ sectionKey: displayKey, sectionLabel: displayLabel, entries: [entry] });
   });
 
   const usedInches = rowEntries.reduce(
