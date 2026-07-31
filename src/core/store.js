@@ -22,14 +22,18 @@ const state = {
   shelfLayoutOverrides: {}, // storeId -> shelfLayout snapshot (fixture edits, incl. built-in stores)
   overrides: {}, // storeId -> [{ id, skuId, action: 'place'|'remove', sectionKey, shelfPosition, facings }]
   caseOnlyMode: false, // global toggle: 750ml facing floor 1 -> 2
-  // Andrew, 2026-07-20: OFF by default -- every manual edit (facing +/-,
-  // drag, Add SKU, remove) fully regenerates the plan, same as always. When
-  // ON, edits patch the currently-rendered plan directly instead (see
-  // applyEditingModePatch in planogramViewer.js) -- ONLY the SKU actually
-  // touched changes; nothing else on the shelf moves, because the
-  // placement algorithm doesn't run again at all. Meant to be switched on
-  // once a set is generated and Andrew starts hand-editing it.
-  editingMode: false,
+  // Andrew, 2026-07-26 (bay-locked rebuild): storeId -> COMPACT bay layout,
+  // the Planogram Viewer's persistent render+edit truth. Compact = per
+  // (bayIndex, shelfPosition) an ordered list of { skuId, facings, isLocked }
+  // plus empty-slot markers { empty: true, widthInches } -- small enough for
+  // localStorage; planogramViewer.js rehydrates full entries (brand,
+  // varietal, price, etc.) from the SKU master + scoreMap on load, and
+  // re-compacts after every edit before calling setBayLayout. Materialized
+  // once per store (from a generated plan) and then only mutated directly --
+  // never re-derived on a routine render -- so a manual bay arrangement
+  // survives reloads and other pages regenerating plan.sections. Only an
+  // explicit Regenerate/Reset action replaces it.
+  bayLayouts: {},
   customStores: [], // stores added via Store Builder's "+ Add Store" flow
   activeStoreId: null, // last store picked in ANY store-scoped page (Set Layout, Optimization Engine, Planogram Viewer, Set Overview, Digital Twin) -- shared so switching pages keeps you on the same set instead of resetting to the first store
 };
@@ -143,13 +147,16 @@ export function setCaseOnlyMode(value) {
   persist();
 }
 
-export function getEditingMode() {
-  return state.editingMode;
+export function getBayLayout(storeId) {
+  return state.bayLayouts[storeId] || null;
 }
 
-export function setEditingMode(value) {
-  state.editingMode = value;
-  bus.emit('editingMode:changed', value);
+// `compactLayout` is already in the small persisted shape (see state.bayLayouts
+// above) -- planogramViewer.js does the full<->compact conversion since it
+// owns the SKU/scoreMap context needed to hydrate a full entry back out.
+export function setBayLayout(storeId, compactLayout) {
+  state.bayLayouts[storeId] = compactLayout;
+  bus.emit('bayLayout:changed', { storeId });
   persist();
 }
 
@@ -242,6 +249,7 @@ export function removeStore(storeId) {
   delete state.sectionAllocations[storeId];
   delete state.shelfLayoutOverrides[storeId];
   delete state.overrides[storeId];
+  delete state.bayLayouts[storeId];
 
   bus.emit('stores:changed', { removed: storeId });
   persist();
@@ -284,7 +292,7 @@ function applyPersistedOverrides() {
   if (persisted.activeScenarioId) state.activeScenarioId = persisted.activeScenarioId;
   if (persisted.activeStoreId) state.activeStoreId = persisted.activeStoreId;
   if (typeof persisted.caseOnlyMode === 'boolean') state.caseOnlyMode = persisted.caseOnlyMode;
-  if (typeof persisted.editingMode === 'boolean') state.editingMode = persisted.editingMode;
+  if (persisted.bayLayouts) state.bayLayouts = persisted.bayLayouts;
 
   if (persisted.metricOverrides) {
     persisted.metricOverrides.forEach((override) => {
@@ -390,8 +398,8 @@ export const store = {
   setOverrides,
   getCaseOnlyMode,
   setCaseOnlyMode,
-  getEditingMode,
-  setEditingMode,
+  getBayLayout,
+  setBayLayout,
   getActiveStoreId,
   setActiveStoreId,
   addStore,

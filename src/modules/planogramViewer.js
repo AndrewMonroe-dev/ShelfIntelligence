@@ -1,19 +1,9 @@
 import { store } from '../core/store.js';
 import { generatePlan } from '../optimize/placementSolver.js';
-import { getPhysicalWidthFt, BAY_WIDTH_FT, getShelvesForSpan } from '../optimize/shelfPosition.js';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js';
 import { sectionForSku } from '../optimize/blocking.js';
 import { bottleWidthInches } from '../optimize/facings.js';
 import { computeScoreMap } from '../calc/scoreEngine.js';
-
-// A rendered section's own key is only a valid override target when it's a
-// real sectionAllocations entry -- merged (small-format cluster) sections
-// are a rendering-only composite, not something generatePlan's override
-// resolution recognizes. For those, fall back to the SKU's own natural
-// section key (sectionForSku), which IS a real allocation underneath the
-// merged visual wrapper. Andrew, 2026-07-18 (drag-and-drop + click-to-add).
-function realSectionKeyFor(rawKey, sku) {
-  return rawKey && rawKey.startsWith('merged:') ? sectionForSku(sku).key : rawKey;
-}
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
@@ -101,10 +91,10 @@ function placeSectionBoxes(map, section, mapper, bays) {
 }
 
 // Returns { map, spans } -- `spans` is Map<sectionKey, {startFt, endFt}> in
-// the same coordinate space as `map`, so the debug table and any other
-// consumer of a section's rendered position stay consistent with what
-// actually gets drawn, instead of recomputing (and drifting from) the
-// compaction math separately.
+// the same coordinate space as `map`, kept for materialization purposes
+// (used once to seed a fresh bayLayout); the live debug table reads
+// computeLiveSectionSpans off the persistent bayLayout instead, since spans
+// captured here go stale the moment a manual bay edit happens.
 //
 // Andrew, 2026-07-20: small-format sections (187s, 375s, 4-packs, 500mls --
 // see `pinnedBayIndex` in placementSolver.js) are pinned to the store's
@@ -223,20 +213,16 @@ function buildBayRowMap(sections, bays) {
 }
 
 // Andrew, 2026-07-26 (bay-locked rebuild, Step 1): captures the bay layout
-// that buildBayRowMap derives into an EXPLICIT structure -- the eventual
-// source of truth for the Planogram Viewer's render + edit path, so a manual
-// arrangement stays put per-bay instead of re-flowing on every edit. Each
-// (bay, shelf) holds its ordered `slots` = exactly the entries the renderer
-// already consumes per row, so rendering from this is a drop-in. Pure
-// addition for now (nothing renders from it yet); a Node test asserts its
-// per-(bay,shelf) skuId sequence is byte-identical to the map the renderer
-// builds today. Full design: "ShelfIntelligence Bay-Locked Rebuild Spec.md"
-// in the vault.
+// that buildBayRowMap derives into an EXPLICIT structure. This is the
+// Planogram Viewer's persistent render+edit truth once ensureLiveBayLayout
+// (below) hands it off to `liveBayLayout` -- called only when a store has no
+// saved bayLayout yet, or on an explicit Regenerate. Each (bay, shelf) holds
+// its ordered `slots` = exactly the entries the renderer consumes per row.
+// Full design: "ShelfIntelligence Bay-Locked Rebuild Spec.md" in the vault.
 function materializeBayLayout(plan, bays) {
-  const { map, spans } = buildBayRowMap(plan.sections, bays);
+  const { map } = buildBayRowMap(plan.sections, bays);
   return {
     storeId: plan.storeId,
-    spans,
     bays: bays.map((bay, bayIndex) => {
       const rowsForBay = map.get(bayIndex) || new Map();
       return {
@@ -356,6 +342,140 @@ function bayLayoutInsert(bayLayout, addr, entry) {
   return true;
 }
 
+// Andrew, 2026-07-26/27 (bay-locked rebuild, Steps 3-5): compact <-> full
+// conversion for persistence. The COMPACT form (per bay/shelf, an ordered
+// list of { skuId, facings, isLocked } or { empty: true, widthInches }) is
+// what's saved to localStorage -- small regardless of store size. The FULL
+// form (real brand/varietal/price/score/etc. per entry, same shape
+// materializeBayLayout produces) is what's actually rendered from and
+// mutated by the bay-address helpers above; it's rehydrated from the
+// compact form + the current SKU master + a fresh scoreMap every time a
+// store's Planogram Viewer is opened.
+function compactBayLayout(bayLayout) {
+  return {
+    storeId: bayLayout.storeId,
+    bays: bayLayout.bays.map((bay) => ({
+      bayIndex: bay.bayIndex,
+      shelves: bay.shelves.map((shelf) => ({
+        position: shelf.position,
+        slots: shelf.slots.map((entry) => (entry.sku.isEmptySlot
+          ? { empty: true, widthInches: entry.sku.widthInches }
+          : { skuId: entry.sku.skuId, facings: entry.sku.facings, isLocked: !!entry.sku.isLocked })),
+      })),
+    })),
+  };
+}
+
+function hydrateBayLayout(compact, targetStore, skus, bottleDimensions, scoreMap) {
+  return {
+    storeId: compact.storeId,
+    bays: targetStore.shelfLayout.bays.map((bay, bayIndex) => {
+      const compactBay = compact.bays.find((b) => b.bayIndex === bayIndex);
+      return {
+        bayIndex,
+        bayId: bay.bayId,
+        shelfCount: bay.shelfCount,
+        shelves: Array.from({ length: bay.shelfCount }, (_, i) => {
+          const position = i + 1;
+          const compactShelf = compactBay && compactBay.shelves.find((s) => s.position === position);
+          const shelfDef = physicalShelfDef(targetStore, bayIndex, position);
+          const slots = (compactShelf ? compactShelf.slots : []).map((slot) => {
+            if (slot.empty) return makeEmptyEntry({ sku: { widthInches: slot.widthInches }, shelfDef });
+            const sku = skus.find((s) => s.skuId === slot.skuId);
+            // A saved slot's SKU is no longer in the master list (removed
+            // from the data source since the layout was saved) -- render
+            // it as an empty placeholder rather than crashing or dropping
+            // the slot's reserved width.
+            if (!sku) return makeEmptyEntry({ sku: { widthInches: 3 }, shelfDef });
+            return buildBayEntry(sku, slot.facings, bottleDimensions, scoreMap, shelfDef, slot.isLocked);
+          });
+          return { position, slots };
+        }),
+      };
+    }),
+  };
+}
+
+// Builds one full bayLayout slot entry for a real SKU -- shared by hydration
+// (rehydrating a saved compact layout) and every manual placement (Add SKU,
+// next-in-line drop, override panel save).
+function buildBayEntry(sku, facings, bottleDimensions, scoreMap, shelfDef, isLocked = true) {
+  const widthInches = bottleWidthInches(sku, bottleDimensions);
+  const section = sectionForSku(sku);
+  return {
+    sku: {
+      skuId: sku.skuId,
+      brand: sku.brand,
+      varietal: sku.varietal,
+      priceUsd: sku.priceUsd,
+      bottleSizeRaw: sku.bottleSizeRaw,
+      sales9L: sku.sales9L ?? null,
+      growthPct9L: sku.growthPct9L ?? null,
+      score: scoreMap.get(sku.skuId)?.score ?? 0,
+      facings,
+      widthInches,
+      allocatedInches: widthInches * facings,
+      isLocked,
+      reasons: isLocked ? [{ factor: 'Manual override', value: 'Locked by user' }] : [],
+    },
+    sectionKey: section.key,
+    sectionLabel: section.label,
+    shelfDef,
+    columnIndex: 0,
+  };
+}
+
+// A physical bay's own shelf profile (zone/traffic per position), computed
+// directly from the target bay -- independent of any section, since a
+// bay-addressed placement doesn't route through section generation at all.
+// Andrew, 2026-07-26/27: reuses the exact same zone/traffic math a section
+// gets (buildSectionShelves), just anchored to the REAL destination bay
+// instead of wherever a section's nominal Set Layout position happened to
+// land, which is strictly more correct for a manually-placed SKU.
+function physicalShelfDef(targetStore, bayIndex, shelfPosition) {
+  const bay = targetStore.shelfLayout.bays[bayIndex];
+  if (!bay) return null;
+  const shelves = buildSectionShelves(bay.shelves, bay.shelfCount);
+  return shelves[shelfPosition - 1] || null;
+}
+
+// Scans every real slot in a bayLayout for one SKU's current physical
+// address -- the source of truth for "where is this SKU right now" once
+// bayLayout (not plan.sections) is what's actually rendered.
+function findBayAddressForSku(bayLayout, skuId) {
+  for (const bay of bayLayout.bays) {
+    for (const shelf of bay.shelves) {
+      const slotIndex = shelf.slots.findIndex((e) => e.sku.skuId === skuId);
+      if (slotIndex !== -1) return { bayIndex: bay.bayIndex, shelfPosition: shelf.position, slotIndex };
+    }
+  }
+  return null;
+}
+
+// Andrew, 2026-07-26/27: per-section bay range + SKU count, scanned live off
+// the persistent bayLayout every render -- replaces the one-time `spans`
+// buildBayRowMap produced at materialization, which goes stale the instant
+// a manual bay edit happens. Keys off each entry's own (unresolved)
+// sectionKey, which for a merged section IS the merged wrapper key (matches
+// plan.sections' own key), same convention placeSectionBoxes always used.
+function computeLiveSectionSpans(bayLayout) {
+  const bySection = new Map();
+  bayLayout.bays.forEach((bay) => {
+    bay.shelves.forEach((shelf) => {
+      shelf.slots.forEach((entry) => {
+        if (entry.sku.isEmptySlot) return;
+        const key = entry.sectionKey;
+        const rec = bySection.get(key) || { minBay: bay.bayIndex, maxBay: bay.bayIndex, count: 0 };
+        rec.minBay = Math.min(rec.minBay, bay.bayIndex);
+        rec.maxBay = Math.max(rec.maxBay, bay.bayIndex);
+        rec.count += 1;
+        bySection.set(key, rec);
+      });
+    });
+  });
+  return bySection;
+}
+
 // One box PER FACING (2026-07-15): a SKU with 3 facings renders as 3
 // side-by-side boxes instead of 1 box with a "3f" label -- fills the
 // section the way it actually looks on the real shelf, and reads as
@@ -367,7 +487,7 @@ function bayLayoutInsert(bayLayout, addr, entry) {
 // (not every repeated facing-copy of this SKU), so a same-SKU multi-facing
 // run doesn't get a stray gold line between its own facings.
 function renderSkuBox(entry, botaEdge = null) {
-  const { sku, sectionKey, shelfDef, columnIndex } = entry;
+  const { sku, shelfDef, bayIndex, slotIndex } = entry;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
   const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
@@ -388,7 +508,7 @@ function renderSkuBox(entry, botaEdge = null) {
         + (botaEdge.last && i === facingCount - 1 ? ' planogram-box-bota-last' : '')
       : '';
     boxes.push(`
-    <div class="planogram-box${sku.isLocked ? ' locked' : ''}${botaClass}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${salesStr} sales, ${growthStr} vs YA, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-section-key="${sectionKey}" data-shelf-position="${shelfDef.position}" data-facings="${sku.facings}" data-column-index="${columnIndex}">
+    <div class="planogram-box${sku.isLocked ? ' locked' : ''}${botaClass}" style="width:${widthPx}px;" title="${label} (score ${sku.score.toFixed(1)}, ${salesStr} sales, ${growthStr} vs YA, ${sku.facings} facings, ${singleWidthIn.toFixed(1)}in each) -- drag to move or swap" draggable="true" data-sku-id="${sku.skuId}" data-bay-index="${bayIndex}" data-shelf-position="${shelfDef.position}" data-slot-index="${slotIndex}" data-facings="${sku.facings}">
       ${sku.isLocked ? '<div class="planogram-lock-badge" title="Manually placed, locked">&#128274;</div>' : ''}
       <div class="planogram-box-facing-controls">
         <button type="button" class="planogram-facing-btn planogram-facing-minus" draggable="false" title="${sku.facings <= 1 ? 'Remove from set' : 'Remove one facing'}">&minus;</button>
@@ -478,27 +598,29 @@ function renderEntriesWithBotaHighlight(entries) {
 // a small divider badge at the handoff point, keeping them distinguishable.
 // Andrew, 2026-07-18: any leftover width in the row (or the whole row, if
 // it's bare) renders as a clickable/droppable "+ Add SKU" slot -- click
-// opens the Add SKU search pre-scoped to that section/shelf, or drop a
-// dragged box onto it to relocate that SKU there.
+// opens the Add SKU search pre-scoped to that bay/shelf, or drop a dragged
+// box onto it to relocate that SKU there.
 function renderBayRow(rowEntries, position, bay) {
   const shelfDef = rowEntries[0]?.shelfDef;
   const groups = [];
-  rowEntries.forEach((entry) => {
-    // Andrew, 2026-07-24: an emptied spot (removeSkuFromPlan) renders as
-    // its own standalone "+ Add SKU" box at the exact reserved width,
-    // rather than folding into a category group -- keeps every OTHER
-    // box's position stable instead of condensing toward the start.
+  rowEntries.forEach((rawEntry, slotIndex) => {
+    // Every entry carries its own physical address (bayIndex from the bay
+    // this row belongs to, slotIndex from its literal position in the
+    // shelf's slots array) -- the address every edit handler now targets
+    // instead of a section/columnIndex pair. A plain object spread, not a
+    // mutation of the live entry, so re-rendering never leaves stray
+    // render-only fields on the actual bayLayout data.
+    const entry = { ...rawEntry, bayIndex: bay.bayIndex, slotIndex };
+    // Andrew, 2026-07-24: an emptied spot renders as its own standalone
+    // "+ Add SKU" box at the exact reserved width, rather than folding into
+    // a category group -- keeps every OTHER box's position stable instead
+    // of condensing toward the start.
     if (entry.sku?.isEmptySlot) {
-      // Raw sectionKey, not resolved through realSectionKeyFor -- that
-      // helper needs a real neighboring SKU to resolve a merged section's
-      // combined key down to one sub-category, which isn't available here.
-      // Matches the existing whole-row-empty case (line below), which also
-      // opens the Add SKU form unscoped rather than guessing.
       groups.push({
         isEmptySlot: true,
         widthInches: entry.sku.widthInches,
-        sectionKey: entry.sectionKey,
-        columnIndex: entry.columnIndex,
+        bayIndex: entry.bayIndex,
+        slotIndex: entry.slotIndex,
       });
       return;
     }
@@ -526,25 +648,13 @@ function renderBayRow(rowEntries, position, bay) {
 
   let emptySlotHtml = '';
   if (!groups.length) {
-    // Nothing placed on this row at all -- no SKU to derive a real section
-    // key from, so this opens the Add SKU form unscoped (pick a section
-    // manually) rather than guessing one.
-    emptySlotHtml = `<div class="planogram-empty-slot planogram-empty-slot-full" title="Click to add a SKU here">+ Add SKU</div>`;
+    // Nothing placed on this row at all -- append target (slotIndex 0 of an
+    // empty array).
+    emptySlotHtml = `<div class="planogram-empty-slot planogram-empty-slot-full" data-bay-index="${bay.bayIndex}" data-shelf-position="${position}" data-slot-index="0" title="Click to add a SKU here">+ Add SKU</div>`;
   } else if (leftoverInches > 1) {
-    const lastGroup = groups[groups.length - 1];
-    const lastEntry = lastGroup.entries[lastGroup.entries.length - 1];
-    const targetSectionKey = realSectionKeyFor(lastGroup.sectionKey, lastEntry.sku);
-    // Trailing slot -- its implied column position is right AFTER the last
-    // visible SKU, in the SECTION row's own coordinate space
-    // (lastEntry.columnIndex is section-relative, assigned in
-    // buildBayRowMap). Andrew, 2026-07-20: this used to be
-    // rowEntries.length -- the count of boxes in THIS BAY's row -- but a
-    // section's row can span multiple bays, so a bay-level count pointed
-    // at the MIDDLE of the section row whenever the section started in an
-    // earlier bay. insertLockedIntoRow then spliced the added SKU mid-row:
-    // it appeared to replace the box to its left and shove everything
-    // over, instead of landing in the empty space that was clicked.
-    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${targetSectionKey}" data-shelf-position="${position}" data-column-index="${lastEntry.columnIndex + 1}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
+    // Trailing slot -- appends after the last real slot in this shelf's
+    // array (slotIndex = rowEntries.length, same as "insert at the end").
+    emptySlotHtml = `<div class="planogram-empty-slot" style="width:${(leftoverInches * PX_PER_INCH).toFixed(0)}px;" data-bay-index="${bay.bayIndex}" data-shelf-position="${position}" data-slot-index="${rowEntries.length}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>`;
   }
 
   return `
@@ -552,7 +662,7 @@ function renderBayRow(rowEntries, position, bay) {
       <div class="planogram-shelf-label">Shelf ${position}${shelfDef ? ` &middot; ${shelfDef.zone} &middot; ${shelfDef.traffic} traffic` : ''}</div>
       <div class="planogram-shelf-frame" style="width:${BAY_INCHES * PX_PER_INCH}px;">
         ${groups.map((g) => g.isEmptySlot ? `
-          <div class="planogram-empty-slot" style="width:${(g.widthInches * PX_PER_INCH).toFixed(0)}px;" data-section-key="${g.sectionKey}" data-shelf-position="${position}" data-column-index="${g.columnIndex}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>
+          <div class="planogram-empty-slot" style="width:${(g.widthInches * PX_PER_INCH).toFixed(0)}px;" data-bay-index="${g.bayIndex}" data-shelf-position="${position}" data-slot-index="${g.slotIndex}" title="Click to add a SKU here, or drag one in">+ Add SKU</div>
         ` : `
           ${groups.length > 1 ? `<div class="planogram-section-divider" title="${g.sectionLabel}">${shortenDividerLabel(g.sectionLabel)}</div>` : ''}
           <div class="planogram-category-group" style="border-color:${categoryColor(g.sectionKey)};" title="${g.sectionLabel}">
@@ -592,48 +702,38 @@ function renderBay(layoutBay) {
 export function mount(el) {
   let selectedStoreId = null;
   let openSkuId = null; // skuId whose override panel is currently expanded
-  let addSectionKey = ''; // "+ Add SKU" form state
+  let addBayIndex = null; // "+ Add SKU" form state
   let addShelfPosition = null; // pre-set when opened by clicking an empty slot
-  let addColumnIndex = null; // pre-set when opened by clicking an empty slot -- where in the row to insert
+  let addSlotIndex = null; // pre-set when opened by clicking an empty slot -- exact slot to insert at
   let addSearchTerm = '';
-  let nextInLineSectionKey = ''; // which section's "next in line" rail list is showing, Editing Mode only
+  let nextInLineSectionKey = ''; // which section's "next in line" rail list is showing
   let nextInLineSearchTerm = ''; // filters the rail's own list by brand/varietal/size/skuId
+
+  // Andrew, 2026-07-26 (bay-locked rebuild): the Planogram Viewer's
+  // persistent render+edit truth for the currently selected store -- loaded
+  // once per store (from store.getBayLayout, or freshly materialized if
+  // none saved yet) via ensureLiveBayLayout, then mutated directly by every
+  // edit handler. Deliberately NOT recomputed from plan.sections on every
+  // render -- that's the entire point of the rebuild (a manual bay
+  // arrangement stays put instead of re-flowing on every edit).
+  let liveBayLayout = null;
 
   // Andrew, 2026-07-25: bayIndex -> last-rendered HTML string for that bay.
   // renderOutput used to rebuild EVERY bay's DOM (up to ~1000 SKU boxes on
   // a large store, each with 7-8 listeners) on every single edit, even a
-  // one-facing change to one SKU -- Editing Mode's data-layer patch
-  // (commitEdits/applyPatchToPlan) only touches the exact shelf/SKU it's
-  // told to, but the render layer never got the same treatment, so a
-  // handful of edits in a row was enough to pile up main-thread work
-  // faster than the browser could paint (looked exactly like a freeze
-  // requiring a refresh, even though every edit's commit had already
-  // landed -- confirmed live: all changes were present after reload).
-  // See patchBays: a bay whose computed HTML hasn't changed since last
-  // render is skipped entirely, DOM and listeners untouched.
+  // one-facing change to one SKU. See patchBays: a bay whose computed HTML
+  // hasn't changed since last render is skipped entirely, DOM and
+  // listeners untouched.
   let bayHtmlCache = new Map();
 
   function currentStore() {
     return store.getSnapshot().stores.find((s) => s.storeId === selectedStoreId);
   }
 
-  // Andrew, 2026-07-18: the real, addressable override targets are whatever
-  // sectionAllocations actually has -- including small-format sizes that
-  // only ever appear inside a rendering-only "merged" section in the plan
-  // output. Building the selectable list from the allocations themselves
-  // (rather than currentPlan.sections, which hides merged-away individual
-  // sizes entirely) means every size -- 0.5LT, 0.187LT X4, etc. -- can
-  // actually be targeted by the Add SKU form and the override panel, not
-  // just the always-standalone varietal sections.
-  function realSelectableSections() {
+  function scoreMapForCurrentStore() {
+    const { skus, metricsConfig } = store.getSnapshot();
     const targetStore = currentStore();
-    if (!targetStore) return [];
-    const allocations = store.getSectionAllocations(selectedStoreId);
-    return allocations.map((a) => ({
-      key: a.key,
-      label: a.label,
-      shelfCount: getShelvesForSpan(targetStore.shelfLayout, a.startFt, a.widthFt).length,
-    }));
+    return computeScoreMap(skus, metricsConfig, targetStore?.qualityScore != null ? { qualityScore: targetStore.qualityScore } : null);
   }
 
   function regenerateAndSetPlan() {
@@ -651,202 +751,80 @@ export function mount(el) {
     return plan;
   }
 
-  // Andrew, 2026-07-20 (Editing Mode): a rendered box's own section key is
-  // either a real allocation's key or a "merged:a+b+c" wrapper's -- either
-  // way, if the box is ALREADY sitting in some plan.sections entry, that
-  // entry's key is exactly what's on the box, so no resolution is needed to
-  // find it again. This only has to additionally handle the case of a
-  // BRAND-NEW placement (Add SKU search) targeting a real section key that
-  // itself got absorbed into a merged wrapper.
-  function findContainingSection(plan, sectionKey) {
-    const exact = plan.sections.find((s) => s.key === sectionKey);
-    if (exact) return exact;
-    return plan.sections.find((s) => s.key.startsWith('merged:') && s.key.slice('merged:'.length).split('+').includes(sectionKey)) || null;
+  function persistLiveBayLayout() {
+    if (!liveBayLayout) return;
+    store.setBayLayout(selectedStoreId, compactBayLayout(liveBayLayout));
   }
 
-  // Andrew, 2026-07-24: emptying a spot in Editing Mode used to splice it
-  // out of the array entirely, which shifted every box after it one
-  // position left -- a removal at column 2 of 8 visually "condensed" the
-  // whole rest of the row toward the start. Replacing the entry with an
-  // empty-slot placeholder (same reserved width, rendered as a
-  // "+ Add SKU" box in renderBayRow) keeps everything else exactly where
-  // it was; the gap only closes if a new SKU is deliberately dropped into
-  // that same spot (see applyPatchToPlan's in-place-replace branch below).
-  function removeSkuFromPlan(plan, skuId) {
-    for (const section of plan.sections) {
-      for (const shelf of section.shelves) {
-        const idx = shelf.skus.findIndex((sk) => sk.skuId === skuId);
-        if (idx !== -1) {
-          const removed = shelf.skus[idx];
-          const fallbackWidth = removed.facings ? (removed.allocatedInches ?? 0) / removed.facings : 0;
-          const widthInches = removed.widthInches ?? (fallbackWidth || 3);
-          shelf.skus[idx] = {
-            skuId: null,
-            isEmptySlot: true,
-            brand: '', varietal: '', priceUsd: null,
-            facings: 1,
-            widthInches,
-            allocatedInches: widthInches,
-            score: 0,
-            isLocked: false,
-            reasons: [],
-          };
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  function buildPatchedSkuEntry(sku, facings, bottleDimensions, scoreMap) {
-    const widthInches = bottleWidthInches(sku, bottleDimensions);
-    return {
-      skuId: sku.skuId,
-      brand: sku.brand,
-      varietal: sku.varietal,
-      priceUsd: sku.priceUsd,
-      bottleSizeRaw: sku.bottleSizeRaw,
-      score: scoreMap.get(sku.skuId)?.score ?? 0,
-      facings,
-      widthInches,
-      allocatedInches: widthInches * facings,
-      isLocked: true,
-      reasons: [{ factor: 'Manual override', value: 'Locked by user (Editing Mode)' }],
-    };
-  }
-
-  // Applies one edit directly to an already-cloned plan -- no call into
-  // generatePlan, so nothing outside the exact SKU/row touched can move.
-  // Returns false if the target section can't be located in the CURRENT
-  // rendered plan (only possible for a brand-new placement into a section
-  // that isn't showing at all yet) -- caller falls back to a full
-  // regeneration for that one edit rather than silently dropping it.
-  function applyPatchToPlan(plan, action, context) {
-    removeSkuFromPlan(plan, action.skuId);
-    if (action.remove) return true;
-
-    const section = findContainingSection(plan, action.sectionKey);
-    const shelf = section?.shelves[action.shelfPosition - 1];
-    if (!shelf) return false;
-
-    const sku = context.skus.find((s) => s.skuId === action.skuId);
-    if (!sku) return false;
-    const entry = buildPatchedSkuEntry(sku, action.facings || 1, context.bottleDimensions, context.scoreMap);
-    const insertAt = action.columnIndex == null ? shelf.skus.length : Math.max(0, Math.min(action.columnIndex, shelf.skus.length));
-    // Andrew, 2026-07-24: dropping a SKU onto an emptied spot fills that
-    // exact gap instead of pushing every box after it one column right --
-    // only insert-and-shift when there's no placeholder there to replace
-    // (e.g. adding into genuinely leftover row width at the end).
-    // Andrew, 2026-07-26: a two-way swap (action.swap) needs the SAME
-    // replace-in-place behavior even when the target column holds a real
-    // SKU, not just an empty-slot placeholder -- each half of a swap
-    // targets a column it KNOWS the other half is about to vacate, so
-    // displacing it is correct, not a bug. Without this, the first half's
-    // insert shifted the target (and everything after it) one column over
-    // before the second half ever ran, so a swap just pushed both SKUs
-    // right together instead of exchanging their positions. The
-    // "next in line" rail drop (not a swap -- no second action relocates
-    // whatever's displaced) still wants the original insert/shift so the
-    // existing box visibly gets pushed over, not silently overwritten.
-    if (shelf.skus[insertAt]?.isEmptySlot || (action.swap && insertAt < shelf.skus.length)) shelf.skus[insertAt] = entry;
-    else shelf.skus.splice(insertAt, 0, entry);
-    return true;
-  }
-
-  // Single entry point for every manual edit (facing +/-, drag move/swap,
-  // Add SKU, remove) -- persists the override exactly as before, then
-  // either patches the frozen rendered plan in place (Editing Mode ON) or
-  // fully regenerates (Editing Mode OFF, today's behavior). `actions` is a
-  // list so a two-SKU swap commits both sides in one pass instead of
-  // patching one then re-deriving state for the second.
-  // Andrew, 2026-07-26: `allowRegenFallback` -- when an in-place Editing
-  // Mode patch can't be applied, whether it's safe to fall back to a full
-  // regeneration. Box drag/swap/facing edits target an already-VISIBLE box
-  // or slot, so a failed patch means a resolution bug, NOT a legitimately
-  // off-screen target -- and a full regen there re-ranks the section and
-  // drops a *different* SKU into the vacated hole (the compounding
-  // "phantom SKU appeared in the empty spot" symptom, which only a page
-  // reload cleared). Those default to false: revert cleanly instead. Only
-  // Add SKU and the override edit panel (which place into a section chosen
-  // from a dropdown of ALL real sections, possibly not currently rendered)
-  // pass true, since for them a regen is the correct way to surface it.
-  function commitEdits(actions, { allowRegenFallback = false } = {}) {
-    // Snapshot overrides BEFORE mutating so a failed patch can be rolled
-    // back cleanly rather than leaving a half-applied edit persisted (which
-    // would then get partially re-applied on the next reload/regen).
-    const overridesBefore = store.getOverrides(selectedStoreId).map((o) => ({ ...o }));
-
-    actions.forEach((a) => {
-      if (a.remove) store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'remove' });
-      else store.addOverride(selectedStoreId, { skuId: a.skuId, action: 'place', sectionKey: a.sectionKey, shelfPosition: a.shelfPosition, facings: a.facings || 1, columnIndex: a.columnIndex ?? null });
-    });
-
-    let plan;
-    let applied = true;
-    if (store.getEditingMode() && store.getSnapshot().currentPlan) {
-      const patched = structuredClone(store.getSnapshot().currentPlan);
-      const { skus, metricsConfig, bottleDimensions } = store.getSnapshot();
-      const targetStore = currentStore();
-      const context = {
-        skus, bottleDimensions,
-        scoreMap: computeScoreMap(skus, metricsConfig, targetStore?.qualityScore != null ? { qualityScore: targetStore.qualityScore } : null),
-      };
-      const allOk = actions.every((a) => applyPatchToPlan(patched, a, context));
-      if (!allOk && !allowRegenFallback) {
-        // Clean no-op revert: undo the overrides just saved and re-render
-        // the UNCHANGED current plan. Nothing re-ranked, nothing persisted,
-        // no phantom SKU. Logged so the exact failing input is capturable
-        // if this ever fires (it shouldn't for an already-visible target).
-        console.warn('Editing Mode: patch could not be applied cleanly; reverted with no change.', actions);
-        store.setOverrides(selectedStoreId, overridesBefore);
-        plan = store.getSnapshot().currentPlan;
-        applied = false;
-      } else if (allOk) {
-        // Andrew, 2026-07-21: applyPatchToPlan only touches the exact
-        // shelf/SKU it's told to (that's the whole point of Editing Mode),
-        // so each section's nextInLine array is left over from the last
-        // full regeneration -- a SKU just placed from the "next in line"
-        // rail would otherwise keep showing as still available. Strip any
-        // newly-placed skuId out of every section's list (cheap, and a
-        // manual placement can target any section regardless of its
-        // natural one, so don't assume it's only in its own). A 'remove'
-        // action's SKU isn't added back here -- it won't reappear in the
-        // rail until the next full regeneration, an accepted minor
-        // staleness rather than reconstructing its rank position by hand.
-        const placedSkuIds = actions.filter((a) => !a.remove).map((a) => a.skuId);
-        if (placedSkuIds.length) {
-          patched.sections.forEach((s) => {
-            s.nextInLine = s.nextInLine.filter((n) => !placedSkuIds.includes(n.skuId));
-          });
-        }
-        store.setPlan(patched);
-        plan = patched;
-      } else {
-        // allowRegenFallback && !allOk: a legitimately off-screen target
-        // (Add SKU / override panel) -- regen to surface it.
-        plan = regenerateAndSetPlan();
-      }
+  // Andrew, 2026-07-26/27 (bay-locked rebuild, Step 5): loads the saved
+  // compact bayLayout for the selected store and rehydrates it, or
+  // materializes a fresh one (from the current plan) if this store has
+  // none saved yet. A no-op once liveBayLayout already matches the
+  // selected store -- called on every renderOutput, but only does real
+  // work on a store switch or first load.
+  function ensureLiveBayLayout(plan, targetStore) {
+    if (liveBayLayout && liveBayLayout.storeId === selectedStoreId) return;
+    const compact = store.getBayLayout(selectedStoreId);
+    const { skus, bottleDimensions } = store.getSnapshot();
+    const scoreMap = scoreMapForCurrentStore();
+    if (compact) {
+      liveBayLayout = hydrateBayLayout(compact, targetStore, skus, bottleDimensions, scoreMap);
     } else {
-      plan = regenerateAndSetPlan();
+      liveBayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
+      persistLiveBayLayout();
     }
-    // Andrew, 2026-07-26: alert() is a browser-blocking call -- the WHOLE
-    // page (including this very render) freezes until it's dismissed. This
-    // used to run BEFORE renderOutput, so "It will still render" (the
-    // alert's own text) was a false promise: nothing actually rendered
-    // until the popup was clicked away, which looked exactly like the move
-    // had silently failed if you didn't dismiss it immediately (same trap
-    // as PizzaWineScout's blocking "Scan complete" dialog tonight). Render
-    // first so the result is already on screen; the warning is now purely
-    // a followup notice, not a gate in front of the visual update.
-    renderOutput(plan);
-    // Only warn about row overflow when an edit actually applied -- on a
-    // clean revert nothing changed, so a warning would be spurious.
-    if (applied) warnIfRowOverflows(plan, currentStore(), actions.map((a) => a.skuId));
-    return plan;
   }
 
-  function commitEdit(action, opts) {
-    return commitEdits([action], opts);
+  // Single entry point for every manual bay edit (facing +/-, drag
+  // move/swap, Add SKU, remove, override panel). `mutate` applies to
+  // liveBayLayout via the bay-address helpers above; `overrides` is the
+  // parallel section-addressed override list saved via store.addOverride --
+  // the "COUPLING FINDING" dual-write from the rebuild spec, so Set
+  // Overview / Digital Twin / Optimization Engine (which regenerate from
+  // plan.sections + overrides, not from bayLayout) stay correct too, even
+  // though they may show a differently-reflowed position than the
+  // bay-locked viewer. If `mutate` can't apply (shouldn't happen -- every
+  // caller only ever targets a real, currently-rendered address), nothing
+  // is touched: no override saved, no render, no partial state.
+  function commitBayEdit({ mutate, overrides }) {
+    if (!liveBayLayout) return;
+    const ok = mutate(liveBayLayout);
+    if (!ok) {
+      console.warn('Bay-locked edit could not be applied cleanly; no change made.', overrides);
+      return;
+    }
+    overrides.forEach((o) => store.addOverride(selectedStoreId, o));
+    persistLiveBayLayout();
+    renderOutput(store.getSnapshot().currentPlan);
+    warnIfBayOverflows(overrides.map((o) => o.skuId));
+  }
+
+  // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
+  // from the row's normal fill budget (known limitation, documented at the
+  // block-layout call site in placementSolver.js) -- so a forced facings
+  // count or a swap can genuinely push a shelf row's real content past the
+  // physical 4ft bay width without the placement itself being rejected.
+  // Warn explicitly rather than let it silently overflow the row. Per
+  // decision 3 (2026-07-27): crowd-and-warn, never block -- the edit above
+  // has already been applied by the time this runs.
+  function warnIfBayOverflows(skuIds) {
+    if (!liveBayLayout) return;
+    const warned = new Set();
+    liveBayLayout.bays.forEach((bay) => {
+      bay.shelves.forEach((shelf) => {
+        if (!shelf.slots.some((e) => skuIds.includes(e.sku.skuId))) return;
+        const usedInches = shelf.slots.reduce(
+          (sum, e) => sum + (e.sku.allocatedInches ?? e.sku.facings * (e.sku.widthInches ?? 3)),
+          0
+        );
+        const overageInches = usedInches - BAY_INCHES;
+        const key = `${bay.bayIndex}-${shelf.position}`;
+        if (overageInches > 0.5 && !warned.has(key)) {
+          warned.add(key);
+          alert(`Bay ${bay.bayId}, Shelf ${shelf.position} now exceeds its available space by ${(overageInches / 12).toFixed(1)}ft. It will still render, but consider fewer facings or moving something out.`);
+        }
+      });
+    });
   }
 
   function renderOverridesList() {
@@ -870,11 +848,15 @@ export function mount(el) {
     `;
   }
 
-  function renderAddSkuForm(currentPlan) {
+  // Andrew, 2026-07-27 (bay-locked rebuild, decision 1): Bay + Shelf
+  // dropdowns, not a Section dropdown -- place directly where you want it.
+  function renderAddSkuForm() {
     const { skus } = store.getSnapshot();
-    const sections = realSelectableSections();
-    const chosenSection = sections.find((s) => s.key === addSectionKey) || sections[0];
-    const shelfOptions = chosenSection ? Array.from({ length: chosenSection.shelfCount }, (_, i) => i + 1) : [];
+    const targetStore = currentStore();
+    const bays = targetStore ? targetStore.shelfLayout.bays : [];
+    const chosenBayIndex = addBayIndex != null && bays[addBayIndex] ? addBayIndex : 0;
+    const chosenBay = bays[chosenBayIndex];
+    const shelfOptions = chosenBay ? Array.from({ length: chosenBay.shelfCount }, (_, i) => i + 1) : [];
     const chosenShelf = addShelfPosition && shelfOptions.includes(addShelfPosition) ? addShelfPosition : shelfOptions[0];
     const matches = addSearchTerm.trim().length >= 2
       ? skus.filter((s) => `${s.brand} ${s.varietal || ''} ${s.skuId}`.toLowerCase().includes(addSearchTerm.toLowerCase())).slice(0, 8)
@@ -885,9 +867,9 @@ export function mount(el) {
         <span class="card-label">+ Add SKU to Plan</span>
         <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-end;">
           <div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Section</div>
-            <select class="add-sku-section">
-              ${sections.map((s) => `<option value="${s.key}" ${s.key === chosenSection?.key ? 'selected' : ''}>${s.label}</option>`).join('')}
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Bay</div>
+            <select class="add-sku-bay">
+              ${bays.map((b, i) => `<option value="${i}" ${i === chosenBayIndex ? 'selected' : ''}>Bay ${b.bayId}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -914,40 +896,23 @@ export function mount(el) {
     `;
   }
 
-  function renderOverridePanel(currentPlan) {
+  // Andrew, 2026-07-27 (bay-locked rebuild): same Bay + Shelf targeting as
+  // Add SKU, for consistency -- this is the click-a-box editing panel.
+  function renderOverridePanel() {
     if (!openSkuId) return '';
     const { skus } = store.getSnapshot();
     const sku = skus.find((s) => s.skuId === openSkuId);
     if (!sku) return '';
     const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === openSkuId);
-
-    // Find where this SKU actually sits right now by searching every
-    // rendered section (including merged ones) -- a merged section's own
-    // key isn't itself selectable, so it's resolved to the real underlying
-    // key via realSectionKeyFor below.
-    let currentRenderedSectionKey = null;
-    let currentShelfPosition = null;
-    let currentFacingsFound = null;
-    outer: for (const s of currentPlan.sections) {
-      for (const sh of s.shelves) {
-        const found = sh.skus.find((k) => k.skuId === openSkuId);
-        if (found) {
-          currentRenderedSectionKey = s.key;
-          currentShelfPosition = sh.position;
-          currentFacingsFound = found.facings;
-          break outer;
-        }
-      }
-    }
-
-    const sections = realSelectableSections();
-    const currentSectionKey = existing?.sectionKey
-      || (currentRenderedSectionKey ? realSectionKeyFor(currentRenderedSectionKey, sku) : null)
-      || sections[0]?.key;
-    const chosenSection = sections.find((s) => s.key === currentSectionKey) || sections[0];
-    const shelfOptions = chosenSection ? Array.from({ length: chosenSection.shelfCount }, (_, i) => i + 1) : [];
-    const chosenShelf = existing?.shelfPosition || currentShelfPosition || shelfOptions[0];
-    const currentFacings = existing?.facings || currentFacingsFound || 1;
+    const targetStore = currentStore();
+    const bays = targetStore ? targetStore.shelfLayout.bays : [];
+    const currentAddr = liveBayLayout ? findBayAddressForSku(liveBayLayout, openSkuId) : null;
+    const chosenBayIndex = currentAddr ? currentAddr.bayIndex : 0;
+    const chosenBay = bays[chosenBayIndex];
+    const shelfOptions = chosenBay ? Array.from({ length: chosenBay.shelfCount }, (_, i) => i + 1) : [];
+    const chosenShelf = currentAddr ? currentAddr.shelfPosition : shelfOptions[0];
+    const currentEntry = currentAddr ? bayShelf(liveBayLayout, currentAddr.bayIndex, currentAddr.shelfPosition)?.slots[currentAddr.slotIndex] : null;
+    const currentFacings = existing?.facings || currentEntry?.sku.facings || 1;
 
     return `
       <div class="card override-panel" style="margin-bottom:14px;">
@@ -957,9 +922,9 @@ export function mount(el) {
         </div>
         <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:flex-end;">
           <div>
-            <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Section</div>
-            <select class="override-section">
-              ${sections.map((s) => `<option value="${s.key}" ${s.key === chosenSection?.key ? 'selected' : ''}>${s.label}</option>`).join('')}
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">Bay</div>
+            <select class="override-bay">
+              ${bays.map((b, i) => `<option value="${i}" ${i === chosenBayIndex ? 'selected' : ''}>Bay ${b.bayId}</option>`).join('')}
             </select>
           </div>
           <div>
@@ -1001,15 +966,6 @@ export function mount(el) {
           </select>
         </div>
         <div>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="checkbox" class="editing-mode-toggle" ${store.getEditingMode() ? 'checked' : ''} />
-            <span>
-              <div class="card-label" style="margin-bottom:2px;">Editing Mode</div>
-              <div style="font-size:11px;color:var(--text2);max-width:340px;">Off: every edit fully regenerates the plan (default). On: edits change only the exact SKU you touch -- nothing else on the shelf moves.</div>
-            </span>
-          </label>
-        </div>
-        <div>
           <a href="#set-layout" class="btn">Reorder Sections &rarr;</a>
         </div>
       </div>
@@ -1026,27 +982,20 @@ export function mount(el) {
       render();
     });
 
-    el.querySelector('.editing-mode-toggle').addEventListener('change', (e) => {
-      store.setEditingMode(e.target.checked);
-      renderNextInLineRail(store.getSnapshot().currentPlan);
-    });
-
     renderOutput(plan);
   }
 
   // Andrew, 2026-07-21: browsable per-section "next in line" list -- the
   // ranked-but-not-yet-placed pool for whichever section is selected in the
-  // rail's own dropdown, draggable onto any shelf slot. Editing Mode only:
-  // it's a manual-placement tool, and outside Editing Mode every edit fully
-  // regenerates the plan anyway, so a dropped SKU wouldn't durably land
-  // where you dropped it. Scoped per-section (not one global list) since
-  // sections are real, distinct category pools -- a flat cross-section list
-  // would make "which 100 SKUs" ambiguous and mostly irrelevant to whichever
-  // shelf you're actually looking at.
+  // rail's own dropdown, draggable onto any shelf slot. Andrew, 2026-07-27:
+  // always visible now that bayLayout is always the live editable truth
+  // (the old Editing-Mode-only gate is gone -- every edit is a manual
+  // placement tool now, not just when a toggle was on). Scoped per-section
+  // (not one global list) since sections are real, distinct category pools.
   function renderNextInLineRail(plan) {
     const column = el.querySelector('.next-in-line-column');
     if (!column) return;
-    if (!store.getEditingMode() || !plan || !plan.sections.length) {
+    if (!plan || !plan.sections.length) {
       column.innerHTML = '';
       return;
     }
@@ -1134,25 +1083,27 @@ export function mount(el) {
       return;
     }
 
+    ensureLiveBayLayout(plan, targetStore);
+
     // Andrew, 2026-07-19: dropped the Math.max(linearFeet, ...) floor -- with
     // sections now rendering compacted to their real content width (see
     // buildBayRowMap), this summary should match what's actually drawn, not
     // pretend a depth-exhausted section still occupies its full allocation.
+    // Andrew, 2026-07-27: this summary, the category legend, and the
+    // nextInLine rail all keep reading plan.sections unchanged (per the
+    // rebuild spec) -- they reflect the last full regeneration, not live
+    // bay edits, same intentional divergence as Set Overview/Digital
+    // Twin/Optimization Engine.
     const actualSectionFeet = (s) => Math.max(...s.shelves.map(rowInches), 0) / 12;
     const totalWidth = plan.sections.reduce((sum, s) => sum + actualSectionFeet(s), 0);
     const physicalWidthFt = getPhysicalWidthFt(targetStore.shelfLayout);
-    // Andrew, 2026-07-26 (bay-locked rebuild, Step 2): render from the
-    // materialized bayLayout instead of the re-derived map. spans (for the
-    // debug table below) come from the same materialization, so that table
-    // is unchanged. Output is identical to before -- proven byte-for-byte
-    // by a Node test in Step 1.
-    const bayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
-    const bayCompactedSpans = bayLayout.spans;
+    const liveSpans = computeLiveSectionSpans(liveBayLayout);
+    const bayCount = targetStore.shelfLayout.bays.length;
 
     const chromeHtml = `
       ${renderOverridesList()}
-      ${renderAddSkuForm(plan)}
-      ${renderOverridePanel(plan)}
+      ${renderAddSkuForm()}
+      ${renderOverridePanel()}
       <div class="card" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span class="card-label">Total Horizontal Set Width</span>
@@ -1176,7 +1127,7 @@ export function mount(el) {
         </div>
       </div>
       <div class="card" style="margin-bottom:14px;">
-        <div class="card-label">Debug: Section &rarr; Bay Mapping</div>
+        <div class="card-label">Debug: Section &rarr; Bay Mapping (live)</div>
         <table style="width:100%;font-family:var(--font-mono);font-size:11px;margin-top:8px;border-collapse:collapse;">
           <thead><tr style="text-align:left;color:var(--text3);">
             <th style="padding:3px 8px 3px 0;">Type</th><th style="padding:3px 8px;">Key</th>
@@ -1186,26 +1137,25 @@ export function mount(el) {
           </tr></thead>
           <tbody>
             ${plan.sections.map((s) => {
-              // Andrew, 2026-07-19: startFt/endFt now come from the same
-              // COMPACTED spans buildBayRowMap used to actually place boxes
-              // (real content position, not the nominal Set Layout
-              // allocation) -- this table used to show the old fixed
-              // boundary while the render below already compacted, which
-              // made the two disagree.
-              const span = bayCompactedSpans.get(s.key) ?? { startFt: s.startFt, endFt: s.startFt + actualSectionFeet(s) };
-              const feet = span.endFt - span.startFt;
-              const startBay = Math.floor((span.startFt * 12) / BAY_INCHES);
-              const endBay = Math.floor(((span.endFt * 12) - 0.01) / BAY_INCHES);
-              const bayCount = targetStore.shelfLayout.bays.length;
-              const outOfBounds = endBay > bayCount - 1;
-              const skuCount = s.shelves.reduce((sum, sh) => sum + sh.skus.length, 0);
-              return `<tr style="${outOfBounds ? 'color:var(--warning,#e0a030);' : ''}">
+              // Andrew, 2026-07-27: startFt/endFt/bay-range/SKU-count now
+              // come from a LIVE scan of the persistent bayLayout (see
+              // computeLiveSectionSpans), not a one-time materialization
+              // snapshot -- this table always matches what's actually
+              // drawn, including after manual bay edits. Bay indices are
+              // always real physical bays by construction now, so the old
+              // "OUT OF BOUNDS" case can no longer occur.
+              const rec = liveSpans.get(s.key);
+              const startFt = rec ? rec.minBay * BAY_WIDTH_FT : null;
+              const endFt = rec ? (rec.maxBay + 1) * BAY_WIDTH_FT : null;
+              const feet = rec ? endFt - startFt : 0;
+              const skuCount = rec ? rec.count : 0;
+              return `<tr>
                 <td style="padding:3px 8px 3px 0;">${s.type}</td>
                 <td style="padding:3px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.key}">${s.key.slice(0, 40)}${s.key.length > 40 ? '…' : ''}</td>
-                <td style="padding:3px 8px;">${span.startFt.toFixed(2)}</td>
+                <td style="padding:3px 8px;">${startFt != null ? startFt.toFixed(2) : '--'}</td>
                 <td style="padding:3px 8px;">${feet.toFixed(2)}</td>
-                <td style="padding:3px 8px;">${span.endFt.toFixed(2)}</td>
-                <td style="padding:3px 8px;">${startBay}-${endBay}${outOfBounds ? ' (OUT OF BOUNDS, store has ' + bayCount + ' bays)' : ''}</td>
+                <td style="padding:3px 8px;">${endFt != null ? endFt.toFixed(2) : '--'}</td>
+                <td style="padding:3px 8px;">${rec ? `${rec.minBay}-${rec.maxBay}` : 'not placed'} (of ${bayCount} bays)</td>
                 <td style="padding:3px 8px;">${s.shelfCount}</td>
                 <td style="padding:3px 8px;">${skuCount}</td>
               </tr>`;
@@ -1231,43 +1181,15 @@ export function mount(el) {
     }
     chromeEl.innerHTML = chromeHtml;
     bindChromeListeners(output);
-    patchBays(baysContainer, bayLayout);
-  }
-
-  // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
-  // from the row's normal fill budget (known limitation, documented at the
-  // block-layout call site in placementSolver.js) -- so a forced facings
-  // count or a swap can genuinely push a shelf row's real content past the
-  // physical 4ft bay width without the placement itself being rejected.
-  // Warn explicitly rather than let it silently overflow the row.
-  function warnIfRowOverflows(plan, targetStore, skuIds) {
-    if (!plan || !targetStore) return;
-    const { map: rowMap } = buildBayRowMap(plan.sections, targetStore.shelfLayout.bays);
-    const warned = new Set();
-    for (const [bayIndex, rows] of rowMap.entries()) {
-      for (const [position, entries] of rows.entries()) {
-        if (!entries.some((e) => skuIds.includes(e.sku.skuId))) continue;
-        const usedInches = entries.reduce(
-          (sum, e) => sum + (e.sku.allocatedInches ?? e.sku.facings * (e.sku.widthInches ?? 3)),
-          0
-        );
-        const overageInches = usedInches - BAY_INCHES;
-        const key = `${bayIndex}-${position}`;
-        if (overageInches > 0.5 && !warned.has(key)) {
-          warned.add(key);
-          alert(`Bay ${bayIndex + 1}, Shelf ${position} now exceeds its available space by ${(overageInches / 12).toFixed(1)}ft. It will still render, but consider fewer facings or moving something out.`);
-        }
-      }
-    }
+    patchBays(baysContainer, liveBayLayout);
   }
 
   // Andrew, 2026-07-25: rebuilds one bay's DOM + listeners, but only when
   // that bay's actual rendered content changed since last render -- see
   // bayHtmlCache above. On a typical single-SKU edit, only the bay(s) the
-  // edit and any downstream compaction shift actually touch get rebuilt;
-  // every other bay's existing elements and listeners are left completely
-  // alone, instead of the whole store's ~1000 boxes being torn down and
-  // re-listened on every click.
+  // edit actually touches get rebuilt; every other bay's existing elements
+  // and listeners are left completely alone, instead of the whole store's
+  // ~1000 boxes being torn down and re-listened on every click.
   function patchBays(container, bayLayout) {
     bayLayout.bays.forEach((layoutBay, i) => {
       const html = renderBay(layoutBay);
@@ -1299,42 +1221,48 @@ export function mount(el) {
       box.addEventListener('click', () => {
         const skuId = box.dataset.skuId;
         openSkuId = openSkuId === skuId ? null : skuId;
-        addSectionKey = '';
+        addBayIndex = null;
         addShelfPosition = null;
-        addColumnIndex = null;
+        addSlotIndex = null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
       });
+
+      const bayIndex = parseInt(box.dataset.bayIndex, 10);
+      const shelfPosition = parseInt(box.dataset.shelfPosition, 10);
+      const slotIndex = parseInt(box.dataset.slotIndex, 10);
+      const currentFacings = parseInt(box.dataset.facings, 10) || 1;
+      const addr = { bayIndex, shelfPosition, slotIndex };
 
       // Andrew, 2026-07-18: +/- facing buttons. Plus adds one facing;
       // minus removes one, or removes the SKU from the set entirely once
       // facings would drop below 1. stopPropagation so these don't also
       // trigger the box's own click-to-open-edit-panel handler.
-      const currentFacings = parseInt(box.dataset.facings, 10) || 1;
-      const sectionKey = realSectionKeyFor(box.dataset.sectionKey, store.getSnapshot().skus.find((s) => s.skuId === box.dataset.skuId));
-      const shelfPosition = parseInt(box.dataset.shelfPosition, 10);
-
-      // Andrew, 2026-07-20: pass the box's own columnIndex through --
-      // commitEdit's override defaults columnIndex to null when omitted, and
-      // insertLockedIntoRow (placementSolver.js) treats a null columnIndex
-      // as "insert at the end of the row," which is why a facing change
-      // was jumping the SKU (and its new facing) to the far right instead
-      // of staying put.
-      const columnIndex = parseInt(box.dataset.columnIndex, 10);
-      const currentColumnIndex = Number.isNaN(columnIndex) ? null : columnIndex;
-
       box.querySelector('.planogram-facing-plus')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        commitEdit({ skuId: box.dataset.skuId, sectionKey, shelfPosition, facings: currentFacings + 1, columnIndex: currentColumnIndex });
+        const sku = store.getSnapshot().skus.find((s) => s.skuId === box.dataset.skuId);
+        if (!sku) return;
+        commitBayEdit({
+          mutate: (bl) => bayLayoutSetFacings(bl, addr, currentFacings + 1),
+          overrides: [{ skuId: box.dataset.skuId, action: 'place', sectionKey: sectionForSku(sku).key, shelfPosition, facings: currentFacings + 1 }],
+        });
       });
 
       box.querySelector('.planogram-facing-minus')?.addEventListener('click', (e) => {
         e.stopPropagation();
         if (openSkuId === box.dataset.skuId) openSkuId = null;
         if (currentFacings <= 1) {
-          commitEdit({ skuId: box.dataset.skuId, remove: true });
+          commitBayEdit({
+            mutate: (bl) => bayLayoutRemove(bl, addr),
+            overrides: [{ skuId: box.dataset.skuId, action: 'remove' }],
+          });
         } else {
-          commitEdit({ skuId: box.dataset.skuId, sectionKey, shelfPosition, facings: currentFacings - 1, columnIndex: currentColumnIndex });
+          const sku = store.getSnapshot().skus.find((s) => s.skuId === box.dataset.skuId);
+          if (!sku) return;
+          commitBayEdit({
+            mutate: (bl) => bayLayoutSetFacings(bl, addr, currentFacings - 1),
+            overrides: [{ skuId: box.dataset.skuId, action: 'place', sectionKey: sectionForSku(sku).key, shelfPosition, facings: currentFacings - 1 }],
+          });
         }
       });
 
@@ -1345,10 +1273,8 @@ export function mount(el) {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', JSON.stringify({
           skuId: box.dataset.skuId,
-          facings: parseInt(box.dataset.facings, 10) || 1,
-          sectionKey: box.dataset.sectionKey,
-          shelfPosition: parseInt(box.dataset.shelfPosition, 10),
-          columnIndex: parseInt(box.dataset.columnIndex, 10),
+          facings: currentFacings,
+          bayIndex, shelfPosition, slotIndex,
         }));
       });
       box.addEventListener('dragover', (e) => e.preventDefault());
@@ -1363,69 +1289,47 @@ export function mount(el) {
         const targetSkuId = box.dataset.skuId;
         if (!dragged?.skuId || dragged.skuId === targetSkuId) return;
 
-        const { skus } = store.getSnapshot();
+        const { skus, bottleDimensions } = store.getSnapshot();
         const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
         const targetSku = skus.find((s) => s.skuId === targetSkuId);
         if (!draggedSku || !targetSku) return;
 
         // Andrew, 2026-07-21: a "next in line" rail drag has no real origin
-        // slot to swap back into (it isn't placed anywhere yet) -- insert it
-        // at the target box's exact position instead of swapping, same as
-        // dropping it on an empty slot (see insertLockedIntoRow/columnIndex).
-        // The box already there isn't removed, just pushed over.
+        // slot to swap back into (it isn't placed anywhere yet) -- insert
+        // it at the target box's exact position instead of swapping. The
+        // box already there isn't removed, just pushed over.
         if (dragged.fromNextInLineList) {
-          const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
-          const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
-          const targetColumnIndex = parseInt(box.dataset.columnIndex, 10);
+          const scoreMap = scoreMapForCurrentStore();
+          const shelfDef = physicalShelfDef(currentStore(), bayIndex, shelfPosition);
+          const entry = buildBayEntry(draggedSku, 1, bottleDimensions, scoreMap, shelfDef);
           openSkuId = null;
-          commitEdit({ skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: 1, columnIndex: targetColumnIndex });
+          commitBayEdit({
+            mutate: (bl) => bayLayoutInsert(bl, addr, entry),
+            overrides: [{ skuId: dragged.skuId, action: 'place', sectionKey: sectionForSku(draggedSku).key, shelfPosition, facings: 1 }],
+          });
           return;
         }
 
-        const targetSectionKey = realSectionKeyFor(box.dataset.sectionKey, targetSku);
-        const targetShelfPosition = parseInt(box.dataset.shelfPosition, 10);
-        const targetColumnIndex = parseInt(box.dataset.columnIndex, 10);
-        const targetFacings = parseInt(box.dataset.facings, 10) || 1;
-        const originSectionKey = realSectionKeyFor(dragged.sectionKey, draggedSku);
-        const originShelfPosition = dragged.shelfPosition;
-        const originColumnIndex = dragged.columnIndex;
-
-        // The swap: dragged takes target's exact row+column, target takes
-        // dragged's -- this is what actually reorders two SKUs already on
-        // the same row, not just assigning them both "this row" and hoping.
-        // Andrew, 2026-07-26: swap: true tells applyPatchToPlan to REPLACE
-        // whatever's sitting at the target column instead of inserting and
-        // shifting it -- each half of a swap targets a column it KNOWS is
-        // about to be vacated by the other half, so displacing in place is
-        // correct (see the swap-vs-shift split in applyPatchToPlan). Without
-        // this, the first half's insert shifted the target (and everything
-        // after it) one column over before the second half ever ran, so
-        // both SKUs ended up shifted right together instead of swapped
-        // (reproduced live: dragging White Zinfandel to Fortified's spot
-        // pushed both one column right, order unchanged).
+        const originAddr = { bayIndex: dragged.bayIndex, shelfPosition: dragged.shelfPosition, slotIndex: dragged.slotIndex };
+        // The swap: dragged takes target's exact bay/shelf/slot, target
+        // takes dragged's -- exchanges the two SKUs' physical positions.
         openSkuId = null;
-        commitEdits([
-          { skuId: dragged.skuId, sectionKey: targetSectionKey, shelfPosition: targetShelfPosition, facings: dragged.facings, columnIndex: targetColumnIndex, swap: true },
-          { skuId: targetSkuId, sectionKey: originSectionKey, shelfPosition: originShelfPosition, facings: targetFacings, columnIndex: originColumnIndex, swap: true },
-        ]);
+        commitBayEdit({
+          mutate: (bl) => bayLayoutSwap(bl, originAddr, addr),
+          overrides: [
+            { skuId: dragged.skuId, action: 'place', sectionKey: sectionForSku(draggedSku).key, shelfPosition, facings: dragged.facings },
+            { skuId: targetSkuId, action: 'place', sectionKey: sectionForSku(targetSku).key, shelfPosition: originAddr.shelfPosition, facings: currentFacings },
+          ],
+        });
       });
     });
 
     scopeEl.querySelectorAll('.planogram-empty-slot').forEach((slot) => {
       slot.addEventListener('click', () => {
         openSkuId = null;
-        addSectionKey = slot.dataset.sectionKey || '';
+        addBayIndex = slot.dataset.bayIndex != null ? parseInt(slot.dataset.bayIndex, 10) : null;
         addShelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
-        // Andrew, 2026-07-20: the empty slot's own columnIndex was never
-        // captured here -- only the drag-and-drop path passed it through --
-        // so adding a SKU via the search form always fell back to
-        // columnIndex null, which insertLockedIntoRow treats as "append
-        // to whatever the row's natural content computes to," not the
-        // actual gap that was clicked. Since a locked override can itself
-        // change what naturally fills that row, "the end" doesn't
-        // reliably land back in the same visual spot -- existing product
-        // could shift left while the clicked gap stayed empty.
-        addColumnIndex = slot.dataset.columnIndex != null ? parseInt(slot.dataset.columnIndex, 10) : null;
+        addSlotIndex = slot.dataset.slotIndex != null ? parseInt(slot.dataset.slotIndex, 10) : null;
         addSearchTerm = '';
         renderOutput(store.getSnapshot().currentPlan);
         requestAnimationFrame(() => {
@@ -1442,25 +1346,33 @@ export function mount(el) {
         slot.classList.remove('drag-over-target');
         let dragged;
         try { dragged = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
-        // Andrew, 2026-07-26: an emptied-slot hole's data-section-key is the
-        // RAW section key from render time (see renderBayRow's isEmptySlot
-        // branch -- deliberately unresolved there, since no real neighboring
-        // SKU exists to resolve a merged composite key down to one real
-        // sub-category). Dropping a new SKU on it used to pass that raw key
-        // straight through to the override, so a hole inside a merged
-        // section (small-format cluster, or thin adjacent varietals like
-        // White Zinfandel + Fortified) recorded an override the FULL
-        // generator doesn't recognize as a real section -- the SKU vanished
-        // instead of landing anywhere, reproduced live on a fresh account.
-        // The dragged SKU itself IS real, so resolve through it instead of
-        // needing a neighbor.
-        const { skus } = store.getSnapshot();
-        const draggedSku = skus.find((s) => s.skuId === dragged?.skuId);
-        const sectionKey = draggedSku ? realSectionKeyFor(slot.dataset.sectionKey, draggedSku) : slot.dataset.sectionKey;
-        const shelfPosition = slot.dataset.shelfPosition ? parseInt(slot.dataset.shelfPosition, 10) : null;
-        const columnIndex = slot.dataset.columnIndex ? parseInt(slot.dataset.columnIndex, 10) : null;
-        if (!dragged?.skuId || !sectionKey || !shelfPosition) return;
-        commitEdit({ skuId: dragged.skuId, sectionKey, shelfPosition, facings: dragged.facings, columnIndex });
+        if (!dragged?.skuId) return;
+
+        const targetAddr = {
+          bayIndex: parseInt(slot.dataset.bayIndex, 10),
+          shelfPosition: parseInt(slot.dataset.shelfPosition, 10),
+          slotIndex: parseInt(slot.dataset.slotIndex, 10),
+        };
+        const { skus, bottleDimensions } = store.getSnapshot();
+        const draggedSku = skus.find((s) => s.skuId === dragged.skuId);
+        if (!draggedSku) return;
+
+        if (dragged.fromNextInLineList) {
+          const scoreMap = scoreMapForCurrentStore();
+          const shelfDef = physicalShelfDef(currentStore(), targetAddr.bayIndex, targetAddr.shelfPosition);
+          const entry = buildBayEntry(draggedSku, 1, bottleDimensions, scoreMap, shelfDef);
+          commitBayEdit({
+            mutate: (bl) => bayLayoutInsert(bl, targetAddr, entry),
+            overrides: [{ skuId: dragged.skuId, action: 'place', sectionKey: sectionForSku(draggedSku).key, shelfPosition: targetAddr.shelfPosition, facings: 1 }],
+          });
+          return;
+        }
+
+        const originAddr = { bayIndex: dragged.bayIndex, shelfPosition: dragged.shelfPosition, slotIndex: dragged.slotIndex };
+        commitBayEdit({
+          mutate: (bl) => bayLayoutMove(bl, originAddr, targetAddr),
+          overrides: [{ skuId: dragged.skuId, action: 'place', sectionKey: sectionForSku(draggedSku).key, shelfPosition: targetAddr.shelfPosition, facings: dragged.facings }],
+        });
       });
     });
   }
@@ -1476,47 +1388,93 @@ export function mount(el) {
     });
 
     output.querySelector('.override-save-btn')?.addEventListener('click', () => {
-      const sectionKey = output.querySelector('.override-section').value;
+      const bayIndex = parseInt(output.querySelector('.override-bay').value, 10);
       const shelfPosition = parseInt(output.querySelector('.override-shelf').value, 10);
       const facings = parseInt(output.querySelector('.override-facings').value, 10);
-      const placedSkuId = openSkuId;
+      const skuId = openSkuId;
       openSkuId = null;
-      // Override panel targets a section chosen from a dropdown of all real
-      // sections -- may not be currently rendered, so a regen fallback is
-      // the correct way to surface it (see commitEdits/allowRegenFallback).
-      commitEdit({ skuId: placedSkuId, sectionKey, shelfPosition, facings }, { allowRegenFallback: true });
+      const { skus, bottleDimensions } = store.getSnapshot();
+      const sku = skus.find((s) => s.skuId === skuId);
+      if (!sku || !liveBayLayout) return;
+      const targetStore = currentStore();
+      const currentAddr = findBayAddressForSku(liveBayLayout, skuId);
+      const scoreMap = scoreMapForCurrentStore();
+      const shelfDef = physicalShelfDef(targetStore, bayIndex, shelfPosition);
+      const entry = buildBayEntry(sku, facings, bottleDimensions, scoreMap, shelfDef);
+      commitBayEdit({
+        mutate: (bl) => {
+          // Same address, only facings changed -- adjust in place rather
+          // than vacating and re-inserting at the end of the row.
+          if (currentAddr && currentAddr.bayIndex === bayIndex && currentAddr.shelfPosition === shelfPosition) {
+            return bayLayoutSetFacings(bl, currentAddr, facings);
+          }
+          if (currentAddr) bayLayoutRemove(bl, currentAddr);
+          return bayLayoutInsert(bl, { bayIndex, shelfPosition, slotIndex: null }, entry);
+        },
+        overrides: [{ skuId, action: 'place', sectionKey: sectionForSku(sku).key, shelfPosition, facings }],
+      });
     });
 
     output.querySelector('.override-remove-btn')?.addEventListener('click', () => {
-      const removedSkuId = openSkuId;
+      const skuId = openSkuId;
       openSkuId = null;
-      commitEdit({ skuId: removedSkuId, remove: true });
+      const addr = liveBayLayout ? findBayAddressForSku(liveBayLayout, skuId) : null;
+      commitBayEdit({
+        mutate: (bl) => (addr ? bayLayoutRemove(bl, addr) : false),
+        overrides: [{ skuId, action: 'remove' }],
+      });
     });
 
+    // Andrew, 2026-07-27: a per-SKU "Reset to AI" just opens a slot where
+    // the SKU currently sits (same as Remove) and drops the override --
+    // its natural AI-recommended position doesn't reappear in the bay
+    // layout until a full Regenerate (Reset All to AI), consistent with
+    // every other bay edit never triggering a reflow of its own accord.
     output.querySelector('.override-reset-btn')?.addEventListener('click', () => {
-      const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === openSkuId);
-      if (existing) store.removeOverride(selectedStoreId, existing.id);
+      const skuId = openSkuId;
       openSkuId = null;
-      renderOutput(regenerateAndSetPlan());
+      const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === skuId);
+      if (existing) store.removeOverride(selectedStoreId, existing.id);
+      const addr = liveBayLayout ? findBayAddressForSku(liveBayLayout, skuId) : null;
+      if (addr) {
+        bayLayoutRemove(liveBayLayout, addr);
+        persistLiveBayLayout();
+      }
+      renderOutput(store.getSnapshot().currentPlan);
     });
 
     output.querySelectorAll('.reset-override-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        store.removeOverride(selectedStoreId, btn.dataset.overrideId);
-        renderOutput(regenerateAndSetPlan());
+        const overrideId = btn.dataset.overrideId;
+        const skuId = store.getOverrides(selectedStoreId).find((o) => o.id === overrideId)?.skuId;
+        store.removeOverride(selectedStoreId, overrideId);
+        const addr = (skuId && liveBayLayout) ? findBayAddressForSku(liveBayLayout, skuId) : null;
+        if (addr) {
+          bayLayoutRemove(liveBayLayout, addr);
+          persistLiveBayLayout();
+        }
+        renderOutput(store.getSnapshot().currentPlan);
       });
     });
 
+    // Andrew, 2026-07-27 (bay-locked rebuild, decision 4): confirm-and-
+    // discard -- this existing button/confirm already covers "regenerate,"
+    // now extended to also re-materialize the bay layout (discarding any
+    // manual bay arrangement), not just plan.sections' overrides.
     output.querySelector('.reset-all-overrides-btn')?.addEventListener('click', () => {
-      if (!confirm('Reset all manual overrides for this store back to the AI recommendation?')) return;
+      if (!confirm('Reset all manual overrides and regenerate this bay arrangement from the AI recommendation? Any manual bay moves will be lost.')) return;
       store.clearOverrides(selectedStoreId);
-      renderOutput(regenerateAndSetPlan());
+      const plan = regenerateAndSetPlan();
+      const targetStore = currentStore();
+      liveBayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
+      persistLiveBayLayout();
+      renderOutput(plan);
     });
 
-    output.querySelector('.add-sku-section')?.addEventListener('change', (e) => {
-      addSectionKey = e.target.value;
-      addShelfPosition = null; // shelf options change with the section -- let it default to the first
-      addColumnIndex = null; // a different section's row has an unrelated column layout
+    output.querySelector('.add-sku-bay')?.addEventListener('change', (e) => {
+      addBayIndex = parseInt(e.target.value, 10);
+      addShelfPosition = null; // shelf options change with the bay -- let it default to the first
+      addSlotIndex = null; // a different bay's row has an unrelated slot layout
       renderOutput(store.getSnapshot().currentPlan);
     });
 
@@ -1544,18 +1502,25 @@ export function mount(el) {
     });
 
     function addSkuFromForm(skuId) {
-      const sectionKey = output.querySelector('.add-sku-section').value;
+      const bayIndex = parseInt(output.querySelector('.add-sku-bay').value, 10);
       const shelfPosition = parseInt(output.querySelector('.add-sku-shelf').value, 10);
       const facings = parseInt(output.querySelector('.add-sku-facings').value, 10);
-      const columnIndex = addColumnIndex;
+      const slotIndex = addSlotIndex;
       addSearchTerm = '';
-      addSectionKey = '';
+      addBayIndex = null;
       addShelfPosition = null;
-      addColumnIndex = null;
-      // Add SKU targets a section chosen from a dropdown of all real
-      // sections -- may not be currently rendered (e.g. depth-exhausted),
-      // so a regen fallback is the correct way to surface it.
-      commitEdit({ skuId, sectionKey, shelfPosition, facings, columnIndex }, { allowRegenFallback: true });
+      addSlotIndex = null;
+      const { skus, bottleDimensions } = store.getSnapshot();
+      const sku = skus.find((s) => s.skuId === skuId);
+      if (!sku) return;
+      const targetStore = currentStore();
+      const scoreMap = scoreMapForCurrentStore();
+      const shelfDef = physicalShelfDef(targetStore, bayIndex, shelfPosition);
+      const entry = buildBayEntry(sku, facings, bottleDimensions, scoreMap, shelfDef);
+      commitBayEdit({
+        mutate: (bl) => bayLayoutInsert(bl, { bayIndex, shelfPosition, slotIndex }, entry),
+        overrides: [{ skuId, action: 'place', sectionKey: sectionForSku(sku).key, shelfPosition, facings }],
+      });
     }
 
     output.querySelectorAll('.add-sku-result').forEach((row) => {
