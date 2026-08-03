@@ -715,8 +715,8 @@ function renderPrintBox(sku) {
   for (let i = 0; i < facingCount; i++) {
     boxes.push(`
       <div class="print-box" style="flex-grow:${singleWidthIn};flex-basis:0;">
-        <div class="print-box-desc"><span>${label}</span></div>
         ${sku.upc ? `<div class="print-box-upc"><span>${sku.upc}</span></div>` : ''}
+        <div class="print-box-desc"><span>${label}</span></div>
       </div>
     `);
   }

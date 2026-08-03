@@ -387,16 +387,40 @@
   display:flex;
   border:1px solid #000;
 }
+/* Andrew, 2026-08-03 (2nd round): UPC sits beside the description, not
+   below it -- both are independently vertical-rl text, so putting them
+   side by side (flex-direction:row, normal horizontal-tb on the PARENT --
+   deliberately NOT vertical-rl on .print-box itself, to keep "row" meaning
+   literal left/right here rather than reopening the same axis-flips-under-
+   vertical-writing-mode confusion the box-label bug came from) reads as
+   two adjacent vertical columns: UPC first/leftmost, description
+   second/rightmost. Both stretch to the box's full height (flex row's
+   default cross-axis stretch), so the UPC is no longer squeezed into a
+   short bottom slice -- font size came back up now that height isn't the
+   constraint. */
 .print-box{
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
   overflow:hidden;
   border-right:1px solid #000;
 }
 .print-box:last-child{border-right:none;}
+.print-box-upc{
+  flex-shrink:0;
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-start;
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  font-size:7pt;
+  letter-spacing:0.3px;
+  border-right:1px solid #000;
+  padding:4px 2px;
+  white-space:nowrap;
+}
 .print-box-desc{
   flex:1;
-  min-height:0;
+  min-width:0;
   display:flex;
   align-items:flex-start;
   justify-content:flex-start;
@@ -408,25 +432,5 @@
   padding:4px 1px;
   overflow:hidden;
   text-overflow:ellipsis;
-  white-space:nowrap;
-}
-/* Andrew, 2026-08-03: UPC never truncates -- a partially-cut UPC is
-   useless for lookup, unlike a truncated brand name which is still
-   identifiable from context. flex-shrink:0 + no explicit height means
-   this box always renders at its full natural (vertical-text) size; the
-   description above it (flex:1, min-height:0) absorbs the squeeze on a
-   short box instead, same reasoning already in place for its own
-   ellipsis fallback. */
-.print-box-upc{
-  flex-shrink:0;
-  display:flex;
-  align-items:flex-start;
-  justify-content:flex-start;
-  writing-mode:vertical-rl;
-  text-orientation:mixed;
-  font-size:5.5pt;
-  letter-spacing:0.3px;
-  border-top:1px solid #000;
-  padding:3px 1px 2px;
   white-space:nowrap;
 }
