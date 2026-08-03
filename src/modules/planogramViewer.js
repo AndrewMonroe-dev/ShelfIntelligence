@@ -711,10 +711,19 @@ function renderPrintBox(sku) {
   const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const facingCount = Math.max(1, sku.facings || 1);
+  // Andrew, 2026-08-03: fixed percentage of the physical bay width
+  // (BAY_INCHES), not flex-grow -- flex-grow distributes ALL leftover row
+  // space among the boxes present, silently stretching every product
+  // wider than its real width whenever a shelf has intentional open space
+  // (some sets need flex space; not every SKU is in the data). A box's
+  // printed width must stay true to the product's real size regardless of
+  // how much of the shelf is actually filled -- true leftover space
+  // renders as genuine blank space at the end of the row instead.
+  const widthPct = (singleWidthIn / BAY_INCHES) * 100;
   const boxes = [];
   for (let i = 0; i < facingCount; i++) {
     boxes.push(`
-      <div class="print-box" style="flex-grow:${singleWidthIn};flex-basis:0;">
+      <div class="print-box" style="width:${widthPct.toFixed(4)}%;flex-grow:0;flex-shrink:0;">
         ${sku.upc ? `<div class="print-box-upc"><span>${sku.upc}</span></div>` : ''}
         <div class="print-box-desc"><span>${label}</span></div>
       </div>
