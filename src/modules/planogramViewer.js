@@ -405,6 +405,7 @@ function buildBayEntry(sku, facings, bottleDimensions, scoreMap, shelfDef, isLoc
   return {
     sku: {
       skuId: sku.skuId,
+      upc: sku.upc,
       brand: sku.brand,
       varietal: sku.varietal,
       priceUsd: sku.priceUsd,
@@ -699,6 +700,67 @@ function renderBay(layoutBay) {
   `;
 }
 
+// Andrew, 2026-08-03: Print Set. A deliberately separate, minimal render
+// path from renderBay/renderBayRow/renderSkuBox above -- print output has
+// none of the interactive/editing concerns (drag-drop, facing buttons, lock
+// badges, category color, Bota highlight) those exist for, and mixing the
+// two would tie print layout's percentage-of-page math to the on-screen
+// editor's pixel-based math. Prints from liveBayLayout (the live, hand-
+// edited truth), one bay per physical page, portrait, black-and-white.
+function renderPrintBox(sku) {
+  const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
+  const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
+  const facingCount = Math.max(1, sku.facings || 1);
+  const boxes = [];
+  for (let i = 0; i < facingCount; i++) {
+    boxes.push(`
+      <div class="print-box" style="flex-grow:${singleWidthIn};flex-basis:0;">
+        <div class="print-box-desc"><span>${label}</span></div>
+        ${sku.upc ? `<div class="print-box-upc"><span>${sku.upc}</span></div>` : ''}
+      </div>
+    `);
+  }
+  return boxes.join('');
+}
+
+function renderPrintShelfRow(slots, position) {
+  const realSlots = slots.filter((s) => s.sku && !s.sku.isEmptySlot);
+  return `
+    <div class="print-shelf-row">
+      <div class="print-shelf-label">Shelf ${position}</div>
+      <div class="print-shelf-frame">
+        ${realSlots.map((s) => renderPrintBox(s.sku)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderPrintBayPage(layoutBay, storeName, pageIndex) {
+  const positions = Array.from({ length: layoutBay.shelfCount }, (_, i) => i + 1);
+  return `
+    <div class="print-page"${pageIndex > 0 ? ' style="break-before:page;"' : ''}>
+      <div class="print-page-header">${storeName} &mdash; Bay ${layoutBay.bayId}</div>
+      <div class="print-page-body">
+        ${positions.map((position) => {
+          const shelf = layoutBay.shelves.find((s) => s.position === position);
+          return renderPrintShelfRow(shelf ? shelf.slots : [], position);
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function printSet(bayLayout, storeName) {
+  let printRoot = document.getElementById('planogram-print-root');
+  if (!printRoot) {
+    printRoot = document.createElement('div');
+    printRoot.id = 'planogram-print-root';
+    document.body.appendChild(printRoot);
+  }
+  printRoot.innerHTML = bayLayout.bays.map((b, i) => renderPrintBayPage(b, storeName, i)).join('');
+  window.print();
+}
+
 export function mount(el) {
   let selectedStoreId = null;
   let openSkuId = null; // skuId whose override panel is currently expanded
@@ -968,6 +1030,9 @@ export function mount(el) {
         <div>
           <a href="#set-layout" class="btn">Reorder Sections &rarr;</a>
         </div>
+        <div>
+          <button type="button" class="btn print-set-btn">Print Set</button>
+        </div>
       </div>
       <div style="display:flex;align-items:stretch;gap:14px;">
         <div class="viewer-output" style="flex:1;min-width:0;"></div>
@@ -980,6 +1045,15 @@ export function mount(el) {
       store.setActiveStoreId(selectedStoreId);
       openSkuId = null;
       render();
+    });
+
+    // Andrew, 2026-08-03: prints from liveBayLayout (not plan.sections), same
+    // "live hand-edited truth" liveBayLayout already is for the on-screen
+    // view -- a manual bay edit shows up on the printout without needing a
+    // full Regenerate first.
+    el.querySelector('.print-set-btn').addEventListener('click', () => {
+      if (!liveBayLayout) return;
+      printSet(liveBayLayout, currentStore()?.name || 'Store');
     });
 
     renderOutput(plan);

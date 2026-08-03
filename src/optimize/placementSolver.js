@@ -1235,6 +1235,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
           if (isLocked) reasons.push({ factor: 'Manual override', value: 'Locked by user' });
           return {
             skuId: sku.skuId,
+            upc: sku.upc,
             brand: sku.brand,
             varietal: sku.varietal,
             priceUsd: sku.priceUsd,
@@ -1423,6 +1424,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
           if (isLocked) reasons.push({ factor: 'Manual override', value: 'Locked by user' });
           return {
             skuId: sku.skuId,
+            upc: sku.upc,
             brand: sku.brand,
             varietal: sku.varietal,
             priceUsd: sku.priceUsd,
