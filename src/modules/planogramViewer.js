@@ -738,7 +738,7 @@ function renderPrintShelfRow(slots, position) {
 function renderPrintBayPage(layoutBay, storeName, pageIndex) {
   const positions = Array.from({ length: layoutBay.shelfCount }, (_, i) => i + 1);
   return `
-    <div class="print-page"${pageIndex > 0 ? ' style="break-before:page;"' : ''}>
+    <div class="print-page"${pageIndex > 0 ? ' style="break-before:page;page-break-before:always;"' : ''}>
       <div class="print-page-header">${storeName} &mdash; Bay ${layoutBay.bayId}</div>
       <div class="print-page-body">
         ${positions.map((position) => {

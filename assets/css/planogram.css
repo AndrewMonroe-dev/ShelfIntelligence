@@ -314,22 +314,38 @@
   background:linear-gradient(90deg,var(--heat-low),var(--heat-high));
 }
 
-/* Print Set (Andrew, 2026-08-03). #planogram-print-root is a standalone
-   tree appended to document.body (not inside the app's own root), rebuilt
-   fresh from liveBayLayout on every click -- kept hidden on screen and only
+/* Print Set (Andrew, 2026-08-03, refined 2026-08-03 per Andrew's 3 fixes
+   after real-printer testing). #planogram-print-root is a standalone tree
+   appended to document.body (not inside the app's own root), rebuilt fresh
+   from liveBayLayout on every click -- kept hidden on screen and only
    shown while printing, at which point everything else in the app is
    hidden so the printout is nothing but the bay pages. One <div
    class="print-page"> per physical bay, forced portrait, plain black text
-   on white regardless of the app's dark theme. */
+   on white regardless of the app's dark theme.
+   Andrew, 2026-08-03: real printing produced only 1 page no matter how
+   many bays. Root cause confirmed via an isolated repro (not just theory):
+   tokens.css sets `html,body{height:100%;overflow:hidden;}` for the app's
+   own single-viewport SPA shell (#app-shell) -- that clips body's own
+   layout box to one screen's height, and print output is generated from
+   body's box, so every print-page past the first was silently outside the
+   printable area even though #planogram-print-root is a sibling of
+   #app-shell, not nested inside it. getBoundingClientRect() doesn't
+   detect this (overflow:hidden clips paint, not layout geometry), which
+   is why the earlier DOM-measurement verification missed it. Also
+   switched .print-page from `height:100vh` to physical inches matching
+   @page's own size/margin -- not the root cause here, but vh is
+   independently unreliable for print sizing and inches are deterministic
+   in every engine. */
 #planogram-print-root{display:none;}
 @media print{
+  html,body{height:auto !important;overflow:visible !important;}
   body > *:not(#planogram-print-root){display:none !important;}
   #planogram-print-root{display:block !important;}
-  @page{size:portrait;margin:0.4in;}
 }
+@page{size:8.5in 11in;margin:0.4in;}
 .print-page{
-  width:100%;
-  height:100vh;
+  width:7.7in; /* 8.5in page - 0.4in margin each side, matches @page above */
+  height:10.2in; /* 11in page - 0.4in margin each side */
   box-sizing:border-box;
   display:flex;
   flex-direction:column;
@@ -340,10 +356,11 @@
 .print-page-header{
   flex-shrink:0;
   font-weight:700;
-  font-size:16pt;
-  border-bottom:2px solid #000;
-  padding-bottom:6px;
-  margin-bottom:8px;
+  font-size:8pt; /* Andrew, 2026-08-03: store name is a descriptor only --
+    the bay content needs the page space, not the header. */
+  border-bottom:1px solid #000;
+  padding-bottom:2px;
+  margin-bottom:4px;
 }
 .print-page-body{
   flex:1;
@@ -393,19 +410,23 @@
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+/* Andrew, 2026-08-03: UPC never truncates -- a partially-cut UPC is
+   useless for lookup, unlike a truncated brand name which is still
+   identifiable from context. flex-shrink:0 + no explicit height means
+   this box always renders at its full natural (vertical-text) size; the
+   description above it (flex:1, min-height:0) absorbs the squeeze on a
+   short box instead, same reasoning already in place for its own
+   ellipsis fallback. */
 .print-box-upc{
   flex-shrink:0;
-  height:28%;
   display:flex;
   align-items:flex-start;
   justify-content:flex-start;
   writing-mode:vertical-rl;
   text-orientation:mixed;
-  font-size:6.5pt;
-  letter-spacing:0.5px;
+  font-size:5.5pt;
+  letter-spacing:0.3px;
   border-top:1px solid #000;
-  padding:2px 1px;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  padding:3px 1px 2px;
   white-space:nowrap;
 }
