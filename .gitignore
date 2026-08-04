@@ -7,3 +7,7 @@ data/backups/
 # (region/varietal review, brand-rebuild diffs, etc.) -- reference/audit
 # trail, not something the app reads or that needs to travel in git.
 data/review-exports/
+
+# Local-only deps for the run-shelfintelligence agent skill (Playwright) --
+# reinstalled via `npm install` per the skill's own Setup step, not the app.
+.claude/skills/run-shelfintelligence/node_modules/

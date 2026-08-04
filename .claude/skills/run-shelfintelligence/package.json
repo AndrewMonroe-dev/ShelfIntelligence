@@ -1,0 +1,9 @@
+{
+  "name": "run-shelfintelligence-skill",
+  "private": true,
+  "description": "Local-only deps for the run-shelfintelligence agent skill (static server + Playwright driver). Not part of the app itself.",
+  "type": "module",
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
