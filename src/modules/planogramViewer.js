@@ -822,6 +822,67 @@ export function mount(el) {
     return plan;
   }
 
+  // Andrew, 2026-08-04: finds where the AI would actually place `skuId` if it
+  // had no manual override of its own -- regenerates a full plan with
+  // `overridesWithoutThisSku` (every OTHER override still applied, this SKU's
+  // excluded) and materializes what that plan's bay layout would be, then
+  // looks up the SKU's address in THAT fresh layout. Returns null if the AI's
+  // own plan wouldn't include the SKU at all without a manual override
+  // forcing it in (below the score/section cutoff) -- there's no natural spot
+  // to restore to in that case.
+  function computeNaturalPlacement(skuId, overridesWithoutThisSku) {
+    const { skus, metricsConfig, bottleDimensions, sizePackage } = store.getSnapshot();
+    const targetStore = currentStore();
+    if (!targetStore) return null;
+    const targetCount = store.getTargetSkuCount(selectedStoreId);
+    const multipliers = store.getSectionMultipliers(selectedStoreId);
+    let allocations = store.getSectionAllocations(selectedStoreId);
+    if (!allocations.length) allocations = store.autoAllocateSections(selectedStoreId);
+    const caseOnlyMode = store.getCaseOnlyMode();
+    const naturalPlan = generatePlan(
+      targetStore, skus, metricsConfig, targetCount, bottleDimensions,
+      allocations, multipliers, sizePackage, caseOnlyMode, overridesWithoutThisSku
+    );
+    const naturalBayLayout = materializeBayLayout(naturalPlan, targetStore.shelfLayout.bays);
+    const naturalAddr = findBayAddressForSku(naturalBayLayout, skuId);
+    if (!naturalAddr) return null;
+    const shelf = bayShelf(naturalBayLayout, naturalAddr.bayIndex, naturalAddr.shelfPosition);
+    return { bayIndex: naturalAddr.bayIndex, shelfPosition: naturalAddr.shelfPosition, entry: shelf.slots[naturalAddr.slotIndex] };
+  }
+
+  // Andrew, 2026-08-04: the actual "Reset to AI" behavior -- drops this SKU's
+  // own override, vacates wherever it's currently manually placed, and
+  // reinserts it (appended to the row, same convention as Add SKU/next-in-
+  // line) at its real AI-recommended bay/shelf per computeNaturalPlacement.
+  // Explicitly un-locks the reinserted entry afterward since bayLayoutInsert
+  // always marks its target locked (correct for a manual placement, wrong
+  // here -- this entry is going back under AI control). Falls back to a bare
+  // vacate (the old behavior) when the AI's own plan has nowhere natural for
+  // this SKU to land.
+  function resetSkuToAI(skuId) {
+    const remainingOverrides = store.getOverrides(selectedStoreId).filter((o) => o.skuId !== skuId);
+    const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === skuId);
+    if (existing) store.removeOverride(selectedStoreId, existing.id);
+    if (!liveBayLayout) return;
+    const addr = findBayAddressForSku(liveBayLayout, skuId);
+    if (addr) bayLayoutRemove(liveBayLayout, addr);
+    const natural = computeNaturalPlacement(skuId, remainingOverrides);
+    if (natural) {
+      // Reuse the hole just vacated when the SKU's natural bay/shelf is the
+      // same one it's already sitting in (e.g. only its facings/lock state
+      // changed, not its position) -- otherwise it'd get vacated in place
+      // and re-appended at the row's end, leaving a stray gap behind.
+      const fillSlotIndex = (addr && addr.bayIndex === natural.bayIndex && addr.shelfPosition === natural.shelfPosition)
+        ? addr.slotIndex
+        : null;
+      bayLayoutInsert(liveBayLayout, { bayIndex: natural.bayIndex, shelfPosition: natural.shelfPosition, slotIndex: fillSlotIndex }, natural.entry);
+      natural.entry.sku.isLocked = false;
+    }
+    persistLiveBayLayout();
+    renderOutput(store.getSnapshot().currentPlan);
+    if (natural) warnIfBayOverflows([skuId]);
+  }
+
   function persistLiveBayLayout() {
     if (!liveBayLayout) return;
     store.setBayLayout(selectedStoreId, compactBayLayout(liveBayLayout));
@@ -1508,35 +1569,21 @@ export function mount(el) {
       });
     });
 
-    // Andrew, 2026-07-27: a per-SKU "Reset to AI" just opens a slot where
-    // the SKU currently sits (same as Remove) and drops the override --
-    // its natural AI-recommended position doesn't reappear in the bay
-    // layout until a full Regenerate (Reset All to AI), consistent with
-    // every other bay edit never triggering a reflow of its own accord.
+    // Andrew, 2026-08-04: per-SKU "Reset to AI" restores the SKU to its real
+    // AI-recommended bay/shelf (see resetSkuToAI/computeNaturalPlacement)
+    // instead of just vacating its slot -- was flagged 2026-07-27 as
+    // vacate-only and never actioned until now.
     output.querySelector('.override-reset-btn')?.addEventListener('click', () => {
       const skuId = openSkuId;
       openSkuId = null;
-      const existing = store.getOverrides(selectedStoreId).find((o) => o.skuId === skuId);
-      if (existing) store.removeOverride(selectedStoreId, existing.id);
-      const addr = liveBayLayout ? findBayAddressForSku(liveBayLayout, skuId) : null;
-      if (addr) {
-        bayLayoutRemove(liveBayLayout, addr);
-        persistLiveBayLayout();
-      }
-      renderOutput(store.getSnapshot().currentPlan);
+      resetSkuToAI(skuId);
     });
 
     output.querySelectorAll('.reset-override-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const overrideId = btn.dataset.overrideId;
         const skuId = store.getOverrides(selectedStoreId).find((o) => o.id === overrideId)?.skuId;
-        store.removeOverride(selectedStoreId, overrideId);
-        const addr = (skuId && liveBayLayout) ? findBayAddressForSku(liveBayLayout, skuId) : null;
-        if (addr) {
-          bayLayoutRemove(liveBayLayout, addr);
-          persistLiveBayLayout();
-        }
-        renderOutput(store.getSnapshot().currentPlan);
+        if (skuId) resetSkuToAI(skuId);
       });
     });
 
