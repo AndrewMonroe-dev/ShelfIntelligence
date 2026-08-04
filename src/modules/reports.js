@@ -1,5 +1,19 @@
 import { store } from '../core/store.js';
 
+// Andrew, 2026-08-04: same staleness gap as Optimization Engine/Set Overview
+// -- a metric change takes effect in scoring immediately but currentPlan
+// (what every export/score/reason here reflects) only updates on an
+// explicit regenerate. No regenerate action lives on this page, so point at
+// Optimization Engine rather than offering a button that can't do the job.
+function stalePlanBannerHtml() {
+  if (!store.isPlanStale()) return '';
+  return `
+    <div class="card stale-plan-banner" style="margin-bottom:14px;border:1px solid var(--warning);background:rgba(245,158,11,.14);">
+      <span>&#9888; A metric weight or enabled state has changed in <a href="#metric-center">Metric Center</a> since this plan was generated -- scores and exports below may be stale. Regenerate from <a href="#optimization-engine">Optimization Engine</a>.</span>
+    </div>
+  `;
+}
+
 function collectPlanSkus(plan) {
   const rows = [];
   plan.sections.forEach((section) => {
@@ -91,6 +105,7 @@ export function mount(el) {
         <h1>Reports</h1>
         <p>Plan for ${currentPlan.storeId}, generated ${new Date(currentPlan.generatedAt).toLocaleString()}. ${currentPlan.skuCount} SKUs across ${currentPlan.sections.length} sections.</p>
       </div>
+      ${stalePlanBannerHtml()}
       <div class="card" style="display:flex;gap:10px;margin-bottom:14px;">
         <button class="btn btn-primary export-csv-btn">Export CSV</button>
         <button class="btn export-json-btn">Export JSON</button>

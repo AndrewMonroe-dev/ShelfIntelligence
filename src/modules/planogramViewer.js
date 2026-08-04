@@ -770,6 +770,25 @@ function printSet(bayLayout, storeName) {
   window.print();
 }
 
+// Andrew, 2026-08-04: a metric weight/enabled change takes effect in
+// scoring immediately, but this page's bay layout only comes from AI
+// scores at materialization time (store's first load, or an explicit
+// "Reset All to AI") -- it's never re-derived on a routine render, by
+// design (that's what keeps a manual bay arrangement stable). So unlike
+// Optimization Engine/Set Overview, there's no lighter "just refresh the
+// plan" action here that would visibly change anything: only Reset All to
+// AI does, and that also discards every manual placement. Points there
+// explicitly rather than offering a same-looking "Regenerate Now" button
+// that wouldn't actually change what's on screen.
+function stalePlanBannerHtml() {
+  if (!store.isPlanStale()) return '';
+  return `
+    <div class="card stale-plan-banner" style="margin-bottom:14px;border:1px solid var(--warning);background:rgba(245,158,11,.14);">
+      <span>&#9888; A metric weight or enabled state has changed in <a href="#metric-center">Metric Center</a> since this store's bay layout was last generated -- the Next In Line pool's scores may be stale, and any newly-added SKU won't reflect it either. Existing bay placements won't pick up the new scores until you use "Reset All to AI" below, which also discards every manual placement.</span>
+    </div>
+  `;
+}
+
 export function mount(el) {
   let selectedStoreId = null;
   let openSkuId = null; // skuId whose override panel is currently expanded
@@ -959,23 +978,32 @@ export function mount(el) {
     });
   }
 
+  // Andrew, 2026-08-04: used to return '' (nothing, including the button)
+  // when there were zero overrides -- which meant "Reset All to AI" was
+  // invisible on exactly the store state where a stale-plan banner (see
+  // stalePlanBannerHtml) would most need to point someone at it: a freshly
+  // generated store nobody has manually touched yet. Every manual bay edit
+  // dual-writes an override entry (the COUPLING FINDING from the bay-locked
+  // rebuild), so zero overrides also means zero manual placements to lose --
+  // always showing the button is safe, not just more discoverable.
   function renderOverridesList() {
     const overrides = store.getOverrides(selectedStoreId);
-    if (!overrides.length) return '';
     return `
       <div class="card" style="margin-bottom:14px;">
         <div style="display:flex;justify-content:space-between;align-items:baseline;">
           <span class="card-label">Manual Overrides (${overrides.length})</span>
           <button class="btn reset-all-overrides-btn">Reset All to AI</button>
         </div>
-        <div style="margin-top:8px;">
-          ${overrides.map((o) => `
-            <div class="override-list-item" data-override-id="${o.id}">
-              <span>${o.skuId} -- ${o.action === 'remove' ? 'removed from plan' : `placed in ${o.sectionKey}, shelf ${o.shelfPosition}, ${o.facings}f`}</span>
-              <button class="btn reset-override-btn" data-override-id="${o.id}">Reset to AI</button>
-            </div>
-          `).join('')}
-        </div>
+        ${overrides.length ? `
+          <div style="margin-top:8px;">
+            ${overrides.map((o) => `
+              <div class="override-list-item" data-override-id="${o.id}">
+                <span>${o.skuId} -- ${o.action === 'remove' ? 'removed from plan' : `placed in ${o.sectionKey}, shelf ${o.shelfPosition}, ${o.facings}f`}</span>
+                <button class="btn reset-override-btn" data-override-id="${o.id}">Reset to AI</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `<div style="margin-top:8px;font-size:12px;color:var(--text2);">No manual placements yet -- this button re-syncs the bay layout with the AI's current recommendation (e.g. after a Metric Center change).</div>`}
       </div>
     `;
   }
@@ -1090,6 +1118,7 @@ export function mount(el) {
         <h1>Planogram Viewer</h1>
         <p>Rendered in real 4ft bays, matching the store's physical fixture from Set Layout. Click a SKU to move, lock, or remove it -- manual placements always win over the AI recommendation. Boxes marked &#128274; are locked.</p>
       </div>
+      ${stalePlanBannerHtml()}
       <div class="card" style="display:flex;align-items:center;gap:24px;margin-bottom:14px;">
         <div>
           <div class="card-label" style="margin-bottom:6px;">Store</div>
@@ -1599,6 +1628,11 @@ export function mount(el) {
       liveBayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
       persistLiveBayLayout();
       renderOutput(plan);
+      // Reset All to AI is the one action that actually resolves staleness
+      // here (see stalePlanBannerHtml) -- renderOutput only touches
+      // .viewer-output/.next-in-line-column, not the banner in the outer
+      // template, so it needs its own removal.
+      el.querySelector('.stale-plan-banner')?.remove();
     });
 
     output.querySelector('.add-sku-bay')?.addEventListener('change', (e) => {
