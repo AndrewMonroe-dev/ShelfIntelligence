@@ -120,6 +120,19 @@ at the repo root is a one-off data-audit script, not a test runner.
   Linux-container tool; this is native Windows. `driver.mjs` is a
   hand-rolled Playwright REPL that plays the same role (see the
   `run-skill-generator`'s own fallback note for exactly this case).
+- **`eval`/`text`/`fill`/etc. only take ONE argument.** The dispatcher
+  passes the whole remainder of the line as a single string -- an early
+  version spread tokens positionally (`fn(...rest)`), which silently
+  truncated any multi-word argument to its first word (`eval` calls
+  threw `SyntaxError: Unexpected end of input` on anything past a
+  single token). Already fixed in the committed driver; don't
+  reintroduce positional spreading.
+- **Native `confirm()`/`alert()` dialogs block the page under
+  Playwright** unless something responds to them (e.g. Planogram
+  Viewer's "Reset All to AI" confirm, the bay-overflow `alert`).
+  `launch` registers `page.on('dialog', d => d.accept())` so a scripted
+  run doesn't hang on one -- if you need to reject instead, override
+  the handler after `launch`.
 - **Piped/heredoc stdin makes Node's `readline` auto-close (`close`
   event) the instant it hits EOF** -- immediately, long before queued
   async commands (like `launch`, which takes a few seconds) finish.

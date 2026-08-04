@@ -17,12 +17,26 @@ fs.mkdirSync(SHOT_DIR, { recursive: true });
 let browser = null;
 let page = null;
 
+// Every command takes ONE raw string argument -- the rest of the line after
+// the command word, whitespace collapsed at the edges but preserved inside
+// (e.g. a full JS expression for `eval`, or "selector some text" for `fill`).
+// Commands that need more than one logical argument (`fill`) split it
+// themselves on the first space, since positional spread (`fn(...rest)`)
+// silently truncated multi-word args to their first word -- e.g. `eval` only
+// ever received the first token of the expression, which is why an early
+// version of this driver threw "Unexpected end of input" on every non-trivial
+// eval.
 const COMMANDS = {
   async launch(hashRoute) {
     if (browser) return console.log('already launched');
     browser = await chromium.launch({ args: ['--no-sandbox'] });
     page = await (await browser.newContext()).newPage();
     page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
+    // Native confirm()/alert() (e.g. Planogram Viewer's "Reset All to AI",
+    // the bay-overflow warning) blocks the page indefinitely under
+    // Playwright unless a dialog handler responds -- auto-accept so a
+    // scripted run doesn't hang on one.
+    page.on('dialog', (d) => d.accept());
     await page.goto(BASE_URL + (hashRoute ? `/#${hashRoute}` : ''), { waitUntil: 'networkidle' });
     console.log('launched.', page.url());
   },
@@ -58,7 +72,8 @@ const COMMANDS = {
   },
 
   // App-specific: the store-select dropdown on Set Layout/Planogram Viewer/
-  // etc. takes a visible <option> label substring (e.g. "Retailer X - Location 12").
+  // Optimization Engine/etc. takes a visible <option> label substring
+  // (e.g. "Retailer X - Location 12").
   async 'select-store'(nameSubstring) {
     if (!page) return console.log('ERROR: launch first');
     const sel = page.locator('.store-select');
@@ -71,7 +86,15 @@ const COMMANDS = {
     console.log('selected store:', match);
   },
 
-  async fill(sel, ...text) { if (page) await page.locator(sel).fill(text.join(' ')); },
+  async fill(argsStr) {
+    if (!page) return console.log('ERROR: launch first');
+    const sp = argsStr.indexOf(' ');
+    const sel = sp === -1 ? argsStr : argsStr.slice(0, sp);
+    const text = sp === -1 ? '' : argsStr.slice(sp + 1);
+    await page.locator(sel).fill(text);
+    console.log('fill', sel, '->', JSON.stringify(text));
+  },
+
   async type(text) { if (page) await page.keyboard.type(text, { delay: 20 }); },
   async press(key) { if (page) await page.keyboard.press(key); },
 
@@ -120,11 +143,14 @@ let closed = false;
 function safePrompt() { if (!closed) rl.prompt(); }
 rl.on('line', (line) => {
   queue = queue.then(async () => {
-    const [cmd, ...rest] = line.trim().split(/\s+/);
-    if (!cmd) { safePrompt(); return; }
+    const trimmed = line.trim();
+    if (!trimmed) { safePrompt(); return; }
+    const sp = trimmed.indexOf(' ');
+    const cmd = sp === -1 ? trimmed : trimmed.slice(0, sp);
+    const argsStr = sp === -1 ? '' : trimmed.slice(sp + 1).trim();
     const fn = COMMANDS[cmd];
     if (!fn) { console.log('unknown:', cmd, '-- try: help'); safePrompt(); return; }
-    try { await fn(...rest); } catch (e) { console.log('ERROR:', e.message); }
+    try { await fn(argsStr); } catch (e) { console.log('ERROR:', e.message); }
     if (cmd === 'quit') { exited = true; process.exit(0); return; }
     safePrompt();
   });
