@@ -1173,6 +1173,13 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
     });
     lockedByRow.forEach((skusForRow, clamped) => insertLockedIntoRow(rowGroups[clamped - 1], skusForRow));
 
+    // Reapply row-level priority separation after any locked SKUs were
+    // inserted, because locked-position placement can otherwise create
+    // adjacent strategic supplier SKUs in 750ml varietal rows.
+    if (usesPriceBandRules) {
+      rowGroups = rowGroups.map((group) => spreadPriorityAdjacency(group));
+    }
+
     // Facings are computed PER ROW, not once for the whole section's SKU
     // list -- the section's width repeats at every shelf level, it isn't
     // divided among the rows. Each row independently fills the same
