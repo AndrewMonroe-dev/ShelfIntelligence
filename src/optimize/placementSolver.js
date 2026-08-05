@@ -130,7 +130,24 @@ function layoutGroupsAsBlocks(groups, shelfCount, totalWidthInches, scoreMap, bo
   const droppedBlocks = [];
   const totalFloorAll = blockInfo.reduce((s, b) => s + b.maxRowFloorWidth, 0);
   if (totalFloorAll > totalWidthInches) {
-    const byScoreDesc = [...blockInfo].sort((a, b) => b.totalScore - a.totalScore);
+    // Andrew, 2026-08-05: a Bota-family block (e.g. Breeze, split off by its
+    // own sub-line grouping) can carry a much lower total score than plain
+    // Bota or Nighthawk, so pure score-sorting let it lose this cull to an
+    // unrelated brand -- dropped here, it then got backfilled below via
+    // blind per-row leftover space, landing outside the pinned Breeze ->
+    // Bota -> Nighthawk order (and even behind Black Box) instead of
+    // staying part of the family block. The whole point of the Bota floor
+    // guarantee further down is that Bota always beats every other brand in
+    // this section, so it must never lose the CULL to a non-Bota brand
+    // either -- sort every Bota-family block ahead of every non-Bota block
+    // here, score-ordering only within each group.
+    const isBotaBlock = (b) => botaFloorTest && b.sample && botaFloorTest(b.sample);
+    const byScoreDesc = [...blockInfo].sort((a, b) => {
+      const botaA = isBotaBlock(a) ? 1 : 0;
+      const botaB = isBotaBlock(b) ? 1 : 0;
+      if (botaA !== botaB) return botaB - botaA;
+      return b.totalScore - a.totalScore;
+    });
     const keptSet = new Set();
     let usedFloor = 0;
     for (const b of byScoreDesc) {
