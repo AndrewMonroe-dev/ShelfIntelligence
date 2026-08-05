@@ -292,8 +292,10 @@
     "brands": [
       "SOFIA ROSE",
       "SOFIA MINI",
-      "SOFIA"
-    ]
+      "SOFIA",
+      "TRUMP WINERY"
+    ],
+    "_brandsReason": "Sofia entries: discontinued line. TRUMP WINERY: permanent policy exclusion per Andrew, 2026-08-05 -- never eligible for any set, in any store, regardless of score/sales. Not a discontinued-line call like Sofia; if a future skus.json regeneration adds other Trump-branded SKUs under a different exact brand string, add that string here too (this list matches the exact brand field, not a substring)."
   },
   "manualAdditions": {
     "_readme": "Full SKU records for products that don't exist in ANY source export yet (too new to market to be tracked), keyed by a fixed skuId so re-applying this file never creates duplicates. Replace upc:null with the real UPC once available, then this entry can move out of manualAdditions (it'll already be in the real export).",
