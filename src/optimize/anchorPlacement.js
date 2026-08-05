@@ -99,12 +99,12 @@ export function applyAnchorTiebreak(sortedSkus, scoreMap, { priorityMargin = DEF
 export function spreadPriorityAdjacency(rowSkus) {
   const priority = rowSkus.filter((s) => s.strategicSupplierPriority);
   const other = rowSkus.filter((s) => !s.strategicSupplierPriority);
-  if (priority.length <= 1 || priority.length > other.length + 1) return rowSkus;
+  if (priority.length <= 1 || other.length === 0) return rowSkus;
 
   const result = [];
   let pi = 0;
   let oi = 0;
-  const startWithPriority = priority.length > other.length;
+  const startWithPriority = priority.length >= other.length;
   while (pi < priority.length || oi < other.length) {
     if (startWithPriority) {
       if (pi < priority.length) result.push(priority[pi++]);

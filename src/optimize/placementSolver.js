@@ -1102,7 +1102,8 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
       // row membership or facings.
       rowGroups = result.groups.map((rowSkus, i) => {
         const widthInches = Math.max(0, linearFeet * 12 - lockedInchesForRow(i));
-        const fitted = fitSkusToWidth(rowSkus, widthInches, bottleDimensions, floorFacings);
+        const candidateOrder = spreadPriorityAdjacency(rowSkus);
+        const fitted = fitSkusToWidth(candidateOrder, widthInches, bottleDimensions, floorFacings);
         const anchorInRow = fitted.find((sku) => anchorInfoBySkuId.has(sku.skuId));
         const biased = anchorInRow ? applyHorizontalAnchorBias(fitted, anchorInRow.skuId) : fitted;
         return spreadPriorityAdjacency(biased);
