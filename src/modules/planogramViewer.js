@@ -1,9 +1,9 @@
-import { store } from '../core/store.js';
-import { generatePlan } from '../optimize/placementSolver.js';
-import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js';
-import { sectionForSku } from '../optimize/blocking.js';
-import { bottleWidthInches } from '../optimize/facings.js';
-import { computeScoreMap } from '../calc/scoreEngine.js';
+﻿import { store } from '../core/store.js?v=20260805';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260805';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260805';
+import { sectionForSku } from '../optimize/blocking.js?v=20260805';
+import { bottleWidthInches } from '../optimize/facings.js?v=20260805';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260805';
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
@@ -494,7 +494,7 @@ function renderSkuBox(entry, botaEdge = null) {
   const { sku, shelfDef, bayIndex, slotIndex } = entry;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const widthPx = Math.max(MIN_BOX_PX, singleWidthIn * PX_PER_INCH);
-  const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
+  const label = `${sku.brand}${sku.varietal ? ' â€“ ' + sku.varietal : (sku.bottleSizeRaw ? ' â€“ ' + sku.bottleSizeRaw : '')}`;
   const salesStr = sku.sales9L != null ? '$' + Math.round(sku.sales9L).toLocaleString() : '--';
   const growthStr = (typeof sku.growthPct9L === 'number' && Number.isFinite(sku.growthPct9L))
     ? (sku.growthPct9L >= 0 ? '+' : '') + (sku.growthPct9L * 100).toFixed(1) + '%'
@@ -541,7 +541,7 @@ function shortenDividerLabel(label, maxParts = 3, maxChars = 60) {
   const parts = label.split(' + ');
   let shown = parts.slice(0, maxParts).join(' + ');
   if (parts.length > maxParts) shown += ` +${parts.length - maxParts} more`;
-  if (shown.length > maxChars) shown = shown.slice(0, maxChars) + '…';
+  if (shown.length > maxChars) shown = shown.slice(0, maxChars) + 'â€¦';
   return shown;
 }
 
@@ -711,7 +711,7 @@ function renderBay(layoutBay) {
 // editor's pixel-based math. Prints from liveBayLayout (the live, hand-
 // edited truth), one bay per physical page, portrait, black-and-white.
 function renderPrintBox(sku) {
-  const label = `${sku.brand}${sku.varietal ? ' – ' + sku.varietal : (sku.bottleSizeRaw ? ' – ' + sku.bottleSizeRaw : '')}`;
+  const label = `${sku.brand}${sku.varietal ? ' â€“ ' + sku.varietal : (sku.bottleSizeRaw ? ' â€“ ' + sku.bottleSizeRaw : '')}`;
   const singleWidthIn = sku.widthInches ?? ((sku.allocatedInches ?? sku.widthInches ?? 3) / Math.max(1, sku.facings));
   const facingCount = Math.max(1, sku.facings || 1);
   // Andrew, 2026-08-03: fixed percentage of the physical bay width
@@ -1327,7 +1327,7 @@ export function mount(el) {
               const skuCount = rec ? rec.count : 0;
               return `<tr>
                 <td style="padding:3px 8px 3px 0;">${s.type}</td>
-                <td style="padding:3px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.key}">${s.key.slice(0, 40)}${s.key.length > 40 ? '…' : ''}</td>
+                <td style="padding:3px 8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${s.key}">${s.key.slice(0, 40)}${s.key.length > 40 ? 'â€¦' : ''}</td>
                 <td style="padding:3px 8px;">${startFt != null ? startFt.toFixed(2) : '--'}</td>
                 <td style="padding:3px 8px;">${feet.toFixed(2)}</td>
                 <td style="padding:3px 8px;">${endFt != null ? endFt.toFixed(2) : '--'}</td>

@@ -1,15 +1,15 @@
-import { computeScoreMap } from '../calc/scoreEngine.js';
-import { dedupeByBrandVarietalSize } from './assortment.js';
+﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260805';
+import { dedupeByBrandVarietalSize } from './assortment.js?v=20260805';
 import {
   sectionForSku, applyBlackBoxTiebreak, isBota3LSection, isBotaBrand, tradeUpPartnerNote,
   isSparklingSection, subBlockBySubtype, rankByBrandBlocks, brandGroups,
   isExcludedSku, isFranzia3LRedirect, isSmallFormatSection, pinBotaBlackBoxFamilyOrder, isAlwaysIncludeSku,
-} from './blocking.js';
-import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js';
-import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js';
-import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
-import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js';
-import { applyAnchorTiebreak, applyHorizontalAnchorBias, spreadPriorityAdjacency } from './anchorPlacement.js';
+} from './blocking.js?v=20260805';
+import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js?v=20260805';
+import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js?v=20260805';
+import { isMarketShareSection, getSectionMarketShare } from './marketShare.js?v=20260805';
+import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js?v=20260805';
+import { applyAnchorTiebreak, applyHorizontalAnchorBias, spreadPriorityAdjacency } from './anchorPlacement.js?v=20260805';
 
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;
@@ -1444,7 +1444,7 @@ function computeDepthExhaustion(shelves, shelfCount, linearFeet, poolSize) {
             { factor: 'Shelf position', value: `${shelfDef.zone} (index ${shelfDef.verticalIndex})` },
             { factor: 'Traffic', value: shelfDef.traffic },
             { factor: 'Facings', value: facing?.facings ?? STANDARD_FLOOR_FACINGS },
-            { factor: 'Combined section', value: 'Merged with adjacent thin categories (each ≤' + THIN_SECTION_WIDTH_FT + 'ft)' },
+            { factor: 'Combined section', value: 'Merged with adjacent thin categories (each â‰¤' + THIN_SECTION_WIDTH_FT + 'ft)' },
           ];
           if (isLocked) reasons.push({ factor: 'Manual override', value: 'Locked by user' });
           return {

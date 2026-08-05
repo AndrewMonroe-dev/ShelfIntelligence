@@ -1,5 +1,5 @@
-import { store } from '../core/store.js';
-import { runAllScenarios } from '../sim/scenarioEngine.js';
+﻿import { store } from '../core/store.js?v=20260805';
+import { runAllScenarios } from '../sim/scenarioEngine.js?v=20260805';
 
 function fmtPct(v) {
   if (v == null) return '--';

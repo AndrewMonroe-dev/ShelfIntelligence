@@ -1,7 +1,7 @@
-import { bus } from './bus.js';
-import { jsonAdapter } from '../data/adapters/jsonAdapter.js';
-import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js';
-import { seedSectionAllocation } from '../optimize/allocationSeed.js';
+﻿import { bus } from './bus.js?v=20260805';
+import { jsonAdapter } from '../data/adapters/jsonAdapter.js?v=20260805';
+import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js?v=20260805';
+import { seedSectionAllocation } from '../optimize/allocationSeed.js?v=20260805';
 
 const adapter = jsonAdapter; // swap to apiAdapter later, nothing else changes
 

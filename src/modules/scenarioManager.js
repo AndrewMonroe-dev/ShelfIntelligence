@@ -1,4 +1,4 @@
-import { store } from '../core/store.js';
+﻿import { store } from '../core/store.js?v=20260805';
 
 export function mount(el) {
   const { scenarios, activeScenarioId } = store.getSnapshot();

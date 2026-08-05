@@ -1,11 +1,11 @@
-// Market-share-based section sizing, per 2026-07-12 clarification: for 3L,
+﻿// Market-share-based section sizing, per 2026-07-12 clarification: for 3L,
 // 4L, 5L, and anything under 747ml, varietal composition is irrelevant --
 // these sections are self-contained, ranked against the OTHER categories
 // (Cabernet, Sauvignon Blanc, etc.) and sized according to their real
 // national market share, not the sum of their assigned SKUs' opportunity
 // scores (which is how every other -- varietal -- section is sized).
 
-import { PACKAGE_TYPE_ASSUMPTIONS } from './blocking.js';
+import { PACKAGE_TYPE_ASSUMPTIONS } from './blocking.js?v=20260805';
 
 const MARKET_SHARE_EXEMPT_SIZES = new Set(['3LT', '4LT', '5LT', '0.5LT', '0.375LT', '0.25LT', '0.187LT']);
 

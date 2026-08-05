@@ -1,4 +1,4 @@
-import { store } from '../core/store.js';
+﻿import { store } from '../core/store.js?v=20260805';
 
 // Andrew, 2026-08-04: same staleness gap as Optimization Engine/Set Overview
 // -- a metric change takes effect in scoring immediately but currentPlan

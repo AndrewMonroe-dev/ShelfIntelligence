@@ -1,5 +1,5 @@
-import { normalizeValues } from './normalize.js';
-import { METRIC_ACCESSORS, metricHasData } from './metricRegistry.js';
+﻿import { normalizeValues } from './normalize.js?v=20260805';
+import { METRIC_ACCESSORS, metricHasData } from './metricRegistry.js?v=20260805';
 
 // Every metric weight is fully live/config-driven -- nothing about which
 // metrics count or how much they count is hardcoded here. This function only

@@ -1,5 +1,5 @@
-import { store } from '../core/store.js';
-import { estimateStorageSizeKb } from '../core/persistence.js';
+﻿import { store } from '../core/store.js?v=20260805';
+import { estimateStorageSizeKb } from '../core/persistence.js?v=20260805';
 
 export function mount(el) {
   function render() {

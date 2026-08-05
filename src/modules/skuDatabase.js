@@ -1,6 +1,6 @@
-import { store } from '../core/store.js';
-import { bus } from '../core/bus.js';
-import { computeScoreMap } from '../calc/scoreEngine.js';
+﻿import { store } from '../core/store.js?v=20260805';
+import { bus } from '../core/bus.js?v=20260805';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260805';
 
 export function mount(el) {
   function render() {

@@ -1,8 +1,8 @@
-import { computeScoreMap } from '../calc/scoreEngine.js';
-import { selectAssortment } from './assortment.js';
-import { groupBySection, isSmallFormatSection } from './blocking.js';
-import { isMarketShareSection, getSectionMarketShare } from './marketShare.js';
-import { getPhysicalWidthFt } from './shelfPosition.js';
+﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260805';
+import { selectAssortment } from './assortment.js?v=20260805';
+import { groupBySection, isSmallFormatSection } from './blocking.js?v=20260805';
+import { isMarketShareSection, getSectionMarketShare } from './marketShare.js?v=20260805';
+import { getPhysicalWidthFt } from './shelfPosition.js?v=20260805';
 
 // Andrew, 2026-07-17: lowered from 2ft -- some categories genuinely only
 // need a couple bottles' worth of space, and 2ft (several bottles per

@@ -1,5 +1,5 @@
-import { store } from '../core/store.js';
-import { readWorkbook, sheetToRows, autoDetectMapping, transformRows } from '../data/importParser.js';
+﻿import { store } from '../core/store.js?v=20260805';
+import { readWorkbook, sheetToRows, autoDetectMapping, transformRows } from '../data/importParser.js?v=20260805';
 
 const FIELD_LABELS = {
   upc: 'UPC / Barcode',
