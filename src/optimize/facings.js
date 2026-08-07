@@ -16,19 +16,35 @@ export function bottleWidthInches(sku, bottleDimensions) {
   return dim ? dim.widthIn : FALLBACK_WIDTH_IN;
 }
 
-// Given a category's SKUs already ranked in fill order, returns the
-// longest PREFIX that fits within widthInches at floorFacings each -- this
-// is what decides how many DISTINCT SKUs populate a row, before
-// computeFacings spends any leftover width as bonus facings on that same
-// prefix. Always includes at least one SKU (if the pool is non-empty and
-// width > 0) even if it alone exceeds the budget, consistent with the
-// "never leave a row artificially empty" philosophy below.
+// Given a category's SKUs already ranked in fill order, returns every SKU
+// that fits within widthInches at floorFacings each -- this is what decides
+// how many DISTINCT SKUs populate a row, before computeFacings spends any
+// leftover width as bonus facings on that same set. Always includes at
+// least one SKU (if the pool is non-empty and width > 0) even if it alone
+// exceeds the budget, consistent with the "never leave a row artificially
+// empty" philosophy below.
+//
+// Andrew, 2026-08-07: backfills rather than stopping at the first SKU that
+// doesn't fit -- previously this returned the longest RANKED PREFIX only,
+// so one wide SKU mid-list ended the row right there, leaving a leftover
+// gap unused even when narrower SKUs ranked further down (e.g. a long tail
+// of near-identical low scores) would have fit it. Found via a live report:
+// a Cabernet Sauvignon section flagged "SKU depth exhausted" while its own
+// Next In Line rail still listed 68 real, unplaced SKUs -- the pool wasn't
+// actually exhausted, the old prefix-only fit just gave up on each row
+// before reaching them. Now every candidate gets a chance against
+// whatever's still left, in rank order, so the fill is genuinely exhaustive
+// -- higher-ranked SKUs are still tried and seated first, this only changes
+// what happens to ones that don't fit (skip and keep going, not stop dead).
 export function fitSkusToWidth(rankedSkus, widthInches, bottleDimensions, floorFacings) {
   const included = [];
   let used = 0;
   for (const sku of rankedSkus) {
     const w = bottleWidthInches(sku, bottleDimensions) * floorFacings;
-    if (used + w > widthInches && included.length > 0) break;
+    if (used + w > widthInches) {
+      if (included.length === 0) { included.push(sku); used += w; } // never leave a row artificially empty, even if the very first candidate alone exceeds budget
+      continue;
+    }
     included.push(sku);
     used += w;
   }

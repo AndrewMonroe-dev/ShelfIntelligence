@@ -1,8 +1,8 @@
-﻿import { bus } from './bus.js?v=20260807';
-import { jsonAdapter } from '../data/adapters/jsonAdapter.js?v=20260807';
-import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js?v=20260807';
-import { seedSectionAllocation } from '../optimize/allocationSeed.js?v=20260807';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260807';
+﻿import { bus } from './bus.js?v=20260807b';
+import { jsonAdapter } from '../data/adapters/jsonAdapter.js?v=20260807b';
+import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js?v=20260807b';
+import { seedSectionAllocation } from '../optimize/allocationSeed.js?v=20260807b';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260807b';
 
 const adapter = jsonAdapter; // swap to apiAdapter later, nothing else changes
 
