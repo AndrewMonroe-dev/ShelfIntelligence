@@ -1,6 +1,6 @@
-﻿import { store } from '../core/store.js?v=20260805';
-import { bus } from '../core/bus.js?v=20260805';
-import { getActiveMetrics } from '../calc/scoreEngine.js?v=20260805';
+﻿import { store } from '../core/store.js?v=20260807';
+import { bus } from '../core/bus.js?v=20260807';
+import { getActiveMetrics } from '../calc/scoreEngine.js?v=20260807';
 
 export function mount(el) {
   // Explains what MOVING the slider does, not just what the metric measures

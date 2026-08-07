@@ -1,9 +1,9 @@
-﻿import { store } from '../core/store.js?v=20260805';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260805';
-import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260805';
-import { sectionForSku } from '../optimize/blocking.js?v=20260805';
-import { bottleWidthInches } from '../optimize/facings.js?v=20260805';
-import { computeScoreMap } from '../calc/scoreEngine.js?v=20260805';
+﻿import { store } from '../core/store.js?v=20260807';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260807';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260807';
+import { sectionForSku } from '../optimize/blocking.js?v=20260807';
+import { bottleWidthInches } from '../optimize/facings.js?v=20260807';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260807';
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
@@ -773,21 +773,24 @@ function printSet(bayLayout, storeName) {
   window.print();
 }
 
-// Andrew, 2026-08-04: a metric weight/enabled change takes effect in
-// scoring immediately, but this page's bay layout only comes from AI
-// scores at materialization time (store's first load, or an explicit
-// "Reset All to AI") -- it's never re-derived on a routine render, by
-// design (that's what keeps a manual bay arrangement stable). So unlike
-// Optimization Engine/Set Overview, there's no lighter "just refresh the
-// plan" action here that would visibly change anything: only Reset All to
-// AI does, and that also discards every manual placement. Points there
+// Andrew, 2026-08-04 (broadened 2026-08-07): a change to any plan-generation
+// input -- metric weights, Set Layout's category allocation, target SKU
+// count, section multipliers, case-only mode, or a physical fixture edit
+// (add/remove bay, shelf count) -- takes effect immediately in the
+// underlying plan, but this page's bay layout only comes from AI scores at
+// materialization time (store's first load, or an explicit "Reset All to
+// AI") -- it's never re-derived on a routine render, by design (that's what
+// keeps a manual bay arrangement stable). So unlike Optimization
+// Engine/Set Overview/Reports, there's no lighter "just refresh the plan"
+// action here that would visibly change anything: only Reset All to AI
+// does, and that also discards every manual placement. Points there
 // explicitly rather than offering a same-looking "Regenerate Now" button
 // that wouldn't actually change what's on screen.
-function stalePlanBannerHtml() {
-  if (!store.isPlanStale()) return '';
+function stalePlanBannerHtml(storeId) {
+  if (!store.isBayLayoutStale(storeId)) return '';
   return `
     <div class="card stale-plan-banner" style="margin-bottom:14px;border:1px solid var(--warning);background:rgba(245,158,11,.14);">
-      <span>&#9888; A metric weight or enabled state has changed in <a href="#metric-center">Metric Center</a> since this store's bay layout was last generated -- the Next In Line pool's scores may be stale, and any newly-added SKU won't reflect it either. Existing bay placements won't pick up the new scores until you use "Reset All to AI" below, which also discards every manual placement.</span>
+      <span>&#9888; Metric weights, category allocation, target SKU count, section space, or the physical fixture have changed since this store's bay layout was last generated -- the Next In Line pool's scores may be stale, and any newly-added SKU won't reflect it either. Existing bay placements won't pick up the change until you use "Reset All to AI" below, which also discards every manual placement.</span>
     </div>
   `;
 }
@@ -827,21 +830,6 @@ export function mount(el) {
     const { skus, metricsConfig } = store.getSnapshot();
     const targetStore = currentStore();
     return computeScoreMap(skus, metricsConfig, targetStore?.qualityScore != null ? { qualityScore: targetStore.qualityScore } : null);
-  }
-
-  function regenerateAndSetPlan() {
-    const { skus, metricsConfig, bottleDimensions, sizePackage } = store.getSnapshot();
-    const targetStore = currentStore();
-    if (!targetStore) return null;
-    const targetCount = store.getTargetSkuCount(selectedStoreId);
-    const multipliers = store.getSectionMultipliers(selectedStoreId);
-    let allocations = store.getSectionAllocations(selectedStoreId);
-    if (!allocations.length) allocations = store.autoAllocateSections(selectedStoreId);
-    const overrides = store.getOverrides(selectedStoreId);
-    const caseOnlyMode = store.getCaseOnlyMode();
-    const plan = generatePlan(targetStore, skus, metricsConfig, targetCount, bottleDimensions, allocations, multipliers, sizePackage, caseOnlyMode, overrides);
-    store.setPlan(plan);
-    return plan;
   }
 
   // Andrew, 2026-08-04: finds where the AI would actually place `skuId` if it
@@ -926,6 +914,13 @@ export function mount(el) {
     } else {
       liveBayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
       persistLiveBayLayout();
+      // This store's bayLayout is freshly built from the current plan-input
+      // version -- record that so isBayLayoutStale() has a real baseline to
+      // compare future input changes against. NOT called from the `compact`
+      // (hydrate-saved-data) branch above -- loading old saved data isn't a
+      // sync event, and stamping it there would falsely mark a genuinely
+      // stale saved layout as fresh.
+      store.markBayLayoutSynced(selectedStoreId);
     }
   }
 
@@ -1113,15 +1108,21 @@ export function mount(el) {
     const { stores, currentPlan } = store.getSnapshot();
     if (!selectedStoreId) selectedStoreId = store.getActiveStoreId() || currentPlan?.storeId || stores[0]?.storeId;
 
+    // Deliberately NOT auto-regenerated on staleness (unlike Optimization
+    // Engine/Set Overview/Reports) -- this plan only serves as the fallback
+    // source for ensureLiveBayLayout's first-ever materialization below.
+    // Auto-regenerating currentPlan here would clear isPlanStale() before
+    // the banner below ever gets to check it, silently hiding the "your bay
+    // layout needs a Reset All to AI" signal this page depends on.
     let plan = currentPlan && currentPlan.storeId === selectedStoreId ? currentPlan : null;
-    if (!plan) plan = regenerateAndSetPlan();
+    if (!plan) plan = store.regeneratePlan(selectedStoreId);
 
     el.innerHTML = `
       <div class="page-header">
         <h1>Planogram Viewer</h1>
         <p>Rendered in real 4ft bays, matching the store's physical fixture from Set Layout. Click a SKU to move, lock, or remove it -- manual placements always win over the AI recommendation. Boxes marked &#128274; are locked.</p>
       </div>
-      ${stalePlanBannerHtml()}
+      ${stalePlanBannerHtml(selectedStoreId)}
       <div class="card" style="display:flex;align-items:center;gap:24px;margin-bottom:14px;">
         <div>
           <div class="card-label" style="margin-bottom:6px;">Store</div>
@@ -1626,10 +1627,11 @@ export function mount(el) {
     output.querySelector('.reset-all-overrides-btn')?.addEventListener('click', () => {
       if (!confirm('Reset all manual overrides and regenerate this bay arrangement from the AI recommendation? Any manual bay moves will be lost.')) return;
       store.clearOverrides(selectedStoreId);
-      const plan = regenerateAndSetPlan();
+      const plan = store.regeneratePlan(selectedStoreId);
       const targetStore = currentStore();
       liveBayLayout = materializeBayLayout(plan, targetStore.shelfLayout.bays);
       persistLiveBayLayout();
+      store.markBayLayoutSynced(selectedStoreId);
       renderOutput(plan);
       // Reset All to AI is the one action that actually resolves staleness
       // here (see stalePlanBannerHtml) -- renderOutput only touches
