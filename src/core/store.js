@@ -1,8 +1,8 @@
-﻿import { bus } from './bus.js?v=20260807b';
-import { jsonAdapter } from '../data/adapters/jsonAdapter.js?v=20260807b';
-import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js?v=20260807b';
-import { seedSectionAllocation } from '../optimize/allocationSeed.js?v=20260807b';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260807b';
+﻿import { bus } from './bus.js?v=20260807c';
+import { jsonAdapter } from '../data/adapters/jsonAdapter.js?v=20260807c';
+import { loadPersistedState, savePersistedState, clearPersistedState } from './persistence.js?v=20260807c';
+import { seedSectionAllocation } from '../optimize/allocationSeed.js?v=20260807c';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260807c';
 
 const adapter = jsonAdapter; // swap to apiAdapter later, nothing else changes
 
@@ -57,6 +57,14 @@ const state = {
   // reuse currentPlan/currentPlanVersions directly.
   bayLayoutSyncedVersion: {},
   customStores: [], // stores added via Store Builder's "+ Add Store" flow
+  // Andrew, 2026-08-07: SKUs added via the SKU Generator tab -- merged into
+  // state.skus on hydrate (see applyPersistedOverrides), same pattern as
+  // customStores merging into state.stores. A generated SKU is otherwise
+  // indistinguishable from a real one everywhere downstream (scoring,
+  // sections, placement, Planogram Viewer) -- any field left blank just
+  // means that metric skips this SKU (see calc/metricRegistry.js), same as
+  // a real SKU with incomplete source data.
+  generatedSkus: [],
   activeStoreId: null, // last store picked in ANY store-scoped page (Set Layout, Optimization Engine, Planogram Viewer, Set Overview, Digital Twin) -- shared so switching pages keeps you on the same set instead of resetting to the first store
 };
 
@@ -292,6 +300,48 @@ export function removeStore(storeId) {
   persist();
 }
 
+// Andrew, 2026-08-07 (SKU Generator): builds a real SKU record from
+// whatever the form actually had filled in. Only skuId is ever guaranteed
+// -- every other field is optional and left undefined when blank rather
+// than defaulted to a guessed value, so scoring/sections/placement treat a
+// sparse generated SKU exactly like a real SKU with incomplete source data
+// (see metricRegistry.js's null-skipping, not a special case here).
+export function addGeneratedSku(input) {
+  const skuId = `GEN-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+  const num = (v) => (v === '' || v == null ? null : Number(v));
+  const str = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+  const newSku = {
+    skuId,
+    brand: str(input.brand) || 'UNKNOWN',
+    varietal: str(input.varietal),
+    region: str(input.region),
+    bottleSizeRaw: str(input.bottleSizeRaw),
+    upc: str(input.upc),
+    priceUsd: num(input.priceUsd),
+    sales9L: num(input.sales9L),
+    growthPct9L: num(input.growthPct9L),
+    podsDistribution: num(input.podsDistribution),
+    strategicSupplierPriority: input.strategicSupplierPriority === true,
+    isGenerated: true, // flags this as SKU-Generator-created, for the tab's own list/delete UI
+  };
+  state.generatedSkus = [...state.generatedSkus, newSku];
+  state.skus = [...state.skus, newSku];
+  bus.emit('skus:changed', newSku);
+  persist();
+  return newSku;
+}
+
+export function removeGeneratedSku(skuId) {
+  state.generatedSkus = state.generatedSkus.filter((s) => s.skuId !== skuId);
+  state.skus = state.skus.filter((s) => s.skuId !== skuId);
+  bus.emit('skus:changed', { removed: skuId });
+  persist();
+}
+
+export function getGeneratedSkus() {
+  return state.generatedSkus;
+}
+
 export async function hydrate() {
   const [skus, sales, stores, metricsConfig, scenarios, bottleDimensions, sizePackage] = await Promise.all([
     adapter.getSkus(),
@@ -368,6 +418,11 @@ function applyPersistedOverrides() {
     const targetStore = state.stores.find((s) => s.storeId === storeId);
     if (targetStore) targetStore.shelfLayout = shelfLayout;
   });
+
+  if (persisted.generatedSkus?.length) {
+    state.generatedSkus = persisted.generatedSkus;
+    state.skus = [...state.skus, ...state.generatedSkus];
+  }
 }
 
 export function getSnapshot() {
@@ -517,5 +572,8 @@ export const store = {
   setActiveStoreId,
   addStore,
   removeStore,
+  addGeneratedSku,
+  removeGeneratedSku,
+  getGeneratedSkus,
   resetPersistedState,
 };

@@ -1,4 +1,4 @@
-﻿import { store } from '../core/store.js?v=20260807b';
+﻿import { store } from '../core/store.js?v=20260807c';
 
 // Flat, one-row-per-SKU-placement view of the WHOLE generated set --
 // every section/shelf in physical set order, on one page, instead of

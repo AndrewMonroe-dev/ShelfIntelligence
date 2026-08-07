@@ -1,7 +1,7 @@
 ﻿// Set structure / blocking rules from docs/BUSINESS_RULES.md "Set structure (world sets)"
 // and "Strategic Supplier Priority".
 
-import { applyAnchorTiebreak } from './anchorPlacement.js?v=20260807b';
+import { applyAnchorTiebreak } from './anchorPlacement.js?v=20260807c';
 
 const SEVEN_FIFTY_ML = '0.75LT';
 

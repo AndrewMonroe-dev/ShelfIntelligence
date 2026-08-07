@@ -1,7 +1,7 @@
-﻿import { store } from '../core/store.js?v=20260807b';
-import { bus } from '../core/bus.js?v=20260807b';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260807b';
-import { getPhysicalWidthFt, getLinearShelfFeet } from '../optimize/shelfPosition.js?v=20260807b';
+﻿import { store } from '../core/store.js?v=20260807c';
+import { bus } from '../core/bus.js?v=20260807c';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260807c';
+import { getPhysicalWidthFt, getLinearShelfFeet } from '../optimize/shelfPosition.js?v=20260807c';
 
 function actualSectionFeet(section) {
   const maxRowInches = Math.max(

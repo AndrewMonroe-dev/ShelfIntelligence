@@ -37,6 +37,7 @@ export function savePersistedState(state) {
     caseOnlyMode: state.caseOnlyMode,
     customStores: state.customStores,
     bayLayouts: state.bayLayouts,
+    generatedSkus: state.generatedSkus,
     savedAt: new Date().toISOString(),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
