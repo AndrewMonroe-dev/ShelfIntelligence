@@ -1,9 +1,9 @@
-﻿import { store } from '../core/store.js?v=20260807c';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260807c';
-import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260807c';
-import { sectionForSku } from '../optimize/blocking.js?v=20260807c';
-import { bottleWidthInches } from '../optimize/facings.js?v=20260807c';
-import { computeScoreMap } from '../calc/scoreEngine.js?v=20260807c';
+﻿import { store } from '../core/store.js?v=20260808';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260808';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260808';
+import { sectionForSku } from '../optimize/blocking.js?v=20260808';
+import { bottleWidthInches } from '../optimize/facings.js?v=20260808';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808';
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
@@ -890,7 +890,6 @@ export function mount(el) {
     }
     persistLiveBayLayout();
     renderOutput(store.getSnapshot().currentPlan);
-    if (natural) warnIfBayOverflows([skuId]);
   }
 
   function persistLiveBayLayout() {
@@ -945,7 +944,6 @@ export function mount(el) {
     overrides.forEach((o) => store.addOverride(selectedStoreId, o));
     persistLiveBayLayout();
     renderOutput(store.getSnapshot().currentPlan);
-    warnIfBayOverflows(overrides.map((o) => o.skuId));
   }
 
   // Andrew, 2026-07-18: a locked/manual placement's width isn't subtracted
@@ -953,27 +951,32 @@ export function mount(el) {
   // block-layout call site in placementSolver.js) -- so a forced facings
   // count or a swap can genuinely push a shelf row's real content past the
   // physical 4ft bay width without the placement itself being rejected.
-  // Warn explicitly rather than let it silently overflow the row. Per
-  // decision 3 (2026-07-27): crowd-and-warn, never block -- the edit above
-  // has already been applied by the time this runs.
-  function warnIfBayOverflows(skuIds) {
-    if (!liveBayLayout) return;
-    const warned = new Set();
-    liveBayLayout.bays.forEach((bay) => {
+  // Per decision 3 (2026-07-27): crowd-and-warn, never block. Andrew,
+  // 2026-08-08: was a blocking alert() fired once per edit -- replaced with
+  // a passive badge computed fresh in renderOutput's chromeHtml, same
+  // pattern as the plan.isOverflowing / skuDepthExhausted badges right next
+  // to it, so it never needs a click and clears itself the moment the shelf
+  // is no longer over.
+  function computeBayOverflows(bayLayout) {
+    if (!bayLayout) return [];
+    const overflows = [];
+    bayLayout.bays.forEach((bay) => {
       bay.shelves.forEach((shelf) => {
-        if (!shelf.slots.some((e) => skuIds.includes(e.sku.skuId))) return;
         const usedInches = shelf.slots.reduce(
           (sum, e) => sum + (e.sku.allocatedInches ?? e.sku.facings * (e.sku.widthInches ?? 3)),
           0
         );
         const overageInches = usedInches - BAY_INCHES;
-        const key = `${bay.bayIndex}-${shelf.position}`;
-        if (overageInches > 0.5 && !warned.has(key)) {
-          warned.add(key);
-          alert(`Bay ${bay.bayId}, Shelf ${shelf.position} now exceeds its available space by ${(overageInches / 12).toFixed(1)}ft. It will still render, but consider fewer facings or moving something out.`);
+        if (overageInches > 0.5) {
+          overflows.push({ bayId: bay.bayId, position: shelf.position, overageFt: overageInches / 12 });
         }
       });
     });
+    return overflows;
+  }
+
+  function bayOverflowBannerHtml(overflows) {
+    return overflows.map((o) => `<div class="badge badge-warning" style="margin-top:6px;">Bay ${o.bayId}, Shelf ${o.position} exceeds its available space by ${o.overageFt.toFixed(1)}ft -- it will still render, but consider fewer facings or moving something out.</div>`).join('');
   }
 
   // Andrew, 2026-08-04: used to return '' (nothing, including the button)
@@ -1291,6 +1294,7 @@ export function mount(el) {
         </div>
         ${plan.isOverflowing ? `<div class="badge badge-warning" style="margin-top:10px;">Allocated sections exceed the fixture by ${plan.overflowFt.toFixed(1)}ft -- sections past the physical bay count are computed but NOT SHOWN below (silently dropped, not merged or trimmed). Reduce section widths in Set Layout or add bays in Store Builder.</div>` : ''}
         ${plan.sections.filter((s) => s.skuDepthExhausted).map((s) => `<div class="badge badge-warning" style="margin-top:6px;">${s.label}: SKU depth exhausted -- ${s.depthExhaustedNote}</div>`).join('')}
+        ${bayOverflowBannerHtml(computeBayOverflows(liveBayLayout))}
       </div>
       <div class="card" style="margin-bottom:14px;">
         <div class="card-label">Category Colors</div>

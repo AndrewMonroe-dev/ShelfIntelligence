@@ -1,15 +1,15 @@
-﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260807c';
-import { dedupeByBrandVarietalSize } from './assortment.js?v=20260807c';
+﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808';
+import { dedupeByBrandVarietalSize } from './assortment.js?v=20260808';
 import {
   sectionForSku, applyBlackBoxTiebreak, isBota3LSection, isBotaBrand, tradeUpPartnerNote,
   isSparklingSection, subBlockBySubtype, rankByBrandBlocks, brandGroups,
   isExcludedSku, isFranzia3LRedirect, isSmallFormatSection, pinBotaBlackBoxFamilyOrder, isAlwaysIncludeSku,
-} from './blocking.js?v=20260807c';
-import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js?v=20260807c';
-import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js?v=20260807c';
-import { isMarketShareSection, getSectionMarketShare } from './marketShare.js?v=20260807c';
-import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js?v=20260807c';
-import { applyAnchorTiebreak, applyHorizontalAnchorBias, spreadPriorityAdjacency } from './anchorPlacement.js?v=20260807c';
+} from './blocking.js?v=20260808';
+import { buildSectionShelves, getPhysicalWidthFt, getShelvesForSpan, BAY_WIDTH_FT } from './shelfPosition.js?v=20260808';
+import { computeFacings, computeFacingsWithBotaFloor, bottleWidthInches, fitSkusToWidth } from './facings.js?v=20260808';
+import { isMarketShareSection, getSectionMarketShare } from './marketShare.js?v=20260808';
+import { priceBand, allowedPositions, positionPreferenceMultiplier, appliesPriceBandRules, PRICE_BAND_LABELS } from './priceBand.js?v=20260808';
+import { applyAnchorTiebreak, applyHorizontalAnchorBias, spreadPriorityAdjacency } from './anchorPlacement.js?v=20260808';
 
 const CASE_ONLY_FLOOR_FACINGS = 2;
 const STANDARD_FLOOR_FACINGS = 1;

@@ -1,4 +1,4 @@
-﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260807c';
+﻿import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808';
 
 // Selects which SKUs make a store's set, given a target count.
 //

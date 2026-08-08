@@ -1,6 +1,6 @@
-﻿import { store } from '../core/store.js?v=20260807c';
-import { THIN_SECTION_WIDTH_FT } from '../optimize/placementSolver.js?v=20260807c';
-import { getPhysicalWidthFt } from '../optimize/shelfPosition.js?v=20260807c';
+﻿import { store } from '../core/store.js?v=20260808';
+import { THIN_SECTION_WIDTH_FT } from '../optimize/placementSolver.js?v=20260808';
+import { getPhysicalWidthFt } from '../optimize/shelfPosition.js?v=20260808';
 
 export function mount(el) {
   let selectedStoreId = null;
