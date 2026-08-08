@@ -5,7 +5,7 @@
 // national market share, not the sum of their assigned SKUs' opportunity
 // scores (which is how every other -- varietal -- section is sized).
 
-import { PACKAGE_TYPE_ASSUMPTIONS } from './blocking.js?v=20260808';
+import { PACKAGE_TYPE_ASSUMPTIONS } from './blocking.js?v=20260808b';
 
 const MARKET_SHARE_EXEMPT_SIZES = new Set(['3LT', '4LT', '5LT', '0.5LT', '0.375LT', '0.25LT', '0.187LT']);
 

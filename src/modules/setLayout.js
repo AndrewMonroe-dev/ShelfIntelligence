@@ -1,6 +1,6 @@
-﻿import { store } from '../core/store.js?v=20260808';
-import { groupBySection } from '../optimize/blocking.js?v=20260808';
-import { getPhysicalWidthFt, getLinearShelfFeet } from '../optimize/shelfPosition.js?v=20260808';
+﻿import { store } from '../core/store.js?v=20260808b';
+import { groupBySection } from '../optimize/blocking.js?v=20260808b';
+import { getPhysicalWidthFt, getLinearShelfFeet } from '../optimize/shelfPosition.js?v=20260808b';
 
 const PX_PER_FT = 20;
 const MIN_BAY_BLOCK_PX = 92; // wide enough for the shelf-count stepper to never overflow a 4ft-scaled block

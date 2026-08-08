@@ -44,10 +44,27 @@ export const METRIC_ACCESSORS = {
   consumerDemographics: () => null,
   brandStrength: () => null,
   distributionStrength: (sku) => sku.podsDistribution ?? null,
-  velocity: (sku) => (sku.sales9L != null && sku.podsDistribution) ? sku.sales9L / sku.podsDistribution : null,
+  // Andrew, 2026-08-08: prefers the real Circana $ Sales/POD/W figure (dollar
+  // sales per point of distribution per week -- properly week-normalized)
+  // merged in from Detailed Michigan Information.xlsx. Falls back to the old
+  // crude sales9L/podsDistribution ratio (no week normalization) for the
+  // slice of SKUs that didn't match a UPC in that file, so the metric stays
+  // populated for the same pool it always covered.
+  velocity: (sku) => sku.velocityDollarsPerPodPerWeek
+    ?? ((sku.sales9L != null && sku.podsDistribution) ? sku.sales9L / sku.podsDistribution : null),
   seasonality: () => null, // no quarterly/time-series data
   innovationPriority: () => null,
   strategicSupplierPriority: (sku) => (sku.strategicSupplierPriority != null ? sku.strategicSupplierPriority : null),
+  // Andrew, 2026-08-08: three new metrics from Detailed Michigan
+  // Information.xlsx (Circana MI syndicated data), merged onto skus.json by
+  // UPC. displayShare/featureShare measure promotional/trade-support
+  // intensity (share of segment $ sales occurring with any display/feature
+  // support), not intrinsic shelf pull-through. podsMomentum is YoY change
+  // in points of distribution -- a leading indicator of whether other MI
+  // retailers are adding or cutting this SKU right now.
+  displayShare: (sku) => sku.displayShareOfSeg ?? null,
+  featureShare: (sku) => sku.featureShareOfSeg ?? null,
+  podsMomentum: (sku) => sku.podsChangeVsYA ?? null,
 };
 
 // A metric counts as "has data" if at least this fraction of the pool has a
