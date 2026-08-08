@@ -1,6 +1,6 @@
-import { store } from '../core/store.js?v=20260808b';
-import { bus } from '../core/bus.js?v=20260808b';
-import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808b';
+import { store } from '../core/store.js?v=20260808c';
+import { bus } from '../core/bus.js?v=20260808c';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808c';
 
 // Andrew, 2026-08-07: lets a SKU be created by hand instead of only ever
 // arriving via skus.json/curationRules.json -- for stress-testing (e.g.

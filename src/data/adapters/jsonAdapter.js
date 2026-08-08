@@ -1,10 +1,10 @@
-﻿import { applyCurationRules } from '../curationRules.js?v=20260808b';
+﻿import { applyCurationRules } from '../curationRules.js?v=20260808c';
 
 const BASE = new URL('../../../data/', import.meta.url);
 // Andrew, 2026-08-05: same cache-busting marker as index.html's asset tags
 // and every internal module import (see docs/ARCHITECTURE.md) -- data
 // files are fetch()ed at runtime, same staleness exposure as the JS/CSS.
-const CACHE_BUST = '20260808b';
+const CACHE_BUST = '20260808c';
 
 async function fetchJson(filename) {
   const url = new URL(filename, BASE);

@@ -1,6 +1,6 @@
-﻿import { generatePlan } from '../optimize/placementSolver.js?v=20260808b';
-import { computeBaseline } from './digitalTwin.js?v=20260808b';
-import { calibrateVelocity, predictPlanTotals, compareToBaseline } from './predictor.js?v=20260808b';
+﻿import { generatePlan } from '../optimize/placementSolver.js?v=20260808c';
+import { computeBaseline } from './digitalTwin.js?v=20260808c';
+import { calibrateVelocity, predictPlanTotals, compareToBaseline } from './predictor.js?v=20260808c';
 
 // A scenario is just an alternate metric-weight preset merged onto the live
 // Metric Center config, per docs/BUSINESS_RULES.md and the architecture's

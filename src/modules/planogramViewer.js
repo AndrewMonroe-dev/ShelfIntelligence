@@ -1,9 +1,9 @@
-﻿import { store } from '../core/store.js?v=20260808b';
-import { generatePlan } from '../optimize/placementSolver.js?v=20260808b';
-import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260808b';
-import { sectionForSku } from '../optimize/blocking.js?v=20260808b';
-import { bottleWidthInches } from '../optimize/facings.js?v=20260808b';
-import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808b';
+﻿import { store } from '../core/store.js?v=20260808c';
+import { generatePlan } from '../optimize/placementSolver.js?v=20260808c';
+import { getPhysicalWidthFt, BAY_WIDTH_FT, buildSectionShelves } from '../optimize/shelfPosition.js?v=20260808c';
+import { sectionForSku } from '../optimize/blocking.js?v=20260808c';
+import { bottleWidthInches } from '../optimize/facings.js?v=20260808c';
+import { computeScoreMap } from '../calc/scoreEngine.js?v=20260808c';
 
 const PX_PER_INCH = 16; // bumped up 2026-07-15 so the planogram reads as the actual set, not a compressed summary
 const BAY_INCHES = BAY_WIDTH_FT * 12; // 48in -- a real physical bay, the fixed visual module width
